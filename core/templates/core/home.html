@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Bootstrap demo</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet"
+            integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+    </head>
+    <title>Django Stock Web Scraper</title>
+    <style>
+        * {
+            margin: 0;
+            box-sizing: border-box;
+            font-family: "Bitstream Vera Sans Mono", Monaco, "Courier New", Courier, monospace;
+        }
+
+        #main {
+            text-align: center;
+            padding-top: 100px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        input[type='text'] {
+            width: 30%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 2px solid black;
+        }
+
+        input[type='submit'] {
+            width: 30%;
+            padding: 5px;
+            background: black;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8"
+        crossorigin="anonymous"></script>
+
+
+    <div id="main">
+        <h1>Find company ticker</h1>
+        <form method="GET">
+            <div>
+                <label for="ticker"></label>
+                <input type="text" id="ticker" value="{{ request.GET.ticker }}" placeholder="Stock Ticker"
+                    name="ticker" />
+            </div>
+            <input type="submit" value="Submit" />
+
+            
+
+           
+        </form>
+        {% if result %}
+        <h3>{{ result }}</h3>
+
+        {% endif %}
+
+        
+    </div>
+</body>
+
+</html>
