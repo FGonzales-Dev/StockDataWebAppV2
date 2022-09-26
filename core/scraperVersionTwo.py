@@ -252,7 +252,7 @@ def scrape(request):
             pd.read_json("dividends.json").to_excel('dividends.xls',index=False)
             sleep(10)
             driver_dividends.quit()
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+            return render(request, "../templates/loadScreen.html")
         elif download_type == "OPERATING_PERFORMANCE":
             task =scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
