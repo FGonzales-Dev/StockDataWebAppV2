@@ -95,7 +95,7 @@ def scraper_dividends(ticker_value,market_value):
     prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
-    # chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument('--headless')
     chromeOptions.add_argument('--disable-setuid-sandbox')
     chromeOptions.add_argument('--remote-debugging-port=9222')
     chromeOptions.add_argument('--disable-extensions')
@@ -103,18 +103,19 @@ def scraper_dividends(ticker_value,market_value):
     chromeOptions.add_argument('--disable-gpu')
     chromeOptions.add_argument('--no-sandbox')
     chromeOptions.add_argument('--disable-dev-shm-usage')
-    # driver_dividends = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    driver_dividends = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+    driver_dividends = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+    # driver_dividends = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
     driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
     data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)    
-    df[0].to_json ('dividends.json', orient='records')
-    a_file = open("dividends.json", "r")
-    a_file.close()
-    pd.read_json("dividends.json").to_excel('dividends.xls',index=False)
+    df  = pd.read_html(data)   
+    out = df[0].to_json(orient='records') 
+    # df[0].to_json ('dividends.json', orient='records')
+    # a_file = open("dividends.json", "r")
+    # a_file.close()
+    # data = pd.read_json("dividends.json")
     sleep(10)
     driver_dividends.quit()
-    return 'DONE'
+    return out
 
 @shared_task()
 def scraper_valuation(ticker_value,market_value,download_type):

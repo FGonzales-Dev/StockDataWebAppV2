@@ -71,11 +71,51 @@ def download(request):
 
 
 def scrape(request):
+    
     ticker_value =  request.POST.get("ticker", "")
     market_value =  request.POST.get("market", "")
     download_type = request.POST.get("download_type", "")
-    download_type_get = request.GET.get("download_type", "")
-    if 'download' in request.POST:
+    task_id = request.POST.get("task_id", "")
+   
+    if 'get_data' in request.POST:
+        print("============================")
+        if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
+            task = scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
+            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+        elif download_type == "VALUATION_CASH_FLOW" or download_type == "VALUATION_GROWTH" or download_type == "VALUATION_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
+            task = scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
+            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+        elif download_type =="DIVIDENDS":
+            task = scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
+            dividends_task_id = task.id
+            print(dividends_task_id)
+           
+            # dividends_json = json.loads(task.get())
+            # dividends_json.to_json ('dividends.json', orient='records')
+            # a_file = open("dividends.json", "r")
+            # a_file.close()
+            # pd.read_json("dividends.json").to_excel('dividends.xls',index=False)
+           
+            # return HttpResponse(task, content_type='text/json')
+            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+        elif download_type == "OPERATING_PERFORMANCE":
+            task =scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
+          
+            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+        elif download_type == "ALL":
+            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="INCOME_STATEMENT")
+            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="BALANCE_SHEET")
+            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="CASH_FLOW")
+            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_CASH_FLOW")
+            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_GROWTH")
+            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_FINANCIAL_HEALTH")
+            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_OPERATING_EFFICIENCY")
+            scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
+            task = scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
+            return render(request, "../templates/load_screen_all.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+        else:
+            return render(request, "../templates/stockData.html")
+    elif 'download' in request.POST:
         if download_type == "INCOME_STATEMENT": 
             data_xls = pd.read_excel(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
             data_xls.to_json('income_statement_test.json')
@@ -122,11 +162,14 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "DIVIDENDS":
-               
-                with open("dividends.xls", 'rb') as file:
-                        response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
-                        return response
+            
+            res = AsyncResult(task_id).get()
+            df = pd.read_json(res)
+            df.to_excel('dividends.xls', index=False)
+            with open("dividends.xls", 'rb') as file:
+                response = HttpResponse(file, content_type='application/vnd.ms-excel')
+                response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+           
         elif download_type == "OPERATING_PERFORMANCE":
                 with open("operating_performance.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
@@ -219,59 +262,5 @@ def scrape(request):
              return render(request, "../templates/loadScreen.html")
 
 
-    elif 'get_data' in request.POST:
-        print("============================")
-        if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
-            task = scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type == "VALUATION_CASH_FLOW" or download_type == "VALUATION_GROWTH" or download_type == "VALUATION_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
-            task = scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type =="DIVIDENDS":
-            # task =scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
-            CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-            prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-            chromeOptions = webdriver.ChromeOptions()
-            chromeOptions.add_experimental_option('prefs', prefs)
-            chromeOptions.add_argument('--headless')
-            chromeOptions.add_argument('--disable-setuid-sandbox')
-            chromeOptions.add_argument('--remote-debugging-port=9222')
-            chromeOptions.add_argument('--disable-extensions')
-            chromeOptions.add_argument('start-maximized')
-            chromeOptions.add_argument('--disable-gpu')
-            chromeOptions.add_argument('--no-sandbox')
-            chromeOptions.add_argument('--disable-dev-shm-usage')
-            # driver_dividends = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-            driver_dividends = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-            driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
-            data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-            df  = pd.read_html(data)    
-            df[0].to_json ('dividends.json', orient='records')
-            a_file = open("dividends.json", "r")
-            a_file.close()
-            pd.read_json("dividends.json").to_excel('dividends.xls',index=False)
-            sleep(10)
-            driver_dividends.quit()
-            with open("dividends.xls", 'rb') as file:
-                        response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
-                        return response
-            # return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type == "OPERATING_PERFORMANCE":
-            task =scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type == "ALL":
-            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="INCOME_STATEMENT")
-            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="BALANCE_SHEET")
-            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="CASH_FLOW")
-            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_CASH_FLOW")
-            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_GROWTH")
-            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_FINANCIAL_HEALTH")
-            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_OPERATING_EFFICIENCY")
-            scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
-            task = scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
-            return render(request, "../templates/load_screen_all.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        else:
-            return render(request, "../templates/stockData.html")
     else:
         return render(request, "../templates/stockData.html")
