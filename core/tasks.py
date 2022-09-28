@@ -29,28 +29,28 @@ def scraper(self,ticker_value,market_value,download_type):
     chromeOptions.add_argument("--start-maximized")
     chromeOptions.add_argument("--disable-extensions")
     chromeOptions.add_argument('--window-size=1920,1080')
-    chromeOptions.add_argument("--headless")
+    # chromeOptions.add_argument("--headless")
     chromeOptions.add_argument('--no-sandbox')   
     chromeOptions.add_argument("--disable-dev-shm-usage")
-    
-    # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
+    driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+    # driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
     driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
     if download_type == "INCOME_STATEMENT":
-        
+        WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+        data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
         sleep(10)
         driver.quit()
         return 'DONE'
     elif download_type == "BALANCE_SHEET":
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-       
+        WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
+        WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+        data = WebDriverWait(driver, 100).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='tg-mbg tg-3646 tg-mds']"))).get_attribute("outerHTML")
+        # df  = pd.read_html(data)   
+        # out = df[0].to_json(orient='records') 
         sleep(10)
         driver.quit()
-        return 'DONE'
+        return str(data)
     elif download_type == "CASH_FLOW":
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
@@ -103,16 +103,12 @@ def scraper_dividends(ticker_value,market_value):
     chromeOptions.add_argument('--disable-gpu')
     chromeOptions.add_argument('--no-sandbox')
     chromeOptions.add_argument('--disable-dev-shm-usage')
-    driver_dividends = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    # driver_dividends = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+    # driver_dividends = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+    driver_dividends = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
     driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
     data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
     df  = pd.read_html(data)   
     out = df[0].to_json(orient='records') 
-    # df[0].to_json ('dividends.json', orient='records')
-    # a_file = open("dividends.json", "r")
-    # a_file.close()
-    # data = pd.read_json("dividends.json")
     sleep(10)
     driver_dividends.quit()
     return out
