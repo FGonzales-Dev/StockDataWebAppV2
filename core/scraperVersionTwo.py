@@ -169,6 +169,7 @@ def scrape(request):
             with open("dividends.xls", 'rb') as file:
                 response = HttpResponse(file, content_type='application/vnd.ms-excel')
                 response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                return response
            
         elif download_type == "OPERATING_PERFORMANCE":
                 with open("operating_performance.xls", 'rb') as file:
