@@ -12,6 +12,8 @@ import shutil
 from webdriver_manager.chrome import ChromeDriverManager
 from django.http import FileResponse
 from pathlib import Path
+import shutil
+from bs4 import BeautifulSoup
 import string
 
 from time import sleep
@@ -80,6 +82,43 @@ def scrape(request):
     if 'get_data' in request.POST:
         print("============================")
         if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
+            CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+            prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+            chromeOptions = webdriver.ChromeOptions()
+            chromeOptions.add_experimental_option('prefs', prefs)
+            chromeOptions.add_argument("--disable-infobars")
+            chromeOptions.add_argument("--start-maximized")
+            chromeOptions.add_argument("--disable-extensions")
+            chromeOptions.add_argument('--window-size=1920,1080')
+            # chromeOptions.add_argument("--headless")
+            chromeOptions.add_argument('--no-sandbox')   
+            chromeOptions.add_argument("--disable-dev-shm-usage")
+            driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+            # driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+            if download_type == "INCOME_STATEMENT":
+                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
+                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+                sleep(10)
+                driver.quit()
+                return 'DONE'
+            elif download_type == "BALANCE_SHEET":
+                WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
+                WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+                sleep(10)
+                driver.quit()
+                return 'DONE'
+            elif download_type == "CASH_FLOW":
+                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+                sleep(10)
+                driver.quit()
+                return 'DONE'
+             
+       
             task = scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "VALUATION_CASH_FLOW" or download_type == "VALUATION_GROWTH" or download_type == "VALUATION_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
@@ -89,30 +128,41 @@ def scrape(request):
             task = scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
             dividends_task_id = task.id
             print(dividends_task_id)
-           
-            # dividends_json = json.loads(task.get())
-            # dividends_json.to_json ('dividends.json', orient='records')
-            # a_file = open("dividends.json", "r")
-            # a_file.close()
-            # pd.read_json("dividends.json").to_excel('dividends.xls',index=False)
-           
-            # return HttpResponse(task, content_type='text/json')
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "OPERATING_PERFORMANCE":
             task =scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
           
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
-            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="INCOME_STATEMENT")
-            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="BALANCE_SHEET")
-            scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type="CASH_FLOW")
-            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_CASH_FLOW")
-            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_GROWTH")
-            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_FINANCIAL_HEALTH")
-            scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type="VALUATION_OPERATING_EFFICIENCY")
-            scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
-            task = scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
-            return render(request, "../templates/load_screen_all.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+            shutil.rmtree(BASE_DIR + "/selenium")
+            os.makedirs(BASE_DIR + "/selenium")
+            CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+            prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+            chromeOptions = webdriver.ChromeOptions()
+            chromeOptions.add_experimental_option('prefs', prefs)
+            chromeOptions.add_argument("--disable-infobars")
+            chromeOptions.add_argument("--start-maximized")
+            chromeOptions.add_argument("--disable-extensions")
+            chromeOptions.add_argument('--window-size=1920,1080')
+            chromeOptions.add_argument("--headless")
+            chromeOptions.add_argument('--no-sandbox')   
+            chromeOptions.add_argument("--disable-dev-shm-usage")
+            # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+            driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(5)
+            WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
+            WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(5)
+            WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+            WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(5)
+            driver.quit()
+            return render(request, "../templates/load_screen_all.html",{ "download_type": download_type})
+
         else:
             return render(request, "../templates/stockData.html")
     elif 'download' in request.POST:
