@@ -134,20 +134,20 @@ def scrape(request):
           
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
-           
             CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
             prefs = {'download.default_directory' :  BASE_DIR}
             chromeOptions = webdriver.ChromeOptions()
             chromeOptions.add_experimental_option('prefs', prefs)
-            chromeOptions.add_argument("--disable-infobars")
-            chromeOptions.add_argument("--start-maximized")
-            chromeOptions.add_argument("--disable-extensions")
-            chromeOptions.add_argument('--window-size=1920,1080')
-            chromeOptions.add_argument("--headless")
-            chromeOptions.add_argument('--no-sandbox')   
-            chromeOptions.add_argument("--disable-dev-shm-usage")
-            # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-            driver = webdriver.Chrome(  chrome_options=chromeOptions, executable_path=ChromeDriverManager().install()) 
+            chromeOptions.add_argument('--headless')
+            chromeOptions.add_argument('--disable-setuid-sandbox')
+            chromeOptions.add_argument('--remote-debugging-port=9222')
+            chromeOptions.add_argument('--disable-extensions')
+            chromeOptions.add_argument('start-maximized')
+            chromeOptions.add_argument('--disable-gpu')
+            chromeOptions.add_argument('--no-sandbox')
+            chromeOptions.add_argument('--disable-dev-shm-usage')
+            # driver_dividends = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+            driver_dividends = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
