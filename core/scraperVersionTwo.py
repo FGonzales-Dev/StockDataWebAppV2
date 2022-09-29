@@ -134,10 +134,9 @@ def scrape(request):
           
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
-            shutil.rmtree(BASE_DIR + "/selenium")
-            os.makedirs(BASE_DIR + "/selenium")
+           
             CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-            prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+            prefs = {'download.default_directory' :  BASE_DIR}
             chromeOptions = webdriver.ChromeOptions()
             chromeOptions.add_experimental_option('prefs', prefs)
             chromeOptions.add_argument("--disable-infobars")
@@ -251,7 +250,7 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "ALL":
-            data_xls = pd.read_excel(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
+            data_xls = pd.read_excel(BASE_DIR + "/Balance Sheet_Annual_As Originally Reported.xls")
             data_xls.to_json('balance_sheet_test.json')
             with open('balance_sheet_test.json', 'r') as file:
                         content = file.read()
@@ -263,7 +262,7 @@ def scrape(request):
                         df.to_excel('balance_sheet.xls',index=False)
                         df1 = pd.read_excel('balance_sheet.xls')
             
-            data_xls = pd.read_excel(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
+            data_xls = pd.read_excel(BASE_DIR + "/Cash Flow_Annual_As Originally Reported.xls")
             data_xls.to_json('cash_flow_test.json')
             with open('cash_flow_test.json', 'r') as file:
                         content = file.read()
@@ -274,7 +273,7 @@ def scrape(request):
                         df = pd.DataFrame(data=jsont)
                         df.to_excel('cash_flow.xls',index=False)
                         df2 = pd.read_excel('cash_flow.xls')
-            data_xls = pd.read_excel(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
+            data_xls = pd.read_excel(BASE_DIR + "/Income Statement_Annual_As Originally Reported.xls")
             data_xls.to_json('income_statement_test.json')
             with open('income_statement_test.json', 'r') as file:
                         content = file.read()
