@@ -42,282 +42,282 @@ from django.contrib.auth.models import User
 
 
 
-# def scrape_operating_performance(request):
-#     if 'ticker' in request.GET and 'market' in request.GET:
-#         ticker_value = request.GET.get("ticker", "")
-#         market_value = request.GET.get("market", "")
-#         CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-#         prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-#         chromeOptions = webdriver.ChromeOptions()
-#         chromeOptions.add_experimental_option('prefs', prefs)
-#         chromeOptions.add_argument("--disable-infobars")
-#         chromeOptions.add_argument("--start-maximized")
-#         chromeOptions.add_argument("--disable-extensions")
-#         chromeOptions.add_argument('--window-size=1920,1080')
-#         chromeOptions.add_argument("--headless")
-#         chromeOptions.add_argument('--no-sandbox')   
-#         chromeOptions.add_argument("--disable-dev-shm-usage") 
-#         # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-#         driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-#         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
+def scrape_operating_performance(request):
+    if 'ticker' in request.GET and 'market' in request.GET:
+        ticker_value = request.GET.get("ticker", "")
+        market_value = request.GET.get("market", "")
+        CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+        prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+        chromeOptions = webdriver.ChromeOptions()
+        chromeOptions.add_experimental_option('prefs', prefs)
+        chromeOptions.add_argument("--disable-infobars")
+        chromeOptions.add_argument("--start-maximized")
+        chromeOptions.add_argument("--disable-extensions")
+        chromeOptions.add_argument('--window-size=1920,1080')
+        chromeOptions.add_argument("--headless")
+        chromeOptions.add_argument('--no-sandbox')   
+        chromeOptions.add_argument("--disable-dev-shm-usage") 
+        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
       
-#         data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-#         df  = pd.read_html(data)    
-#         df[0].to_json ('jsonfile.json', orient='records')
-#         a_file = open("jsonfile.json", "r")
-#         a_json = json.load(a_file)
-#         pretty_json = json.dumps(a_json).replace("null", '"0"')
-#         a_file.close()
-#         return HttpResponse(pretty_json, content_type='text/json')
+        data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)    
+        df[0].to_json ('jsonfile.json', orient='records')
+        a_file = open("jsonfile.json", "r")
+        a_json = json.load(a_file)
+        pretty_json = json.dumps(a_json).replace("null", '"0"')
+        a_file.close()
+        return HttpResponse(pretty_json, content_type='text/json')
 
-# def scrape_dividends(request):
-#     if 'ticker' in request.GET and 'market' in request.GET:
-#         ticker_value = request.GET.get("ticker", "")
-#         market_value = request.GET.get("market", "")
-#         CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-#         prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-#         chromeOptions = webdriver.ChromeOptions()
-#         chromeOptions.add_experimental_option('prefs', prefs)
-#         chromeOptions.add_argument("--disable-infobars")
-#         chromeOptions.add_argument("--start-maximized")
-#         chromeOptions.add_argument("--disable-extensions")
-#         chromeOptions.add_argument('--window-size=1920,1080')
-#         chromeOptions.add_argument("--headless")
-#         chromeOptions.add_argument('--no-sandbox')   
-#         chromeOptions.add_argument("--disable-dev-shm-usage") 
-#         # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-#         driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-#         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
+def scrape_dividends(request):
+    if 'ticker' in request.GET and 'market' in request.GET:
+        ticker_value = request.GET.get("ticker", "")
+        market_value = request.GET.get("market", "")
+        CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+        prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+        chromeOptions = webdriver.ChromeOptions()
+        chromeOptions.add_experimental_option('prefs', prefs)
+        chromeOptions.add_argument("--disable-infobars")
+        chromeOptions.add_argument("--start-maximized")
+        chromeOptions.add_argument("--disable-extensions")
+        chromeOptions.add_argument('--window-size=1920,1080')
+        chromeOptions.add_argument("--headless")
+        chromeOptions.add_argument('--no-sandbox')   
+        chromeOptions.add_argument("--disable-dev-shm-usage") 
+        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
       
-#         data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-#         df  = pd.read_html(data)    
-#         df[0].to_json ('jsonfile.json', orient='records')
-#         a_file = open("jsonfile.json", "r")
-#         a_json = json.load(a_file)
-#         pretty_json = json.dumps(a_json).replace("null", '"0"')
-#         a_file.close()
-#         return HttpResponse(pretty_json, content_type='text/json')
+        data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)    
+        df[0].to_json ('jsonfile.json', orient='records')
+        a_file = open("jsonfile.json", "r")
+        a_json = json.load(a_file)
+        pretty_json = json.dumps(a_json).replace("null", '"0"')
+        a_file.close()
+        return HttpResponse(pretty_json, content_type='text/json')
 
 
-# def scrape_valuation(request):
-#     if 'ticker' in request.GET and 'market' in request.GET and 'type' in request.GET:
-#         type_value = request.GET.get("type", "")
-#         ticker_value = request.GET.get("ticker", "")
-#         market_value = request.GET.get("market", "")
-#         CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-#         prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-#         chromeOptions = webdriver.ChromeOptions()
-#         chromeOptions.add_experimental_option('prefs', prefs)
-#         chromeOptions.add_argument("--disable-infobars")
-#         chromeOptions.add_argument("--start-maximized")
-#         chromeOptions.add_argument("--disable-extensions")
-#         chromeOptions.add_argument('--window-size=1920,1080')
-#         chromeOptions.add_argument("--headless")
-#         chromeOptions.add_argument('--no-sandbox')   
-#         chromeOptions.add_argument("--disable-dev-shm-usage") 
-#        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-#         driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-#         if type_value == "cf":
-#             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-#             data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
-#             df  = pd.read_html(data)    
-#             df[0].to_json ('jsonfile.json', orient='records')
-#             a_file = open("jsonfile.json", "r")
-#             a_json = json.load(a_file)
-#             pretty_json = json.dumps(a_json).replace("null", '"0"')
-#             a_file.close()
-#             return HttpResponse(pretty_json, content_type='text/json')
+def scrape_valuation(request):
+    if 'ticker' in request.GET and 'market' in request.GET and 'type' in request.GET:
+        type_value = request.GET.get("type", "")
+        ticker_value = request.GET.get("ticker", "")
+        market_value = request.GET.get("market", "")
+        CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+        prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+        chromeOptions = webdriver.ChromeOptions()
+        chromeOptions.add_experimental_option('prefs', prefs)
+        chromeOptions.add_argument("--disable-infobars")
+        chromeOptions.add_argument("--start-maximized")
+        chromeOptions.add_argument("--disable-extensions")
+        chromeOptions.add_argument('--window-size=1920,1080')
+        chromeOptions.add_argument("--headless")
+        chromeOptions.add_argument('--no-sandbox')   
+        chromeOptions.add_argument("--disable-dev-shm-usage") 
+       # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        if type_value == "cf":
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+            data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
+            df  = pd.read_html(data)    
+            df[0].to_json ('jsonfile.json', orient='records')
+            a_file = open("jsonfile.json", "r")
+            a_json = json.load(a_file)
+            pretty_json = json.dumps(a_json).replace("null", '"0"')
+            a_file.close()
+            return HttpResponse(pretty_json, content_type='text/json')
 
-#         elif type_value == "fh":
-#             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
-#             data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
-#             df  = pd.read_html(data)    
-#             df[0].to_json ('jsonfile.json', orient='records')
-#             a_file = open("jsonfile.json", "r")
-#             a_json = json.load(a_file)
-#             pretty_json = json.dumps(a_json).replace("null", '"0"')
-#             a_file.close()
-#             return HttpResponse(pretty_json, content_type='text/json')
-#         elif type_value == "g":
-#             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
-#             data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
-#             df  = pd.read_html(data)    
-#             df[0].to_json ('jsonfile.json', orient='records')
-#             a_file = open("jsonfile.json", "r")
-#             a_json = json.load(a_file)
-#             pretty_json = json.dumps(a_json).replace("null", '"0"')
-#             a_file.close()
-#             return HttpResponse(pretty_json, content_type='text/json')
-#         elif type_value == "ef":
-#             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
-#             data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
-#             df  = pd.read_html(data)    
-#             df[0].to_json ('jsonfile.json', orient='records')
-#             a_file = open("jsonfile.json", "r")
-#             a_json = json.load(a_file)
-#             pretty_json = json.dumps(a_json).replace("null", '"0"')
-#             a_file.close()
-#             return HttpResponse(pretty_json, content_type='text/json')
-#         else: 
-#             return HttpResponse('error', content_type='text/json')
+        elif type_value == "fh":
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
+            data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
+            df  = pd.read_html(data)    
+            df[0].to_json ('jsonfile.json', orient='records')
+            a_file = open("jsonfile.json", "r")
+            a_json = json.load(a_file)
+            pretty_json = json.dumps(a_json).replace("null", '"0"')
+            a_file.close()
+            return HttpResponse(pretty_json, content_type='text/json')
+        elif type_value == "g":
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
+            data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
+            df  = pd.read_html(data)    
+            df[0].to_json ('jsonfile.json', orient='records')
+            a_file = open("jsonfile.json", "r")
+            a_json = json.load(a_file)
+            pretty_json = json.dumps(a_json).replace("null", '"0"')
+            a_file.close()
+            return HttpResponse(pretty_json, content_type='text/json')
+        elif type_value == "ef":
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
+            data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
+            df  = pd.read_html(data)    
+            df[0].to_json ('jsonfile.json', orient='records')
+            a_file = open("jsonfile.json", "r")
+            a_json = json.load(a_file)
+            pretty_json = json.dumps(a_json).replace("null", '"0"')
+            a_file.close()
+            return HttpResponse(pretty_json, content_type='text/json')
+        else: 
+            return HttpResponse('error', content_type='text/json')
 
 
 
-# def scrape_valuation_financial_health(request):
-#     if 'ticker' in request.GET and 'market' in request.GET:
-#         ticker_value = request.GET.get("ticker", "")
-#         market_value = request.GET.get("market", "")
-#         CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-#         prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-#         chromeOptions = webdriver.ChromeOptions()
-#         chromeOptions.add_experimental_option('prefs', prefs)
-#         chromeOptions.add_argument("--disable-infobars")
-#         chromeOptions.add_argument("--start-maximized")
-#         chromeOptions.add_argument("--disable-extensions")
-#         chromeOptions.add_argument('--window-size=1920,1080')
-#         chromeOptions.add_argument("--headless")
-#         # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-#         driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+def scrape_valuation_financial_health(request):
+    if 'ticker' in request.GET and 'market' in request.GET:
+        ticker_value = request.GET.get("ticker", "")
+        market_value = request.GET.get("market", "")
+        CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+        prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+        chromeOptions = webdriver.ChromeOptions()
+        chromeOptions.add_experimental_option('prefs', prefs)
+        chromeOptions.add_argument("--disable-infobars")
+        chromeOptions.add_argument("--start-maximized")
+        chromeOptions.add_argument("--disable-extensions")
+        chromeOptions.add_argument('--window-size=1920,1080')
+        chromeOptions.add_argument("--headless")
+        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
         
 
 
-# def scrape_valuation_operating_and_efficiency(request):
-#     if 'ticker' in request.GET and 'market' in request.GET:
-#         ticker_value = request.GET.get("ticker", "")
-#         market_value = request.GET.get("market", "")
-#         CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-#         prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-#         chromeOptions = webdriver.ChromeOptions()
-#         chromeOptions.add_argument("--disable-infobars")
-#         chromeOptions.add_argument("--start-maximized")
-#         chromeOptions.add_argument("--disable-extensions")
-#         chromeOptions.add_argument('--window-size=1920,1080')
-#         chromeOptions.add_argument("--headless")
-#         # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-#         driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-#         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-#         WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
-#         data = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
-#         df  = pd.read_html(data)    
-#         df[0].to_json ('jsonfile.json', orient='records')
-#         a_file = open("jsonfile.json", "r")
-#         a_json = json.load(a_file)
-#         pretty_json = json.dumps(a_json).replace("null", '"0"')
-#         a_file.close()
-#         return HttpResponse(pretty_json, content_type='text/json')
+def scrape_valuation_operating_and_efficiency(request):
+    if 'ticker' in request.GET and 'market' in request.GET:
+        ticker_value = request.GET.get("ticker", "")
+        market_value = request.GET.get("market", "")
+        CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+        prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+        chromeOptions = webdriver.ChromeOptions()
+        chromeOptions.add_argument("--disable-infobars")
+        chromeOptions.add_argument("--start-maximized")
+        chromeOptions.add_argument("--disable-extensions")
+        chromeOptions.add_argument('--window-size=1920,1080')
+        chromeOptions.add_argument("--headless")
+        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
+        WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
+        data = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)    
+        df[0].to_json ('jsonfile.json', orient='records')
+        a_file = open("jsonfile.json", "r")
+        a_json = json.load(a_file)
+        pretty_json = json.dumps(a_json).replace("null", '"0"')
+        a_file.close()
+        return HttpResponse(pretty_json, content_type='text/json')
 
 
-# def scrape_valuation_growth(request):
-#     if 'ticker' in request.GET and 'market' in request.GET:
-#         ticker_value = request.GET.get("ticker", "")
-#         market_value = request.GET.get("market", "")
-#         CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-#         prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-#         chromeOptions = webdriver.ChromeOptions()
-#         chromeOptions.add_experimental_option('prefs', prefs)
-#         chromeOptions.add_argument("--disable-infobars")
-#         chromeOptions.add_argument("--start-maximized")
-#         chromeOptions.add_argument("--disable-extensions")
-#         chromeOptions.add_argument('--window-size=1920,1080')
-#         chromeOptions.add_argument("--headless")
-#         chromeOptions.add_argument('--no-sandbox')   
-#         chromeOptions.add_argument("--disable-dev-shm-usage") 
+def scrape_valuation_growth(request):
+    if 'ticker' in request.GET and 'market' in request.GET:
+        ticker_value = request.GET.get("ticker", "")
+        market_value = request.GET.get("market", "")
+        CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+        prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+        chromeOptions = webdriver.ChromeOptions()
+        chromeOptions.add_experimental_option('prefs', prefs)
+        chromeOptions.add_argument("--disable-infobars")
+        chromeOptions.add_argument("--start-maximized")
+        chromeOptions.add_argument("--disable-extensions")
+        chromeOptions.add_argument('--window-size=1920,1080')
+        chromeOptions.add_argument("--headless")
+        chromeOptions.add_argument('--no-sandbox')   
+        chromeOptions.add_argument("--disable-dev-shm-usage") 
 
-#         # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH,chrome_options=chromeOptions)
-#         driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-#         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-#         WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
-#         data = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
-#         df  = pd.read_html(data)    
-#         df[0].to_json ('jsonfile.json', orient='records')
-#         a_file = open("jsonfile.json", "r")
-#         a_json = json.load(a_file)
-#         pretty_json = json.dumps(a_json).replace("null", '"0"')
-#         a_file.close()
-#         return HttpResponse(pretty_json, content_type='text/json')
+        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH,chrome_options=chromeOptions)
+        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
+        WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
+        data = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)    
+        df[0].to_json ('jsonfile.json', orient='records')
+        a_file = open("jsonfile.json", "r")
+        a_json = json.load(a_file)
+        pretty_json = json.dumps(a_json).replace("null", '"0"')
+        a_file.close()
+        return HttpResponse(pretty_json, content_type='text/json')
 
-# def scrape(request):
-#     if 'ticker' in request.GET and 'market' in request.GET and 'type' in request.GET:
-#         ticker_value = request.GET.get("ticker", "")
-#         market_value = request.GET.get("market", "")
-#         type_value = request.GET.get("type", "")
-#         CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-#         prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-#         chromeOptions = webdriver.ChromeOptions()
-#         chromeOptions.add_experimental_option('prefs', prefs)
-#         chromeOptions.add_argument("--disable-infobars")
-#         chromeOptions.add_argument("--start-maximized")
-#         chromeOptions.add_argument("--disable-extensions")
-#         chromeOptions.add_argument('--window-size=1920,1080')
-#         chromeOptions.add_argument("--headless")
-#         chromeOptions.add_argument('--no-sandbox')   
-#         chromeOptions.add_argument("--disable-dev-shm-usage") 
-#         # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-#         driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-#         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
-#         if type_value == "is":
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-#             sleep(5)
-#             driver.quit()
-#             with open(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls", 'rb') as file:
-#                 response = HttpResponse(file, content_type='text/csv')
-#                 response['Content-Disposition'] = 'attachment; filename=stockhistory.csv'  
-#                 return response
-#             #     df = pd.read_excel (BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
-#             #     df.replace(',','', regex=True, inplace=True)
-#             #     df.to_json ('jsonfile.json', orient='records')
-#             #     a_file = open("jsonfile.json", "r")
-#             #     a_json = json.load(a_file)
-#             #     pretty_json = json.dumps(a_json).replace("null", '"0"').replace(" ","")
-#             #     a_file.close()
-#             # return HttpResponse(pretty_json, content_type='text/json')
-#         elif type_value == "bs":
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-#             sleep(5)
-#             driver.quit()
-#             with open(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls", 'rb') as file:
-#                 response = HttpResponse(file, content_type='text/csv')
-#                 response['Content-Disposition'] = 'attachment; filename=stockhistory.csv'  
+def scrape(request):
+    if 'ticker' in request.GET and 'market' in request.GET and 'type' in request.GET:
+        ticker_value = request.GET.get("ticker", "")
+        market_value = request.GET.get("market", "")
+        type_value = request.GET.get("type", "")
+        CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+        prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+        chromeOptions = webdriver.ChromeOptions()
+        chromeOptions.add_experimental_option('prefs', prefs)
+        chromeOptions.add_argument("--disable-infobars")
+        chromeOptions.add_argument("--start-maximized")
+        chromeOptions.add_argument("--disable-extensions")
+        chromeOptions.add_argument('--window-size=1920,1080')
+        chromeOptions.add_argument("--headless")
+        chromeOptions.add_argument('--no-sandbox')   
+        chromeOptions.add_argument("--disable-dev-shm-usage") 
+        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+        if type_value == "is":
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(5)
+            driver.quit()
+            with open(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls", 'rb') as file:
+                response = HttpResponse(file, content_type='text/csv')
+                response['Content-Disposition'] = 'attachment; filename=stockhistory.csv'  
+                return response
+            #     df = pd.read_excel (BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
+            #     df.replace(',','', regex=True, inplace=True)
+            #     df.to_json ('jsonfile.json', orient='records')
+            #     a_file = open("jsonfile.json", "r")
+            #     a_json = json.load(a_file)
+            #     pretty_json = json.dumps(a_json).replace("null", '"0"').replace(" ","")
+            #     a_file.close()
+            # return HttpResponse(pretty_json, content_type='text/json')
+        elif type_value == "bs":
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(5)
+            driver.quit()
+            with open(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls", 'rb') as file:
+                response = HttpResponse(file, content_type='text/csv')
+                response['Content-Disposition'] = 'attachment; filename=stockhistory.csv'  
 
                 
-#                 return response
-#                 # df = pd.read_excel (BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
-#             #     df.replace(',','', regex=True, inplace=True)
-#             #     df.to_json ('jsonfile.json', orient='records')
-#             #     a_file = open("jsonfile.json", "r")
-#             #     a_json = json.load(a_file)
-#             #     pretty_json = json.dumps(a_json).replace("null", '"0"').replace(" ","")
-#             #     a_file.close()
-#             # return HttpResponse(pretty_json, content_type='text/json')
-#         elif type_value == "cf":
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-#             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-#             sleep(5)
-#             driver.quit()
-#         with open(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls", 'rb') as file:
-#             # df = pd.read_excel (BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
-#             # with open('BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"') as myfile:
-#             response = HttpResponse(file, content_type='text/csv')
-#             response['Content-Disposition'] = 'attachment; filename=stockhistory.csv'   
-#             return response
-#             # df.replace(',','', regex=True, inplace=True)
-#             # df.to_json ('jsonfile.json', orient='records')
-#             # a_file = open("jsonfile.json", "r")
-#             # a_json = json.load(a_file)
-#             # pretty_json = json.dumps(a_json).replace("null", '"0"').replace(" ","")
-#             # a_file.close()
-#             # return HttpResponse(pretty_json, content_type='text/json')
+                return response
+                # df = pd.read_excel (BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
+            #     df.replace(',','', regex=True, inplace=True)
+            #     df.to_json ('jsonfile.json', orient='records')
+            #     a_file = open("jsonfile.json", "r")
+            #     a_json = json.load(a_file)
+            #     pretty_json = json.dumps(a_json).replace("null", '"0"').replace(" ","")
+            #     a_file.close()
+            # return HttpResponse(pretty_json, content_type='text/json')
+        elif type_value == "cf":
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(5)
+            driver.quit()
+        with open(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls", 'rb') as file:
+            # df = pd.read_excel (BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
+            # with open('BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"') as myfile:
+            response = HttpResponse(file, content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename=stockhistory.csv'   
+            return response
+            # df.replace(',','', regex=True, inplace=True)
+            # df.to_json ('jsonfile.json', orient='records')
+            # a_file = open("jsonfile.json", "r")
+            # a_json = json.load(a_file)
+            # pretty_json = json.dumps(a_json).replace("null", '"0"').replace(" ","")
+            # a_file.close()
+            # return HttpResponse(pretty_json, content_type='text/json')
 
-#             #  dfs = (pd.read_csv(day + '.csv', error_bad_lines=False) for day in days)
-#             # pd.concat(dfs).to_csv('stock_history.csv')
+            #  dfs = (pd.read_csv(day + '.csv', error_bad_lines=False) for day in days)
+            # pd.concat(dfs).to_csv('stock_history.csv')
         
 
 
