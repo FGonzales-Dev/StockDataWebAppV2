@@ -73,14 +73,11 @@ def download(request):
 
 
 def scrape(request):
-    
     ticker_value =  request.POST.get("ticker", "")
     market_value =  request.POST.get("market", "")
     download_type = request.POST.get("download_type", "")
     task_id = request.POST.get("task_id", "")
-   
     if 'get_data' in request.POST:
-        print("============================")
         if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
             CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
             prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
@@ -161,7 +158,6 @@ def scrape(request):
             sleep(5)
             driver.quit()
             return render(request, "../templates/load_screen_all.html",{ "download_type": download_type})
-
         else:
             return render(request, "../templates/stockData.html")
     elif 'download' in request.POST:
@@ -211,7 +207,6 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "DIVIDENDS":
-            
             res = AsyncResult(task_id).get()
             df = pd.read_json(res)
             df.to_excel('dividends.xls', index=False)
@@ -219,7 +214,6 @@ def scrape(request):
                 response = HttpResponse(file, content_type='application/vnd.ms-excel')
                 response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                 return response
-           
         elif download_type == "OPERATING_PERFORMANCE":
                 with open("operating_performance.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')

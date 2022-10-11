@@ -7,16 +7,22 @@ urlpatterns = [
     path('history', views.stockhistory, name='home'),
     path('income_statement', views.stock_income_statement, name='home'),
     path('cash_flow', views.stock_cash_flow, name='home'),
-    # path('stock_history', historicalData.stock_history, name='home'),
-    
+
+
+
+    #JSON FOR GOOGLESHEET
+    path('scrape', historicalData.scrape, name='scrape'),
     path('stock_history_all', historicalData.stock_history_all, name='home'),
     path('stock_history_key_ratio', historicalData.stock_history_key_ratio, name='home'),
+
+
+
     path('stockData', scraperVersionTwo.scrape, name='stockData'),
     path('stockDataDownload', scraperVersionTwo.download, name='stockDataDownload'),
 
     path('stock_history_key_ratio_json', historicalData.stock_history_key_ratio_json, name='home'),
     ######TEST FOR JSON#######
-      path('stock_history_json', historicalData.stock_history_json, name='home'),
+    path('stock_history_json', historicalData.stock_history_json, name='home'),
     
 
       
