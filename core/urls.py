@@ -12,6 +12,9 @@ urlpatterns = [
 
     #JSON FOR GOOGLESHEET
     path('scrape', historicalData.scrape, name='scrape'),
+    path('valuation', historicalData.scrape_valuation, name='valuation'),
+    path('dividends', historicalData.scrape_dividends, name='dividends'),
+    path('performance', historicalData.scrape_operating_performance, name='performance'),
     path('stock_history_all', historicalData.stock_history_all, name='home'),
     path('stock_history_key_ratio', historicalData.stock_history_key_ratio, name='home'),
 
