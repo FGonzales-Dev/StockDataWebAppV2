@@ -28,8 +28,10 @@ def scraper(self,ticker_value,market_value,download_type):
     chromeOptions.add_argument("--disable-infobars")
     chromeOptions.add_argument("--start-maximized")
     chromeOptions.add_argument("--disable-extensions")
-    chromeOptions.add_argument('--window-size=1920,1080')
-    # chromeOptions.add_argument("--headless")
+    chromeOptions.add_argument("--headless")
+    chromeOptions.add_argument("--window-size=1920,1080")
+    chromeOptions.add_argument(
+    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
     chromeOptions.add_argument('--no-sandbox')   
     chromeOptions.add_argument("--disable-dev-shm-usage")
     # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
@@ -67,6 +69,9 @@ def scraper_operating_performance(ticker_value, market_value):
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
     chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument("--window-size=1920,1080")
+    chromeOptions.add_argument(
+    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
     chromeOptions.add_argument('--disable-setuid-sandbox')
     chromeOptions.add_argument('--remote-debugging-port=9222')
     chromeOptions.add_argument('--disable-extensions')
@@ -96,6 +101,9 @@ def scraper_dividends(ticker_value,market_value):
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
     chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument("--window-size=1920,1080")
+    chromeOptions.add_argument(
+    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
     chromeOptions.add_argument('--disable-setuid-sandbox')
     chromeOptions.add_argument('--remote-debugging-port=9222')
     chromeOptions.add_argument('--disable-extensions')
@@ -115,11 +123,15 @@ def scraper_dividends(ticker_value,market_value):
 
 @shared_task()
 def scraper_valuation(ticker_value,market_value,download_type):
+    print("scraper_valuation is called")  
     CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
     prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
     chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument("--window-size=1920,1080")
+    chromeOptions.add_argument(
+    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
     chromeOptions.add_argument('--disable-setuid-sandbox')
     chromeOptions.add_argument('--remote-debugging-port=9222')
     chromeOptions.add_argument('--disable-extensions')
@@ -135,7 +147,8 @@ def scraper_valuation(ticker_value,market_value,download_type):
         valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)    
+        df  = pd.read_html(data) 
+        print(df[0])   
         df[0].to_json ('valuation_cash_flow.json', orient='records')
         a_file = open("valuation_cash_flow.json", "r")
         a_json = json.load(a_file)
@@ -177,7 +190,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
         df  = pd.read_html(data)    
-        df[0].to_json ('valuation_operating_efficiency.json', orient='records')
+        df[0].to_json('valuation_operating_efficiency.json', orient='records')
         a_file = open("valuation_operating_efficiency.json", "r")
         a_json = json.load(a_file)
         pd.read_json("valuation_operating_efficiency.json").to_excel('valuation_operating_efficiency.xls',index=False)
