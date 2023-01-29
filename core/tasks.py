@@ -79,11 +79,9 @@ def scraper_operating_performance(ticker_value, market_value):
     df[0].to_json ('operating_performance.json', orient='records')
     a_file = open("operating_performance.json", "r")
     a_file.close()
-    df = pd.read_json("operating_performance.json")
-    writer = pd.ExcelWriter("operating_performance.xls", engine = 'xlsxwriter')
-    df.to_excel(writer, sheet_name = 'Operating Performance', index=False)
-    writer.save()
-    writer.close()
+    for f in glob.iglob(BASE_DIR+'operating_performance.xls', recursive=True):
+        os.remove(f)
+    pd.read_json("operating_performance.json").to_excel('operating_performance.xls',index=False)
     sleep(5)
     driver_operating_perfomance.quit()
     return 'DONE'
