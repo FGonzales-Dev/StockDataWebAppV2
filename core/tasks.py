@@ -15,6 +15,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import pandas as pd
 from time import sleep
+import glob
 
 
 
@@ -48,8 +49,6 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
         WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
         data = WebDriverWait(driver, 100).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='tg-mbg tg-3646 tg-mds']"))).get_attribute("outerHTML")
-        # df  = pd.read_html(data)   
-        # out = df[0].to_json(orient='records') 
         sleep(10)
         driver.quit()
         return str(data)
@@ -57,7 +56,6 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-       
         sleep(10)
         driver.quit()
         return 'DONE'
@@ -88,6 +86,8 @@ def scraper_operating_performance(ticker_value, market_value):
     df[0].to_json ('operating_performance.json', orient='records')
     a_file = open("operating_performance.json", "r")
     a_file.close()
+    for f in glob.iglob(BASE_DIR+'operating_performance.xls', recursive=True):
+        os.remove(f)
     pd.read_json("operating_performance.json").to_excel('operating_performance.xls',index=False)
     sleep(5)
     driver_operating_perfomance.quit()
@@ -123,7 +123,6 @@ def scraper_dividends(ticker_value,market_value):
 
 @shared_task()
 def scraper_valuation(ticker_value,market_value,download_type):
-    print("scraper_valuation is called")  
     CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
     prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
     chromeOptions = webdriver.ChromeOptions()
@@ -139,7 +138,6 @@ def scraper_valuation(ticker_value,market_value,download_type):
     chromeOptions.add_argument('--disable-gpu')
     chromeOptions.add_argument('--no-sandbox')
     chromeOptions.add_argument('--disable-dev-shm-usage')
-
     # valuation_driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
     valuation_driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
     valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
@@ -153,6 +151,8 @@ def scraper_valuation(ticker_value,market_value,download_type):
         a_file = open("valuation_cash_flow.json", "r")
         a_json = json.load(a_file)
         a_file.close()
+        for f in glob.iglob(BASE_DIR+'valuation_cash_flow.xls', recursive=True):
+            os.remove(f)
         pd.read_json("valuation_cash_flow.json").to_excel('valuation_cash_flow.xls',index=False)
         sleep(5)
         valuation_driver.quit()   
@@ -166,6 +166,8 @@ def scraper_valuation(ticker_value,market_value,download_type):
         a_file = open("valuation_growth.json", "r")
         a_json = json.load(a_file)
         a_file.close()
+        for f in glob.iglob(BASE_DIR+'valuation_growth.xls', recursive=True):
+            os.remove(f)
         pd.read_json("valuation_growth.json").to_excel('valuation_growth.xls',index=False)
         sleep(5)
         valuation_driver.quit() 
@@ -181,6 +183,8 @@ def scraper_valuation(ticker_value,market_value,download_type):
         a_file = open("valuation_financial_health.json", "r")
         a_json = json.load(a_file)
         a_file.close()
+        for f in glob.iglob(BASE_DIR+'valuation_financial_health.xls', recursive=True):
+            os.remove(f)
         pd.read_json("valuation_financial_health.json").to_excel('valuation_financial_health.xls',index=False)
         sleep(5)
         valuation_driver.quit()  
@@ -193,6 +197,8 @@ def scraper_valuation(ticker_value,market_value,download_type):
         df[0].to_json('valuation_operating_efficiency.json', orient='records')
         a_file = open("valuation_operating_efficiency.json", "r")
         a_json = json.load(a_file)
+        for f in glob.iglob(BASE_DIR+'valuation_operating_efficiency.xls', recursive=True):
+            os.remove(f)
         pd.read_json("valuation_operating_efficiency.json").to_excel('valuation_operating_efficiency.xls',index=False)
         a_file.close()
         sleep(5)

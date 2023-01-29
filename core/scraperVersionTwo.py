@@ -87,7 +87,7 @@ def scrape(request):
             chromeOptions.add_argument("--start-maximized")
             chromeOptions.add_argument("--disable-extensions")
             chromeOptions.add_argument('--window-size=1920,1080')
-            # chromeOptions.add_argument("--headless")
+            chromeOptions.add_argument("--headless")
             chromeOptions.add_argument('--no-sandbox')   
             chromeOptions.add_argument("--disable-dev-shm-usage")
             # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
@@ -128,7 +128,6 @@ def scrape(request):
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "OPERATING_PERFORMANCE":
             task =scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
-          
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
             CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
@@ -220,25 +219,21 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "VALUATION_CASH_FLOW":
-                pd.read_excel("valuation_cash_flow.xls")
                 with open("valuation_cash_flow.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "VALUATION_GROWTH":
-                pd.read_excel("valuation_growth.xls")
                 with open("valuation_growth.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "VALUATION_FINANCIAL_HEALTH":
-                pd.read_excel("valuation_financial_health.xls")
                 with open("valuation_financial_health.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "VALUATION_OPERATING_EFFICIENCY":
-                pd.read_excel("valuation_operating_efficiency.xls")
                 with open("valuation_operating_efficiency.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
@@ -255,7 +250,6 @@ def scrape(request):
                         df = pd.DataFrame(data=jsont)
                         df.to_excel('balance_sheet.xls',index=False)
                         df1 = pd.read_excel('balance_sheet.xls')
-            
             data_xls = pd.read_excel(BASE_DIR + "/Cash Flow_Annual_As Originally Reported.xls")
             data_xls.to_json('cash_flow_test.json')
             with open('cash_flow_test.json', 'r') as file:
@@ -278,23 +272,23 @@ def scrape(request):
                         df = pd.DataFrame(data=jsont)
                         df.to_excel('income_statement.xls',index=False)
                         df3 = pd.read_excel('income_statement.xls')
-            df4 = pd.read_excel("dividends.xls")
-            df5 = pd.read_excel("valuation_cash_flow.xls")
-            df6 = pd.read_excel("valuation_growth.xls")
-            df7 = pd.read_excel("valuation_financial_health.xls")
-            df8 = pd.read_excel("valuation_operating_efficiency.xls")
-            df9 = pd.read_excel("operating_performance.xls")
+            df4 = pd.read_excel("dividends.xls", index_col=0)
+            df5 = pd.read_excel("valuation_cash_flow.xls", index_col=0)
+            df6 = pd.read_excel("valuation_growth.xls", index_col=0)
+            df7 = pd.read_excel("valuation_financial_health.xls", index_col=0)
+            df8 = pd.read_excel("valuation_operating_efficiency.xls", index_col=0)
+            df9 = pd.read_excel("operating_performance.xls", index_col=0)
             
             writer = pd.ExcelWriter("all.xls", engine = 'xlsxwriter')
-            df1.to_excel(writer, sheet_name = 'BALANCE SHEET', index=False)
-            df2.to_excel(writer, sheet_name = 'CASH FLOW', index=False)
-            df3.to_excel(writer, sheet_name = 'INCOME STATEMENT', index=False)
-            df5.to_excel(writer, sheet_name = 'VALUATION CASH FLOW', index=False)
-            df6.to_excel(writer, sheet_name = 'VALUATION GROWTH', index=False)
-            df7.to_excel(writer, sheet_name = 'VALUATION FINANCIAL HEALTH', index=False)
-            df8.to_excel(writer, sheet_name = 'VALUATION OPERATING EFFICIENCY', index=False)
-            df4.to_excel(writer, sheet_name = 'DIVIDENDS', index=False)
-            df9.to_excel(writer,sheet_name="OPERATING PERFORMANCE", index=False)
+            df1.to_excel(writer, sheet_name = 'Balance Sheet', index=False)
+            df2.to_excel(writer, sheet_name = 'Cash Flow', index=False)
+            df3.to_excel(writer, sheet_name = 'Income Statement', index=False)
+            df5.to_excel(writer, sheet_name = 'Valuation Cash Flow', index=False)
+            df6.to_excel(writer, sheet_name = 'Valuation Growth', index=False)
+            df7.to_excel(writer, sheet_name = 'Valuation Financial Health', index=False)
+            df8.to_excel(writer, sheet_name = 'Valuation Operating Efficiency', index=False)
+            df4.to_excel(writer, sheet_name = 'Dividends', index=False)
+            df9.to_excel(writer,sheet_name="Operating Performance", index=False)
             writer.save()
             writer.close()
             
