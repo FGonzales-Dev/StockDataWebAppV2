@@ -148,15 +148,6 @@ def scraper_valuation(ticker_value,market_value,download_type):
         df  = pd.read_html(data) 
         print(df[0])   
         df[0].to_json ('valuation_cash_flow.json', orient='records')
-        with open('valuation_cash_flow.json', 'r') as file:
-            content = file.read()
-            clean = content.replace(' ','')  # cleanup here
-            json_data = json.loads(clean)
-            print(json_data) 
-            file = json.dumps(json_data)
-            jsont = json.loads(file)
-            df = pd.DataFrame(data=jsont)
-            df.to_excel('valuation_cash_flow.xls',index=False)
         sleep(10)
         valuation_driver.quit()   
         return 'DONE' 
