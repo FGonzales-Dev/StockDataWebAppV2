@@ -214,6 +214,7 @@ def scrape(request):
                 response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                 return response
         elif download_type == "OPERATING_PERFORMANCE":
+                
                 with open("operating_performance.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
@@ -227,11 +228,9 @@ def scrape(request):
                     file = json.dumps(json_data)
                     jsont = json.loads(file)
                     df = pd.DataFrame(data=jsont)
-                    df.to_excel('valuation_cash_flow.xls',index=False)
-                with open("valuation_cash_flow.xls", 'rb') as file:
-                        response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
-                        return response
+                    response = HttpResponse(file, content_type='application/vnd.ms-excel')
+                    response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                    return response       
         elif download_type == "VALUATION_GROWTH":
                 with open("valuation_growth.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
