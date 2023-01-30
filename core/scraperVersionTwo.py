@@ -79,43 +79,6 @@ def scrape(request):
     task_id = request.POST.get("task_id", "")
     if 'get_data' in request.POST:
         if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
-            CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-            prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-            chromeOptions = webdriver.ChromeOptions()
-            chromeOptions.add_experimental_option('prefs', prefs)
-            chromeOptions.add_argument("--disable-infobars")
-            chromeOptions.add_argument("--start-maximized")
-            chromeOptions.add_argument("--disable-extensions")
-            chromeOptions.add_argument('--window-size=1920,1080')
-            chromeOptions.add_argument("--headless")
-            chromeOptions.add_argument('--no-sandbox')   
-            chromeOptions.add_argument("--disable-dev-shm-usage")
-            # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-            driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
-            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
-            if download_type == "INCOME_STATEMENT":
-                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
-                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-                sleep(10)
-                driver.quit()
-                return 'DONE'
-            elif download_type == "BALANCE_SHEET":
-                WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
-                WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-                sleep(10)
-                driver.quit()
-                return 'DONE'
-            elif download_type == "CASH_FLOW":
-                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-                WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-                sleep(10)
-                driver.quit()
-                return 'DONE'
-             
-       
             task = scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "VALUATION_CASH_FLOW" or download_type == "VALUATION_GROWTH" or download_type == "VALUATION_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
@@ -214,23 +177,15 @@ def scrape(request):
                 response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                 return response
         elif download_type == "OPERATING_PERFORMANCE":
-                
                 with open("operating_performance.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "VALUATION_CASH_FLOW":
-                with open('valuation_cash_flow.json', 'r') as file:
-                    content = file.read()
-                    clean = content.replace(' ','')  # cleanup here
-                    json_data = json.loads(clean)
-                    print(json_data) 
-                    file = json.dumps(json_data)
-                    jsont = json.loads(file)
-                    df = pd.DataFrame(data=jsont)
-                    response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                    response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
-                    return response       
+                with open("valuation_cash_flow.xls", 'rb') as file:
+                        response = HttpResponse(file, content_type='application/vnd.ms-excel')
+                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                        return response
         elif download_type == "VALUATION_GROWTH":
                 with open("valuation_growth.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
