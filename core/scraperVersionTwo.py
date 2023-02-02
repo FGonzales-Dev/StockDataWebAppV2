@@ -145,46 +145,19 @@ def scrape(request):
             return render(request, "../templates/stockData.html")
     elif 'download' in request.POST:
         if download_type == "INCOME_STATEMENT": 
-            data_xls = pd.read_excel(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
-            data_xls.to_json('income_statement_test.json')
-            with open('income_statement_test.json', 'r') as file:
-                        content = file.read()
-                        clean = content.replace(' ','')  # cleanup here
-                        json_data = json.loads(clean)
-                        file = json.dumps(json_data)
-                        jsont = json.loads(file)
-                        df = pd.DataFrame(data=jsont)
-                        df.to_excel('income_statement.xls',index=False)
+            storage.child("income_statement.xls").download(BASE_DIR, filename="income_statement.xls")
             with open("income_statement.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'  
                         return response
         elif download_type == "BALANCE_SHEET":
-                data_xls = pd.read_excel(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
-                data_xls.to_json('balance_sheet_test.json')
-                with open('balance_sheet_test.json', 'r') as file:
-                        content = file.read()
-                        clean = content.replace(' ','')  # cleanup here
-                        json_data = json.loads(clean)
-                        file = json.dumps(json_data)
-                        jsont = json.loads(file)
-                        df = pd.DataFrame(data=jsont)
-                        df.to_excel('balance_sheet.xls',index=False)       
+                storage.child("balance_sheet.xls").download(BASE_DIR, filename="balance_sheet.xls")    
                 with open("balance_sheet.xls", 'rb') as file:
                     response = HttpResponse(file, content_type='application/vnd.ms-excel')
                     response['Content-Disposition'] = 'attachment; filename=stockData.xls'  
                     return response
         elif download_type == "CASH_FLOW":
-                data_xls = pd.read_excel(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
-                data_xls.to_json('cash_flow_test.json')
-                with open('cash_flow_test.json', 'r') as file:
-                        content = file.read()
-                        clean = content.replace(' ','')  # cleanup here
-                        json_data = json.loads(clean)
-                        file = json.dumps(json_data)
-                        jsont = json.loads(file)
-                        df = pd.DataFrame(data=jsont)
-                        df.to_excel('cash_flow.xls',index=False)          
+                storage.child("cash_flow.xls").download(BASE_DIR, filename="cash_flow.xls")
                 with open("cash_flow.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
