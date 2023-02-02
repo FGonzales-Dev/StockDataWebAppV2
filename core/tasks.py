@@ -17,7 +17,28 @@ import pandas as pd
 from time import sleep
 import glob
 
+import pyrebase
+import os
 
+config = {
+    "apiKey": "AIzaSyD7fxurFiXK0agVyqr1wnfhnymIRCRiPXY",
+    "authDomain": "scraper-b0a07.firebaseapp.com",
+    "projectId": "scraper-b0a07",
+    "storageBucket": "scraper-b0a07.appspot.com",
+    "messagingSenderId": "1066439876574",
+    "appId": "1:1066439876574:web:d0d4366594823a2d7f874f",
+    "measurementId": "G-TJTZ8ZT9CW",
+    "databaseURL": "https://scraper-b0a07-default-rtdb.asia-southeast1.firebasedatabase.app"
+
+}
+
+firebase = pyrebase.initialize_app(config)
+storage = firebase.storage()
+database =firebase.database()
+
+def format_dict(d):
+    vals = list(d.values())
+    return "={},".join(d.keys()).format(*vals) + "={}".format(vals[-1])
 
 
 @shared_task(bind=True)
@@ -138,8 +159,8 @@ def scraper_valuation(ticker_value,market_value,download_type):
     chromeOptions.add_argument('--disable-gpu')
     chromeOptions.add_argument('--no-sandbox')
     chromeOptions.add_argument('--disable-dev-shm-usage')
-    valuation_driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    # valuation_driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
+    # valuation_driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+    valuation_driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
     valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
     if download_type == "VALUATION_CASH_FLOW": 
         valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
@@ -158,12 +179,10 @@ def scraper_valuation(ticker_value,market_value,download_type):
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
         df  = pd.read_html(data)    
-        df[0].to_json ('valuation_growth.json', orient='records')
+        df[0].to_json('valuation_growth.json', orient='records')
         a_file = open("valuation_growth.json", "r")
         a_json = json.load(a_file)
         a_file.close()
-        for f in glob.iglob(BASE_DIR+'valuation_growth.xls', recursive=True):
-            os.remove(f)
         pd.read_json("valuation_growth.json").to_excel('valuation_growth.xls',index=False)
         sleep(5)
         valuation_driver.quit() 
@@ -175,13 +194,9 @@ def scraper_valuation(ticker_value,market_value,download_type):
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
         df  = pd.read_html(data)    
-        df[0].to_json ('valuation_financial_health.json', orient='records')
-        a_file = open("valuation_financial_health.json", "r")
-        a_json = json.load(a_file)
-        a_file.close()
-        for f in glob.iglob(BASE_DIR+'valuation_financial_health.xls', recursive=True):
-            os.remove(f)
-        pd.read_json("valuation_financial_health.json").to_excel('valuation_financial_health.xls',index=False)
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("data").set({"valuation_financial_health": data1 })
         sleep(5)
         valuation_driver.quit()  
         return 'DONE'    
@@ -189,7 +204,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
     elif download_type == "VALUATION_OPERATING_EFFICIENCY":
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)    
+        df  = pd.read_html(data)
         df[0].to_json('valuation_operating_efficiency.json', orient='records')
         a_file = open("valuation_operating_efficiency.json", "r")
         a_json = json.load(a_file)

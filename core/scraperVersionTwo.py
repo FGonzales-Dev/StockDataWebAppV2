@@ -15,7 +15,7 @@ from pathlib import Path
 import shutil
 from bs4 import BeautifulSoup
 import string
-
+import io
 from time import sleep
 from email import header
 from core.forms import getDataForm
@@ -50,7 +50,28 @@ from .models import APIRequest
 from register.models import Profile
 from django.contrib.auth.models import User
 from .tasks import *
+import ast
 from celery.result import AsyncResult
+
+
+import pyrebase
+import os
+
+config = {
+    "apiKey": "AIzaSyD7fxurFiXK0agVyqr1wnfhnymIRCRiPXY",
+    "authDomain": "scraper-b0a07.firebaseapp.com",
+    "projectId": "scraper-b0a07",
+    "storageBucket": "scraper-b0a07.appspot.com",
+    "messagingSenderId": "1066439876574",
+    "appId": "1:1066439876574:web:d0d4366594823a2d7f874f",
+    "measurementId": "G-TJTZ8ZT9CW",
+    "databaseURL": "https://scraper-b0a07-default-rtdb.asia-southeast1.firebasedatabase.app"
+
+}
+
+firebase = pyrebase.initialize_app(config)
+storage = firebase.storage()
+database =firebase.database()
 
 
 def get_task_info(request):
@@ -192,10 +213,14 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "VALUATION_FINANCIAL_HEALTH":
-                with open("valuation_financial_health.xls", 'rb') as file:
-                        response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
-                        return response
+                valuation_financial_health_data = database.child('data').child('valuation_financial_health').get().val()
+                valuation_financial_health_data = json.loads(valuation_financial_health_data)
+                print(valuation_financial_health_data)
+                df = pd.DataFrame(valuation_financial_health_data).to_excel("excel.xlsx")
+                with open("excel.xlsx", 'rb') as file:
+                    response = HttpResponse(file, content_type='application/vnd.ms-excel')
+                    response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                    return response
         elif download_type == "VALUATION_OPERATING_EFFICIENCY":
                 with open("valuation_operating_efficiency.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
