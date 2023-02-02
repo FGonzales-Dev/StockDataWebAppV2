@@ -190,7 +190,7 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "DIVIDENDS":
-            dividends_data = database.child('data').child('dividends').get().val()
+            dividends_data = database.child('dividends').child('dividends').get().val()
             dividends_data = json.loads(dividends_data)
             print(dividends_data)
             df = pd.DataFrame(dividends_data).to_excel("dividends_data.xlsx")
@@ -199,7 +199,7 @@ def scrape(request):
                 response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                 return response
         elif download_type == "OPERATING_PERFORMANCE":
-                operating_performance_data = database.child('data').child('operating_performance').get().val()
+                operating_performance_data = database.child('operating_performance').child('operating_performance').get().val()
                 operating_performance_data = json.loads(operating_performance_data)
                 print(operating_performance_data)
                 df = pd.DataFrame(operating_performance_data).to_excel("operating_performance.xlsx")
@@ -208,7 +208,7 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "VALUATION_CASH_FLOW":
-                valuation_cash_flow_data = database.child('data').child('valuation_cash_flow').get().val()
+                valuation_cash_flow_data = database.child('valuation_cash_flow').child('valuation_cash_flow').get().val()
                 valuation_cash_flow_data = json.loads(valuation_cash_flow_data)
                 print(valuation_cash_flow_data)
                 df = pd.DataFrame(valuation_cash_flow_data).to_excel("valuation_cash_flow.xlsx")
@@ -217,7 +217,7 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "VALUATION_GROWTH":
-                valuation_growth_data = database.child('data').child('valuation_growth').get().val()
+                valuation_growth_data = database.child('valuation_growth').child('valuation_growth').get().val()
                 valuation_growth_data = json.loads(valuation_growth_data)
                 print(valuation_growth_data)
                 df = pd.DataFrame(valuation_growth_data).to_excel("valuation_growth.xlsx")
@@ -226,7 +226,7 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "VALUATION_FINANCIAL_HEALTH":
-                valuation_financial_health_data = database.child('data').child('valuation_financial_health').get().val()
+                valuation_financial_health_data = database.child('valuation_financial_health').child('valuation_financial_health').get().val()
                 valuation_financial_health_data = json.loads(valuation_financial_health_data)
                 print(valuation_financial_health_data)
                 df = pd.DataFrame(valuation_financial_health_data).to_excel("valuation_financial_health.xlsx")
@@ -235,7 +235,7 @@ def scrape(request):
                     response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                     return response
         elif download_type == "VALUATION_OPERATING_EFFICIENCY":
-                valuation_operating_efficiency_data = database.child('data').child('valuation_operating_efficiency').get().val()
+                valuation_operating_efficiency_data = database.child('valuation_operating_efficiency').child('valuation_operating_efficiency').get().val()
                 valuation_operating_efficiency_data = json.loads(valuation_operating_efficiency_data)
                 print(valuation_operating_efficiency_data)
                 df = pd.DataFrame(valuation_operating_efficiency_data).to_excel("valuation_operating_efficiency.xlsx")

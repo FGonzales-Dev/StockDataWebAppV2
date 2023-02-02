@@ -106,7 +106,7 @@ def scraper_operating_performance(ticker_value, market_value):
     df  = pd.read_html(data)    
     data1 = df[0].to_json()
     print(data1)
-    database.child("data").set({"operating_performance": data1 })
+    database.child("operating_performance").set({"operating_performance": data1 })
     sleep(5)
     sleep(5)
     driver_operating_perfomance.quit()
@@ -137,7 +137,7 @@ def scraper_dividends(ticker_value,market_value):
     df  = pd.read_html(data)   
     data1 = df[0].to_json()
     print(data1)
-    database.child("data").set({"dividends": data1 })
+    database.child("dividends").set({"dividends": data1 })
     sleep(10)
     driver_dividends.quit()
     return 'DONE'
@@ -169,7 +169,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         df  = pd.read_html(data) 
         data1 = df[0].to_json()
         print(data1)
-        database.child("data").set({"valuation_cash_flow": data1 })
+        database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
         sleep(5)
         valuation_driver.quit()   
         return 'DONE' 
@@ -182,7 +182,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         df  = pd.read_html(data)    
         data1 = df[0].to_json()
         print(data1)
-        database.child("data").set({"valuation_growth": data1 })
+        database.child("valuation_growth").set({"valuation_growth": data1 })
         sleep(5)
         valuation_driver.quit() 
         return 'DONE'      
@@ -195,7 +195,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         df  = pd.read_html(data)    
         data1 = df[0].to_json()
         print(data1)
-        database.child("data").set({"valuation_financial_health": data1 })
+        database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
         sleep(5)
         valuation_driver.quit()  
         return 'DONE'    
@@ -206,7 +206,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         df  = pd.read_html(data)
         data1 = df[0].to_json()
         print(data1)
-        database.child("data").set({"valuation_operating_efficiency": data1 })
+        database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
         sleep(5)
         valuation_driver.quit()      
 
