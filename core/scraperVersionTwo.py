@@ -160,7 +160,7 @@ def scrape(request):
                 storage.child("cash_flow.xls").download(BASE_DIR, filename="cash_flow.xls")
                 with open("cash_flow.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
+                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
                         return response
         elif download_type == "DIVIDENDS":
             dividends_data = database.child('dividends').child('dividends').get().val()
