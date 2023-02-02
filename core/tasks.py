@@ -63,6 +63,8 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+        fileName = BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls"
+        storage.child("income_statement.xls").put(fileName)
         sleep(10)
         driver.quit()
         return 'DONE'
@@ -167,6 +169,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
         df  = pd.read_html(data) 
+        print(data)
         data1 = df[0].to_json()
         print(data1)
         database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
