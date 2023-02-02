@@ -111,7 +111,7 @@ def scrape(request):
             print(dividends_task_id)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "OPERATING_PERFORMANCE":
-            task =scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
+            task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
             CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
@@ -140,12 +140,15 @@ def scrape(request):
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
             sleep(5)
             driver.quit()
+            # scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
+            scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/load_screen_all.html",{ "download_type": download_type})
         else:
             return render(request, "../templates/stockData.html")
     elif 'download' in request.POST:
         if download_type == "INCOME_STATEMENT": 
             storage.child("income_statement.xls").download(BASE_DIR, filename="income_statement.xls")
+            
             with open("income_statement.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xls'  
@@ -166,7 +169,7 @@ def scrape(request):
             dividends_data = database.child('dividends').child('dividends').get().val()
             dividends_data = json.loads(dividends_data)
             print(dividends_data)
-            df = pd.DataFrame(dividends_data).to_excel("dividends_data.xlsx")
+            df = pd.DataFrame(dividends_data).to_excel("dividends_data.xlsx", index=False)
             with open("dividends_data.xlsx", 'rb') as file:
                 response = HttpResponse(file, content_type='application/vnd.ms-excel')
                 response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
@@ -175,7 +178,7 @@ def scrape(request):
                 operating_performance_data = database.child('operating_performance').child('operating_performance').get().val()
                 operating_performance_data = json.loads(operating_performance_data)
                 print(operating_performance_data)
-                df = pd.DataFrame(operating_performance_data).to_excel("operating_performance.xlsx")
+                df = pd.DataFrame(operating_performance_data).to_excel("operating_performance.xlsx", index=False)
                 with open("operating_performance.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
@@ -184,7 +187,7 @@ def scrape(request):
                 valuation_cash_flow_data = database.child('valuation_cash_flow').child('valuation_cash_flow').get().val()
                 valuation_cash_flow_data = json.loads(valuation_cash_flow_data)
                 print(valuation_cash_flow_data)
-                df = pd.DataFrame(valuation_cash_flow_data).to_excel("valuation_cash_flow.xlsx")
+                df = pd.DataFrame(valuation_cash_flow_data).to_excel("valuation_cash_flow.xlsx", index=False)
                 with open("valuation_cash_flow.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
@@ -193,7 +196,7 @@ def scrape(request):
                 valuation_growth_data = database.child('valuation_growth').child('valuation_growth').get().val()
                 valuation_growth_data = json.loads(valuation_growth_data)
                 print(valuation_growth_data)
-                df = pd.DataFrame(valuation_growth_data).to_excel("valuation_growth.xlsx")
+                df = pd.DataFrame(valuation_growth_data).to_excel("valuation_growth.xlsx", index=False)
                 with open("valuation_growth.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
@@ -202,7 +205,7 @@ def scrape(request):
                 valuation_financial_health_data = database.child('valuation_financial_health').child('valuation_financial_health').get().val()
                 valuation_financial_health_data = json.loads(valuation_financial_health_data)
                 print(valuation_financial_health_data)
-                df = pd.DataFrame(valuation_financial_health_data).to_excel("valuation_financial_health.xlsx")
+                df = pd.DataFrame(valuation_financial_health_data).to_excel("valuation_financial_health.xlsx", index=False)
                 with open("valuation_financial_health.xlsx", 'rb') as file:
                     response = HttpResponse(file, content_type='application/vnd.ms-excel')
                     response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
@@ -211,7 +214,7 @@ def scrape(request):
                 valuation_operating_efficiency_data = database.child('valuation_operating_efficiency').child('valuation_operating_efficiency').get().val()
                 valuation_operating_efficiency_data = json.loads(valuation_operating_efficiency_data)
                 print(valuation_operating_efficiency_data)
-                df = pd.DataFrame(valuation_operating_efficiency_data).to_excel("valuation_operating_efficiency.xlsx")
+                df = pd.DataFrame(valuation_operating_efficiency_data).to_excel("valuation_operating_efficiency.xlsx", index=False)
                 with open("valuation_operating_efficiency.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
@@ -250,22 +253,38 @@ def scrape(request):
                         df = pd.DataFrame(data=jsont)
                         df.to_excel('income_statement.xls',index=False)
                         df3 = pd.read_excel('income_statement.xls')
-            df4 = pd.read_excel("dividends.xls", index_col=0)
-            df5 = pd.read_excel("valuation_cash_flow.xls", index_col=0)
-            df6 = pd.read_excel("valuation_growth.xls", index_col=0)
-            df7 = pd.read_excel("valuation_financial_health.xls", index_col=0)
-            df8 = pd.read_excel("valuation_operating_efficiency.xls", index_col=0)
-            df9 = pd.read_excel("operating_performance.xls", index_col=0)
+            
+
+
+            #DIVIDENDS
+            dividends_data = database.child('dividends').child('dividends').get().val()
+            dividends_data = json.loads(dividends_data)
+            print(dividends_data)
+            df4 = pd.DataFrame(dividends_data).to_excel("dividends_data.xlsx", index=False)
+            df4 = pd.read_excel('dividends_data.xls')
+           
+           # OPERATING PERFORMANCE
+            operating_performance_data = database.child('operating_performance').child('operating_performance').get().val()
+            operating_performance_data = json.loads(operating_performance_data)
+            print(operating_performance_data)
+            df9 = pd.DataFrame(operating_performance_data).to_excel("operating_performance.xlsx", index=False)
+            df9 = pd.read_excel('operating_performance.xls')
+            
+
+            # df6 = pd.read_excel("valuation_growth.xls", index_col=0)
+            # df7 = pd.read_excel("valuation_financial_health.xls", index_col=0)
+            # df8 = pd.read_excel("valuation_operating_efficiency.xls", index_col=0)
+            # df9 = pd.read_excel("operating_performance.xls", index_col=0)
             
             writer = pd.ExcelWriter("all.xls", engine = 'xlsxwriter')
             df1.to_excel(writer, sheet_name = 'Balance Sheet', index=False)
             df2.to_excel(writer, sheet_name = 'Cash Flow', index=False)
             df3.to_excel(writer, sheet_name = 'Income Statement', index=False)
-            df5.to_excel(writer, sheet_name = 'Valuation Cash Flow', index=False)
-            df6.to_excel(writer, sheet_name = 'Valuation Growth', index=False)
-            df7.to_excel(writer, sheet_name = 'Valuation Financial Health', index=False)
-            df8.to_excel(writer, sheet_name = 'Valuation Operating Efficiency', index=False)
-            df4.to_excel(writer, sheet_name = 'Dividends', index=False)
+            # df5.to_excel(writer, sheet_name = 'Valuation Cash Flow', index=False)
+            # df6.to_excel(writer, sheet_name = 'Valuation Growth', index=False)
+            # df7.to_excel(writer, sheet_name = 'Valuation Financial Health', index=False)
+            # df8.to_excel(writer, sheet_name = 'Valuation Operating Efficiency', index=False)
+            # df4.to_excel(writer, sheet_name = 'Dividends', index=False)
             df9.to_excel(writer,sheet_name="Operating Performance", index=False)
             writer.save()
             writer.close()
@@ -280,3 +299,6 @@ def scrape(request):
 
     else:
         return render(request, "../templates/stockData.html")
+
+
+
