@@ -187,44 +187,61 @@ def scrape(request):
                         df.to_excel('cash_flow.xls',index=False)          
                 with open("cash_flow.xls", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                        response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "DIVIDENDS":
-            res = AsyncResult(task_id).get()
-            df = pd.read_json(res)
-            df.to_excel('dividends.xls', index=False)
-            with open("dividends.xls", 'rb') as file:
+            dividends_data = database.child('data').child('dividends').get().val()
+            dividends_data = json.loads(dividends_data)
+            print(dividends_data)
+            df = pd.DataFrame(dividends_data).to_excel("dividends_data.xlsx")
+            with open("dividends_data.xlsx", 'rb') as file:
                 response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                 return response
         elif download_type == "OPERATING_PERFORMANCE":
-                with open("operating_performance.xls", 'rb') as file:
+                operating_performance_data = database.child('data').child('operating_performance').get().val()
+                operating_performance_data = json.loads(operating_performance_data)
+                print(operating_performance_data)
+                df = pd.DataFrame(operating_performance_data).to_excel("operating_performance.xlsx")
+                with open("operating_performance.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                        response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "VALUATION_CASH_FLOW":
-                with open("valuation_cash_flow.xls", 'rb') as file:
+                valuation_cash_flow_data = database.child('data').child('valuation_cash_flow').get().val()
+                valuation_cash_flow_data = json.loads(valuation_cash_flow_data)
+                print(valuation_cash_flow_data)
+                df = pd.DataFrame(valuation_cash_flow_data).to_excel("valuation_cash_flow.xlsx")
+                with open("valuation_cash_flow.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                        response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "VALUATION_GROWTH":
-                with open("valuation_growth.xls", 'rb') as file:
+                valuation_growth_data = database.child('data').child('valuation_growth').get().val()
+                valuation_growth_data = json.loads(valuation_growth_data)
+                print(valuation_growth_data)
+                df = pd.DataFrame(valuation_growth_data).to_excel("valuation_growth.xlsx")
+                with open("valuation_growth.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                        response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "VALUATION_FINANCIAL_HEALTH":
                 valuation_financial_health_data = database.child('data').child('valuation_financial_health').get().val()
                 valuation_financial_health_data = json.loads(valuation_financial_health_data)
                 print(valuation_financial_health_data)
-                df = pd.DataFrame(valuation_financial_health_data).to_excel("excel.xlsx")
-                with open("excel.xlsx", 'rb') as file:
+                df = pd.DataFrame(valuation_financial_health_data).to_excel("valuation_financial_health.xlsx")
+                with open("valuation_financial_health.xlsx", 'rb') as file:
                     response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                    response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                    response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                     return response
         elif download_type == "VALUATION_OPERATING_EFFICIENCY":
-                with open("valuation_operating_efficiency.xls", 'rb') as file:
+                valuation_operating_efficiency_data = database.child('data').child('valuation_operating_efficiency').get().val()
+                valuation_operating_efficiency_data = json.loads(valuation_operating_efficiency_data)
+                print(valuation_operating_efficiency_data)
+                df = pd.DataFrame(valuation_operating_efficiency_data).to_excel("valuation_operating_efficiency.xlsx")
+                with open("valuation_operating_efficiency.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                        response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "ALL":
             data_xls = pd.read_excel(BASE_DIR + "/Balance Sheet_Annual_As Originally Reported.xls")

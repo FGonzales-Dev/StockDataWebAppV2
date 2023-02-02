@@ -104,12 +104,10 @@ def scraper_operating_performance(ticker_value, market_value):
     data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
     data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
     df  = pd.read_html(data)    
-    df[0].to_json ('operating_performance.json', orient='records')
-    a_file = open("operating_performance.json", "r")
-    a_file.close()
-    for f in glob.iglob(BASE_DIR+'operating_performance.xls', recursive=True):
-        os.remove(f)
-    pd.read_json("operating_performance.json").to_excel('operating_performance.xls',index=False)
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("data").set({"operating_performance": data1 })
+    sleep(5)
     sleep(5)
     driver_operating_perfomance.quit()
     return 'DONE'
@@ -137,10 +135,12 @@ def scraper_dividends(ticker_value,market_value):
     driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
     data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
     df  = pd.read_html(data)   
-    out = df[0].to_json(orient='records') 
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("data").set({"dividends": data1 })
     sleep(10)
     driver_dividends.quit()
-    return out
+    return 'DONE'
 
 @shared_task()
 def scraper_valuation(ticker_value,market_value,download_type):
@@ -167,9 +167,10 @@ def scraper_valuation(ticker_value,market_value,download_type):
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
         df  = pd.read_html(data) 
-        print(df[0])   
-        df[0].to_json ('valuation_cash_flow.json', orient='records')
-        sleep(10)
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("data").set({"valuation_cash_flow": data1 })
+        sleep(5)
         valuation_driver.quit()   
         return 'DONE' 
     
@@ -179,11 +180,9 @@ def scraper_valuation(ticker_value,market_value,download_type):
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
         df  = pd.read_html(data)    
-        df[0].to_json('valuation_growth.json', orient='records')
-        a_file = open("valuation_growth.json", "r")
-        a_json = json.load(a_file)
-        a_file.close()
-        pd.read_json("valuation_growth.json").to_excel('valuation_growth.xls',index=False)
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("data").set({"valuation_growth": data1 })
         sleep(5)
         valuation_driver.quit() 
         return 'DONE'      
@@ -205,13 +204,9 @@ def scraper_valuation(ticker_value,market_value,download_type):
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
         df  = pd.read_html(data)
-        df[0].to_json('valuation_operating_efficiency.json', orient='records')
-        a_file = open("valuation_operating_efficiency.json", "r")
-        a_json = json.load(a_file)
-        for f in glob.iglob(BASE_DIR+'valuation_operating_efficiency.xls', recursive=True):
-            os.remove(f)
-        pd.read_json("valuation_operating_efficiency.json").to_excel('valuation_operating_efficiency.xls',index=False)
-        a_file.close()
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("data").set({"valuation_operating_efficiency": data1 })
         sleep(5)
         valuation_driver.quit()      
 
