@@ -19,6 +19,8 @@ import glob
 
 import pyrebase
 import os
+from multiprocessing.pool import ThreadPool
+from functools import partial
 
 config = {
     "apiKey": "AIzaSyD7fxurFiXK0agVyqr1wnfhnymIRCRiPXY",
@@ -39,7 +41,6 @@ database =firebase.database()
 def format_dict(d):
     vals = list(d.values())
     return "={},".join(d.keys()).format(*vals) + "={}".format(vals[-1])
-
 
 @shared_task(bind=True)
 def scraper(self,ticker_value,market_value,download_type):
@@ -70,8 +71,8 @@ def scraper(self,ticker_value,market_value,download_type):
         driver.quit()
         return 'DONE'
     elif download_type == "BALANCE_SHEET":
-        WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
-        WebDriverWait(driver, 100).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
+        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
         fileName = BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls"
@@ -89,38 +90,6 @@ def scraper(self,ticker_value,market_value,download_type):
         sleep(10)
         driver.quit()
         return 'DONE'
-
-@shared_task()
-def scraper_operating_performance(ticker_value, market_value):
-    CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-    prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-    chromeOptions = webdriver.ChromeOptions()
-    chromeOptions.add_experimental_option('prefs', prefs)
-    chromeOptions.add_argument('--headless')
-    chromeOptions.add_argument("--window-size=1920,1080")
-    chromeOptions.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
-    chromeOptions.add_argument('--disable-setuid-sandbox')
-    chromeOptions.add_argument('--remote-debugging-port=9222')
-    chromeOptions.add_argument('--disable-extensions')
-    chromeOptions.add_argument('start-maximized')
-    chromeOptions.add_argument('--disable-gpu')
-    chromeOptions.add_argument('--no-sandbox')
-    chromeOptions.add_argument('--disable-dev-shm-usage')
-    # driver_operating_perfomance = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    driver_operating_perfomance = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-    driver_operating_perfomance.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
-    data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)    
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("operating_performance").set({"operating_performance": data1 })
-    sleep(5)
-    sleep(5)
-    driver_operating_perfomance.quit()
-    return 'DONE'
-
 
 @shared_task()
 def scraper_dividends(ticker_value,market_value):
@@ -148,6 +117,7 @@ def scraper_dividends(ticker_value,market_value):
     print(data1)
     database.child("dividends").set({"dividends": data1 })
     sleep(10)
+    
     driver_dividends.quit()
     return 'DONE'
 
@@ -182,10 +152,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
         sleep(5)
         valuation_driver.quit()   
-        return 'DONE' 
-    
-    
-
+        return 'DONE'
     elif download_type == "VALUATION_GROWTH": 
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
@@ -196,9 +163,6 @@ def scraper_valuation(ticker_value,market_value,download_type):
         sleep(5)
         valuation_driver.quit() 
         return 'DONE'      
-
-        
-
     elif download_type == "VALUATION_FINANCIAL_HEALTH": 
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
@@ -209,7 +173,6 @@ def scraper_valuation(ticker_value,market_value,download_type):
         sleep(5)
         valuation_driver.quit()  
         return 'DONE'    
-
     elif download_type == "VALUATION_OPERATING_EFFICIENCY":
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
         data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
@@ -218,6 +181,135 @@ def scraper_valuation(ticker_value,market_value,download_type):
         print(data1)
         database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
         sleep(5)
-        valuation_driver.quit()      
+        valuation_driver.quit() 
+        return 'DONE'       
 
+@shared_task(bind=True)
+def valuation_financial_health(self,ticker_value,market_value):
+    CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+    prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+    chromeOptions = webdriver.ChromeOptions()
+    chromeOptions.add_experimental_option('prefs', prefs)
+    chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument("--window-size=1920,1080")
+    chromeOptions.add_argument(
+    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
+    chromeOptions.add_argument('--disable-setuid-sandbox')
+    chromeOptions.add_argument('--remote-debugging-port=9222')
+    chromeOptions.add_argument('--disable-extensions')
+    chromeOptions.add_argument('start-maximized')
+    chromeOptions.add_argument('--disable-gpu')
+    chromeOptions.add_argument('--no-sandbox')
+    chromeOptions.add_argument('--disable-dev-shm-usage')
+    # valuation_financial_health_driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+    valuation_financial_health_driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
+    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
+    WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
+    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
+    df  = pd.read_html(data)    
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
+    sleep(10)
+    WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
+    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
+    df  = pd.read_html(data)
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
+    sleep(10)
+    WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
+    df  = pd.read_html(data) 
+    print(data)
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
+    sleep(10)    
+    WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
+    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
+    df  = pd.read_html(data)    
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("valuation_growth").set({"valuation_growth": data1 })
+    sleep(10)
+    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
+    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+    df  = pd.read_html(data)    
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("operating_performance").set({"operating_performance": data1 })
+    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
+    data = WebDriverWait(valuation_financial_health_driver, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+    df  = pd.read_html(data)   
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("dividends").set({"dividends": data1 })
+    sleep(10)
+    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+    sleep(10)
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
+    sleep(5)
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+    sleep(5)
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+    sleep(10)
+    fileName = BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls"
+    storage.child("income_statement.xls").put(fileName)
+   
+    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
+    sleep(5)
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+    sleep(5)
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+    sleep(10)
+    fileName = BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls"
+    storage.child("balance_sheet.xls").put(fileName)
+    
+    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+    sleep(5)
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+    sleep(5)
+    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+    sleep(10)
+    fileName = BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"
+    storage.child("cash_flow.xls").put(fileName)
+    sleep(10)
+    valuation_financial_health_driver.quit() 
+    return 'DONE'    
+
+
+
+@shared_task()
+def scraper_operating_performance(ticker_value, market_value):
+    CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
+    prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+    chromeOptions = webdriver.ChromeOptions()
+    chromeOptions.add_experimental_option('prefs', prefs)
+    chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument("--window-size=1920,1080")
+    chromeOptions.add_argument(
+    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
+    chromeOptions.add_argument('--disable-setuid-sandbox')
+    chromeOptions.add_argument('--remote-debugging-port=9222')
+    chromeOptions.add_argument('--disable-extensions')
+    chromeOptions.add_argument('start-maximized')
+    chromeOptions.add_argument('--disable-gpu')
+    chromeOptions.add_argument('--no-sandbox')
+    chromeOptions.add_argument('--disable-dev-shm-usage')
+    driver_operating_perfomance = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
+    # driver_operating_perfomance = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+    driver_operating_perfomance.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
+    data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+    data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+    df  = pd.read_html(data)    
+    data1 = df[0].to_json()
+    print(data1)
+    database.child("operating_performance").set({"operating_performance": data1 })
+    sleep(10)
+    driver_operating_perfomance.quit()
+    return 'DONE'
 
