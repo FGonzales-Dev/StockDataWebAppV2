@@ -111,13 +111,16 @@ def scraper_dividends(ticker_value,market_value):
     # driver_dividends = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
     driver_dividends = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
     driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
-    data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)   
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("dividends").set({"dividends": data1 })
+    try:
+        data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)   
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("dividends").set({"dividends": data1 })
+    except:
+        x =  '{"dividends":{"none":"no data"}}'
+        database.child("dividends").set({"dividends": x })
     sleep(10)
-    
     driver_dividends.quit()
     return 'DONE'
 
@@ -241,11 +244,15 @@ def valuation_financial_health(self,ticker_value,market_value):
     print(data1)
     database.child("operating_performance").set({"operating_performance": data1 })
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
-    data = WebDriverWait(valuation_financial_health_driver, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)   
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("dividends").set({"dividends": data1 })
+    try:
+        data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)   
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("dividends").set({"dividends": data1 })
+    except:
+        x =  '{"dividends":{"none":"no data"}}'
+        database.child("dividends").set({"dividends": x })
     sleep(10)
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
     sleep(10)
