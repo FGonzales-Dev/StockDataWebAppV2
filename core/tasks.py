@@ -245,7 +245,7 @@ def valuation_financial_health(self,ticker_value,market_value):
     database.child("operating_performance").set({"operating_performance": data1 })
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
     try:
-        data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+        data = WebDriverWait(valuation_financial_health_driver, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
         df  = pd.read_html(data)   
         data1 = df[0].to_json()
         print(data1)
