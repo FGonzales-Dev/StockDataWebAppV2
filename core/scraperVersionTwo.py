@@ -114,34 +114,7 @@ def scrape(request):
             task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
-            CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-            prefs = {'download.default_directory' :  BASE_DIR}
-            chromeOptions = webdriver.ChromeOptions()
-            chromeOptions.add_experimental_option('prefs', prefs)
-            chromeOptions.add_argument('--headless')
-            chromeOptions.add_argument('--disable-setuid-sandbox')
-            chromeOptions.add_argument('--remote-debugging-port=9222')
-            chromeOptions.add_argument('--disable-extensions')
-            chromeOptions.add_argument('start-maximized')
-            chromeOptions.add_argument('--disable-gpu')
-            chromeOptions.add_argument('--no-sandbox')
-            chromeOptions.add_argument('--disable-dev-shm-usage')
-            # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-            driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-            sleep(5)
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-            sleep(5)
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-            sleep(5)
-            driver.quit()
-            # scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
-            scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
+            valuation_financial_health.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/load_screen_all.html",{ "download_type": download_type})
         else:
             return render(request, "../templates/stockData.html")
@@ -220,40 +193,15 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "ALL":
-            data_xls = pd.read_excel(BASE_DIR + "/Balance Sheet_Annual_As Originally Reported.xls")
-            data_xls.to_json('balance_sheet_test.json')
-            with open('balance_sheet_test.json', 'r') as file:
-                        content = file.read()
-                        clean = content.replace(' ','')  # cleanup here
-                        json_data = json.loads(clean)
-                        file = json.dumps(json_data)
-                        jsont = json.loads(file)
-                        df = pd.DataFrame(data=jsont)
-                        df.to_excel('balance_sheet.xls',index=False)
-                        df1 = pd.read_excel('balance_sheet.xls')
-            data_xls = pd.read_excel(BASE_DIR + "/Cash Flow_Annual_As Originally Reported.xls")
-            data_xls.to_json('cash_flow_test.json')
-            with open('cash_flow_test.json', 'r') as file:
-                        content = file.read()
-                        clean = content.replace(' ','')  # cleanup here
-                        json_data = json.loads(clean)
-                        file = json.dumps(json_data)
-                        jsont = json.loads(file)
-                        df = pd.DataFrame(data=jsont)
-                        df.to_excel('cash_flow.xls',index=False)
-                        df2 = pd.read_excel('cash_flow.xls')
-            data_xls = pd.read_excel(BASE_DIR + "/Income Statement_Annual_As Originally Reported.xls")
-            data_xls.to_json('income_statement_test.json')
-            with open('income_statement_test.json', 'r') as file:
-                        content = file.read()
-                        clean = content.replace(' ','')  # cleanup here
-                        json_data = json.loads(clean)
-                        file = json.dumps(json_data)
-                        jsont = json.loads(file)
-                        df = pd.DataFrame(data=jsont)
-                        df.to_excel('income_statement.xls',index=False)
-                        df3 = pd.read_excel('income_statement.xls')
-            
+
+            storage.child("income_statement.xls").download(BASE_DIR, filename="income_statement.xls")
+            df1 = pd.read_excel('income_statement.xls')
+
+            storage.child("balance_sheet.xls").download(BASE_DIR, filename="balance_sheet.xls") 
+            df2 = pd.read_excel('balance_sheet.xls')
+
+            storage.child("cash_flow.xls").download(BASE_DIR, filename="cash_flow.xls")
+            df3 = pd.read_excel('cash_flow.xls')
 
 
             #DIVIDENDS
@@ -261,30 +209,55 @@ def scrape(request):
             dividends_data = json.loads(dividends_data)
             print(dividends_data)
             df4 = pd.DataFrame(dividends_data).to_excel("dividends_data.xlsx", index=False)
-            df4 = pd.read_excel('dividends_data.xls')
+            df4 = pd.read_excel('dividends_data.xlsx')
+
+            #VALUATION CASH FLOW
+            valuation_cash_flow_data = database.child('valuation_cash_flow').child('valuation_cash_flow').get().val()
+            valuation_cash_flow_data = json.loads(valuation_cash_flow_data)
+            print(valuation_cash_flow_data)
+            d5 = pd.DataFrame(valuation_cash_flow_data).to_excel("valuation_cash_flow.xlsx", index=False)
+            df5 = pd.read_excel('valuation_cash_flow.xlsx')
+
+            #VALUATION GROWTH
+            valuation_growth_data = database.child('valuation_growth').child('valuation_growth').get().val()
+            valuation_growth_data = json.loads(valuation_growth_data)
+            print(valuation_growth_data)
+            df6 = pd.DataFrame(valuation_growth_data).to_excel("valuation_growth.xlsx", index=False)
+            df6 = pd.read_excel('valuation_growth.xlsx')
+
+            #VALUATION FINANCIAL HEALTH
+            valuation_financial_health_data = database.child('valuation_financial_health').child('valuation_financial_health').get().val()
+            valuation_financial_health_data = json.loads(valuation_financial_health_data)
+            print(valuation_financial_health_data)
+            df7 = pd.DataFrame(valuation_financial_health_data).to_excel("valuation_financial_health.xlsx", index=False)
+            df7 = pd.read_excel('valuation_financial_health.xlsx')
+
+            #VALUATION OPERATING EFFICIENCY
+            valuation_operating_efficiency_data = database.child('valuation_operating_efficiency').child('valuation_operating_efficiency').get().val()
+            valuation_operating_efficiency_data = json.loads(valuation_operating_efficiency_data)
+            print(valuation_operating_efficiency_data)
+            df8 = pd.DataFrame(valuation_operating_efficiency_data).to_excel("valuation_operating_efficiency.xlsx", index=False)
+            df8 = pd.read_excel('valuation_operating_efficiency.xlsx')
+
+
            
            # OPERATING PERFORMANCE
             operating_performance_data = database.child('operating_performance').child('operating_performance').get().val()
             operating_performance_data = json.loads(operating_performance_data)
             print(operating_performance_data)
             df9 = pd.DataFrame(operating_performance_data).to_excel("operating_performance.xlsx", index=False)
-            df9 = pd.read_excel('operating_performance.xls')
-            
-
-            # df6 = pd.read_excel("valuation_growth.xls", index_col=0)
-            # df7 = pd.read_excel("valuation_financial_health.xls", index_col=0)
-            # df8 = pd.read_excel("valuation_operating_efficiency.xls", index_col=0)
-            # df9 = pd.read_excel("operating_performance.xls", index_col=0)
-            
+            df9 = pd.read_excel('operating_performance.xlsx')
+                    
             writer = pd.ExcelWriter("all.xls", engine = 'xlsxwriter')
             df1.to_excel(writer, sheet_name = 'Balance Sheet', index=False)
             df2.to_excel(writer, sheet_name = 'Cash Flow', index=False)
             df3.to_excel(writer, sheet_name = 'Income Statement', index=False)
-            # df5.to_excel(writer, sheet_name = 'Valuation Cash Flow', index=False)
-            # df6.to_excel(writer, sheet_name = 'Valuation Growth', index=False)
-            # df7.to_excel(writer, sheet_name = 'Valuation Financial Health', index=False)
-            # df8.to_excel(writer, sheet_name = 'Valuation Operating Efficiency', index=False)
-            # df4.to_excel(writer, sheet_name = 'Dividends', index=False)
+            df4.to_excel(writer, sheet_name = 'Dividends', index=False)
+            df5.to_excel(writer, sheet_name = 'Valuation Cash Flow', index=False)
+            df6.to_excel(writer, sheet_name = 'Valuation Growth', index=False)
+            df7.to_excel(writer, sheet_name = 'Valuation Financial Health', index=False)
+            df8.to_excel(writer, sheet_name = 'Valuation Operating Efficiency', index=False)
+            df4.to_excel(writer, sheet_name = 'Dividends', index=False)
             df9.to_excel(writer,sheet_name="Operating Performance", index=False)
             writer.save()
             writer.close()
