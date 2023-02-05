@@ -114,7 +114,7 @@ def scrape(request):
             task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
-            valuation_financial_health.delay(ticker_value=ticker_value, market_value=market_value)
+            all_scraper.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/load_screen_all.html",{ "download_type": download_type})
         else:
             return render(request, "../templates/stockData.html")
@@ -193,13 +193,13 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "ALL":
-
+            #INCOME STATEMENT
             storage.child("income_statement.xls").download(BASE_DIR, filename="income_statement.xls")
             df1 = pd.read_excel('income_statement.xls')
-
+            #BALANCE SHEET
             storage.child("balance_sheet.xls").download(BASE_DIR, filename="balance_sheet.xls") 
             df2 = pd.read_excel('balance_sheet.xls')
-
+            #CASH FLOW
             storage.child("cash_flow.xls").download(BASE_DIR, filename="cash_flow.xls")
             df3 = pd.read_excel('cash_flow.xls')
 
@@ -247,17 +247,17 @@ def scrape(request):
             print(operating_performance_data)
             df9 = pd.DataFrame(operating_performance_data).to_excel("operating_performance.xlsx", index=False)
             df9 = pd.read_excel('operating_performance.xlsx')
-                    
+
+            #ALL excel sheet generator        
             writer = pd.ExcelWriter("all.xls", engine = 'xlsxwriter')
-            df1.to_excel(writer, sheet_name = 'Balance Sheet', index=False)
-            df2.to_excel(writer, sheet_name = 'Cash Flow', index=False)
-            df3.to_excel(writer, sheet_name = 'Income Statement', index=False)
+            df1.to_excel(writer, sheet_name = 'Income Statement', index=False)
+            df2.to_excel(writer, sheet_name = 'Balance Seet', index=False)
+            df3.to_excel(writer, sheet_name = 'Cash Flow', index=False)
             df4.to_excel(writer, sheet_name = 'Dividends', index=False)
             df5.to_excel(writer, sheet_name = 'Valuation Cash Flow', index=False)
             df6.to_excel(writer, sheet_name = 'Valuation Growth', index=False)
             df7.to_excel(writer, sheet_name = 'Valuation Financial Health', index=False)
             df8.to_excel(writer, sheet_name = 'Valuation Operating Efficiency', index=False)
-            df4.to_excel(writer, sheet_name = 'Dividends', index=False)
             df9.to_excel(writer,sheet_name="Operating Performance", index=False)
             writer.save()
             writer.close()

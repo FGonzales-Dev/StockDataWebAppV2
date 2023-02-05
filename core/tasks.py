@@ -216,7 +216,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         return 'DONE'       
 
 @shared_task(bind=True)
-def valuation_financial_health(self,ticker_value,market_value):
+def all_scraper(self,ticker_value,market_value):
     CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
     prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
     chromeOptions = webdriver.ChromeOptions()
