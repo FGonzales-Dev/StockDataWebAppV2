@@ -65,8 +65,12 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
-        fileName = BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls"
-        storage.child("income_statement.xls").put(fileName)
+        try:
+            fileName = BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls"
+            storage.child("income_statement.xls").put(fileName)
+        except:
+            fileName = BASE_DIR + "error.xls"
+            storage.child("income_statement.xls").put(fileName)
         sleep(10)
         driver.quit()
         return 'DONE'
@@ -75,8 +79,12 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
-        fileName = BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls"
-        storage.child("balance_sheet.xls").put(fileName)
+        try:
+            fileName = BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls"
+            storage.child("balance_sheet.xls").put(fileName)
+        except:
+            fileName = BASE_DIR + "error.xls"
+            storage.child("balance_sheet.xls").put(fileName)
         sleep(10)
         driver.quit()
         return 'DONE'
@@ -85,8 +93,12 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
-        fileName = BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"
-        storage.child("cash_flow.xls").put(fileName)
+        try:
+            fileName = BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"
+            storage.child("cash_flow.xls").put(fileName)
+        except:
+            fileName = BASE_DIR + "error.xls"
+            storage.child("cash_flow.xls").put(fileName)
         sleep(10)
         driver.quit()
         return 'DONE'
@@ -147,42 +159,59 @@ def scraper_valuation(ticker_value,market_value,download_type):
     if download_type == "VALUATION_CASH_FLOW": 
         valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-        data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data) 
-        print(data)
-        data1 = df[0].to_json()
-        print(data1)
-        database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
-        sleep(5)
+        try: 
+            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
+            df  = pd.read_html(data) 
+            print(data)
+            data1 = df[0].to_json()
+            print(data1)
+            database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
+        except:
+            x =  '{"dividends":{"none":"no data"}}'
+            database.child("valuation_cash_flow").set({"valuation_cash_flow": x })
+            sleep(5)
         valuation_driver.quit()   
         return 'DONE'
     elif download_type == "VALUATION_GROWTH": 
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
-        data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)    
-        data1 = df[0].to_json()
-        print(data1)
-        database.child("valuation_growth").set({"valuation_growth": data1 })
+        try:
+            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
+            df  = pd.read_html(data)    
+            data1 = df[0].to_json()
+            print(data1)
+            database.child("valuation_growth").set({"valuation_growth": data1 })
+            
+        except:
+            x =  '{"dividends":{"none":"no data"}}'
+            database.child("valuation_growth").set({"valuation_growth": x })
         sleep(5)
         valuation_driver.quit() 
         return 'DONE'      
     elif download_type == "VALUATION_FINANCIAL_HEALTH": 
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
-        data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)    
-        data1 = df[0].to_json()
-        print(data1)
-        database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
+        try:
+            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
+            df  = pd.read_html(data)    
+            data1 = df[0].to_json()
+            print(data1)
+            database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
+        except:
+            x =  '{"dividends":{"none":"no data"}}'
+            database.child("valuation_financial_health").set({"valuation_financial_health": x })
         sleep(5)
         valuation_driver.quit()  
         return 'DONE'    
     elif download_type == "VALUATION_OPERATING_EFFICIENCY":
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
-        data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)
-        data1 = df[0].to_json()
-        print(data1)
-        database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
+        try:
+            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
+            df  = pd.read_html(data)
+            data1 = df[0].to_json()
+            print(data1)
+            database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
+        except:
+             x =  '{"dividends":{"none":"no data"}}'
+             database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x })
         sleep(5)
         valuation_driver.quit() 
         return 'DONE'       
@@ -208,41 +237,62 @@ def valuation_financial_health(self,ticker_value,market_value):
     valuation_financial_health_driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
-    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)    
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
+    try:
+        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)    
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
+    except:
+         x =  '{"dividends":{"none":"no data"}}'
+         database.child("valuation_financial_health").set({"valuation_financial_health": x })
     sleep(10)
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
-    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
+    try:
+        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
+    except:
+        x =  '{"dividends":{"none":"no data"}}'
+        database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x })
     sleep(10)
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data) 
-    print(data)
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
+    try:
+        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data) 
+        print(data)
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
+    except:
+        x =  '{"dividends":{"none":"no data"}}'
+        database.child("valuation_cash_flow").set({"valuation_cash_flow": x })
     sleep(10)    
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
-    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)    
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("valuation_growth").set({"valuation_growth": data1 })
+    try:
+        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)    
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("valuation_growth").set({"valuation_growth": data1 })
+    except:
+        x =  '{"dividends":{"none":"no data"}}'
+        database.child("valuation_growth").set({"valuation_growth": x })
+
     sleep(10)
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
-    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)    
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("operating_performance").set({"operating_performance": data1 })
+    try:
+        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)    
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("operating_performance").set({"operating_performance": data1 })
+    except:
+         x =  '{"dividends":{"none":"no data"}}'
+         database.child("operating_performance").set({"operating_performance": x })
+
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
     try:
         data = WebDriverWait(valuation_financial_health_driver, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
@@ -262,8 +312,13 @@ def valuation_financial_health(self,ticker_value,market_value):
     sleep(5)
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
-    fileName = BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls"
-    storage.child("income_statement.xls").put(fileName)
+    try:
+        fileName = BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls"
+        storage.child("income_statement.xls").put(fileName)
+    except:
+        fileName = BASE_DIR + "error.xls"
+        storage.child("income_statement.xls").put(fileName)
+
    
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
@@ -272,8 +327,12 @@ def valuation_financial_health(self,ticker_value,market_value):
     sleep(5)
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
-    fileName = BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls"
-    storage.child("balance_sheet.xls").put(fileName)
+    try:
+        fileName = BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls"
+        storage.child("balance_sheet.xls").put(fileName)
+    except:
+        fileName = BASE_DIR + "error.xls"
+        storage.child("balance_sheet.xls").put(fileName)
     
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
@@ -282,8 +341,12 @@ def valuation_financial_health(self,ticker_value,market_value):
     sleep(5)
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
-    fileName = BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"
-    storage.child("cash_flow.xls").put(fileName)
+    try:
+        fileName = BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"
+        storage.child("cash_flow.xls").put(fileName)
+    except:
+        fileName = BASE_DIR + "error.xls"
+        storage.child("cash_flow.xls").put(fileName)
     sleep(10)
     valuation_financial_health_driver.quit() 
     return 'DONE'    
@@ -310,12 +373,15 @@ def scraper_operating_performance(ticker_value, market_value):
     # driver_operating_perfomance = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
     driver_operating_perfomance = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
     driver_operating_perfomance.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
-    data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-    df  = pd.read_html(data)    
-    data1 = df[0].to_json()
-    print(data1)
-    database.child("operating_performance").set({"operating_performance": data1 })
+    try:
+        data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
+        df  = pd.read_html(data)    
+        data1 = df[0].to_json()
+        print(data1)
+        database.child("operating_performance").set({"operating_performance": data1 })
+    except:
+        x =  '{"dividends":{"none":"no data"}}'
+        database.child("operating_performance").set({"operating_performance": x })
     sleep(10)
     driver_operating_perfomance.quit()
     return 'DONE'
