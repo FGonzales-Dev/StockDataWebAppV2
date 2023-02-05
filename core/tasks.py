@@ -167,7 +167,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
             print(data1)
             database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
         except:
-            x =  '{"dividends":{"none":"no data"}}'
+            x =  '{"valuation_cash_flow":{"none":"no data"}}'
             database.child("valuation_cash_flow").set({"valuation_cash_flow": x })
             sleep(5)
         valuation_driver.quit()   
@@ -180,9 +180,8 @@ def scraper_valuation(ticker_value,market_value,download_type):
             data1 = df[0].to_json()
             print(data1)
             database.child("valuation_growth").set({"valuation_growth": data1 })
-            
         except:
-            x =  '{"dividends":{"none":"no data"}}'
+            x =  '{"valuation_growth":{"none":"no data"}}'
             database.child("valuation_growth").set({"valuation_growth": x })
         sleep(5)
         valuation_driver.quit() 
@@ -196,7 +195,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
             print(data1)
             database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
         except:
-            x =  '{"dividends":{"none":"no data"}}'
+            x =  '{"valuation_financial_health":{"none":"no data"}}'
             database.child("valuation_financial_health").set({"valuation_financial_health": x })
         sleep(5)
         valuation_driver.quit()  
@@ -210,7 +209,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
             print(data1)
             database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
         except:
-             x =  '{"dividends":{"none":"no data"}}'
+             x =  '{"valuation_operating_efficiency":{"none":"no data"}}'
              database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x })
         sleep(5)
         valuation_driver.quit() 
@@ -244,7 +243,7 @@ def valuation_financial_health(self,ticker_value,market_value):
         print(data1)
         database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
     except:
-         x =  '{"dividends":{"none":"no data"}}'
+         x =  '{"valuation_financial_health":{"none":"no data"}}'
          database.child("valuation_financial_health").set({"valuation_financial_health": x })
     sleep(10)
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
@@ -255,7 +254,7 @@ def valuation_financial_health(self,ticker_value,market_value):
         print(data1)
         database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
     except:
-        x =  '{"dividends":{"none":"no data"}}'
+        x =  '{"valuation_operating_efficiency":{"none":"no data"}}'
         database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x })
     sleep(10)
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
@@ -267,7 +266,7 @@ def valuation_financial_health(self,ticker_value,market_value):
         print(data1)
         database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
     except:
-        x =  '{"dividends":{"none":"no data"}}'
+        x =  '{"valuation_cash_flow":{"none":"no data"}}'
         database.child("valuation_cash_flow").set({"valuation_cash_flow": x })
     sleep(10)    
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
@@ -278,7 +277,7 @@ def valuation_financial_health(self,ticker_value,market_value):
         print(data1)
         database.child("valuation_growth").set({"valuation_growth": data1 })
     except:
-        x =  '{"dividends":{"none":"no data"}}'
+        x =  '{"valuation_growth":{"none":"no data"}}'
         database.child("valuation_growth").set({"valuation_growth": x })
 
     sleep(10)
@@ -290,7 +289,7 @@ def valuation_financial_health(self,ticker_value,market_value):
         print(data1)
         database.child("operating_performance").set({"operating_performance": data1 })
     except:
-         x =  '{"dividends":{"none":"no data"}}'
+         x =  '{"operating_performance":{"none":"no data"}}'
          database.child("operating_performance").set({"operating_performance": x })
 
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
@@ -318,8 +317,6 @@ def valuation_financial_health(self,ticker_value,market_value):
     except:
         fileName = BASE_DIR + "error.xls"
         storage.child("income_statement.xls").put(fileName)
-
-   
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
     sleep(5)
@@ -380,7 +377,7 @@ def scraper_operating_performance(ticker_value, market_value):
         print(data1)
         database.child("operating_performance").set({"operating_performance": data1 })
     except:
-        x =  '{"dividends":{"none":"no data"}}'
+        x =  '{"operating_performance":{"none":"no data"}}'
         database.child("operating_performance").set({"operating_performance": x })
     sleep(10)
     driver_operating_perfomance.quit()
