@@ -90,7 +90,16 @@ def get_task_info(request):
 def download(request):
     return render(request, "../templates/loadScreen.html")
 
-
+def remove_whitespaces(d):
+    new_dict = {}
+    for key, value in d.items():
+        key = key.strip()
+        if isinstance(value, str):
+            value = value.strip()
+        elif isinstance(value, dict):
+            value = remove_whitespaces(value)
+        new_dict[key] = value
+    return new_dict
 
 
 def scrape(request):
@@ -120,23 +129,31 @@ def scrape(request):
             return render(request, "../templates/stockData.html")
     elif 'download' in request.POST:
         if download_type == "INCOME_STATEMENT": 
-            storage.child("income_statement.xls").download(BASE_DIR, filename="income_statement.xls")
-            
-            with open("income_statement.xls", 'rb') as file:
-                        response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'  
-                        return response
+            income_statement_data = database.child('income_statement').child('income_statement').get().val()
+            income_statement_data = json.loads(income_statement_data)
+            new_dict = remove_whitespaces(income_statement_data)
+            df = pd.DataFrame(new_dict).to_excel("income_statement.xlsx", index=False)
+            with open("income_statement.xlsx", 'rb') as file:
+                response = HttpResponse(file, content_type='application/vnd.ms-excel')
+                response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
+                return response
         elif download_type == "BALANCE_SHEET":
-                storage.child("balance_sheet.xls").download(BASE_DIR, filename="balance_sheet.xls")    
-                with open("balance_sheet.xls", 'rb') as file:
+            balance_sheet_data = database.child('balance_sheet').child('balance_sheet').get().val()
+            balance_sheet_data = json.loads(balance_sheet_data)
+            new_dict = remove_whitespaces(balance_sheet_data)  
+            df = pd.DataFrame(new_dict).to_excel("balance_sheet.xlsx", index=False)
+            with open("balance_sheet.xlsx", 'rb') as file:
                     response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                    response['Content-Disposition'] = 'attachment; filename=stockData.xls'  
+                    response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'  
                     return response
         elif download_type == "CASH_FLOW":
-                storage.child("cash_flow.xls").download(BASE_DIR, filename="cash_flow.xls")
-                with open("cash_flow.xls", 'rb') as file:
+                cash_flow_data = database.child('cash_flow').child('cash_flow').get().val()
+                cash_flow_data = json.loads(cash_flow_data)
+                new_dict = remove_whitespaces(cash_flow_data)  
+                df = pd.DataFrame(new_dict).to_excel("cash_flow.xlsx", index=False)
+                with open("cash_flow.xlsx", 'rb') as file:
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                        response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+                        response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "DIVIDENDS":
             dividends_data = database.child('dividends').child('dividends').get().val()
@@ -194,15 +211,24 @@ def scrape(request):
                         return response
         elif download_type == "ALL":
             #INCOME STATEMENT
-            storage.child("income_statement.xls").download(BASE_DIR, filename="income_statement.xls")
-            df1 = pd.read_excel('income_statement.xls')
+            income_statement_data = database.child('income_statement').child('income_statement').get().val()
+            income_statement_data = json.loads(income_statement_data)
+            new_dict = remove_whitespaces(income_statement_data)  
+            df1 = pd.DataFrame(new_dict).to_excel("income_statement.xlsx", index=False)
+            df1 = pd.read_excel('income_statement.xlsx')
             #BALANCE SHEET
-            storage.child("balance_sheet.xls").download(BASE_DIR, filename="balance_sheet.xls") 
-            df2 = pd.read_excel('balance_sheet.xls')
+            balance_sheet_data = database.child('balance_sheet').child('balance_sheet').get().val()
+            balance_sheet_data = json.loads(balance_sheet_data)
+            new_dict = remove_whitespaces(balance_sheet_data)  
+            df2 = pd.DataFrame(new_dict).to_excel("balance_sheet.xlsx", index=False)
+            df2 = pd.read_excel('balance_sheet.xlsx')
             #CASH FLOW
-            storage.child("cash_flow.xls").download(BASE_DIR, filename="cash_flow.xls")
-            df3 = pd.read_excel('cash_flow.xls')
-
+            cash_flow_data = database.child('cash_flow').child('cash_flow').get().val()
+            cash_flow_data = json.loads(cash_flow_data)
+            new_dict = remove_whitespaces(cash_flow_data)  
+            df3 = pd.DataFrame(new_dict).to_excel("cash_flow.xlsx", index=False)
+            df3 = pd.read_excel('cash_flow.xlsx')
+          
 
             #DIVIDENDS
             dividends_data = database.child('dividends').child('dividends').get().val()

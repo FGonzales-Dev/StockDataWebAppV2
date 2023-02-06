@@ -65,12 +65,15 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
+
         try:
-            fileName = BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls"
-            storage.child("income_statement.xls").put(fileName)
+            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
+            data1 = excel_data_df.to_json()
+            print(data1)
+            database.child("income_statement").set({"income_statement": data1 })
         except:
-            fileName = BASE_DIR + "error.xls"
-            storage.child("income_statement.xls").put(fileName)
+            x =  '{"income_statement":{"none":"no data"}}'
+            database.child("income_statement").set({"income_statement": x })
         sleep(10)
         driver.quit()
         return 'DONE'
@@ -80,11 +83,13 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
         try:
-            fileName = BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls"
-            storage.child("balance_sheet.xls").put(fileName)
+            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
+            data1 = excel_data_df.to_json()
+            print(data1)
+            database.child("balance_sheet").set({"balance_sheet": data1 })
         except:
-            fileName = BASE_DIR + "error.xls"
-            storage.child("balance_sheet.xls").put(fileName)
+            x =  '{"balance_sheet":{"none":"no data"}}'
+            database.child("balance_sheet").set({"balance_sheet": x })
         sleep(10)
         driver.quit()
         return 'DONE'
@@ -94,11 +99,13 @@ def scraper(self,ticker_value,market_value,download_type):
         WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
         try:
-            fileName = BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"
-            storage.child("cash_flow.xls").put(fileName)
+            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
+            data1 = excel_data_df.to_json()
+            print(data1)
+            database.child("cash_flow").set({"cash_flow": data1 })
         except:
-            fileName = BASE_DIR + "error.xls"
-            storage.child("cash_flow.xls").put(fileName)
+            x =  '{"cash_flow":{"none":"no data"}}'
+            database.child("cash_flow").set({"cash_flow": x })
         sleep(10)
         driver.quit()
         return 'DONE'
@@ -312,11 +319,13 @@ def all_scraper(self,ticker_value,market_value):
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
     try:
-        fileName = BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls"
-        storage.child("income_statement.xls").put(fileName)
+        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
+        data1 = excel_data_df.to_json()
+        print(data1)
+        database.child("income_statement").set({"income_statement": data1 })
     except:
-        fileName = BASE_DIR + "error.xls"
-        storage.child("income_statement.xls").put(fileName)
+        x =  '{"income_statement":{"none":"no data"}}'
+        database.child("income_statement").set({"income_statement": x })
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
     sleep(5)
@@ -325,12 +334,13 @@ def all_scraper(self,ticker_value,market_value):
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
     try:
-        fileName = BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls"
-        storage.child("balance_sheet.xls").put(fileName)
+            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
+            data1 = excel_data_df.to_json()
+            print(data1)
+            database.child("balance_sheet").set({"balance_sheet": data1 })
     except:
-        fileName = BASE_DIR + "error.xls"
-        storage.child("balance_sheet.xls").put(fileName)
-    
+        x =  '{"balance_sheet":{"none":"no data"}}'
+        database.child("balance_sheet").set({"balance_sheet": x })
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
     sleep(5)
@@ -339,11 +349,13 @@ def all_scraper(self,ticker_value,market_value):
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
     try:
-        fileName = BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls"
-        storage.child("cash_flow.xls").put(fileName)
+        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
+        data1 = excel_data_df.to_json()
+        print(data1)
+        database.child("cash_flow").set({"cash_flow": data1 })
     except:
-        fileName = BASE_DIR + "error.xls"
-        storage.child("cash_flow.xls").put(fileName)
+        x =  '{"cash_flow":{"none":"no data"}}'
+        database.child("cash_flow").set({"cash_flow": x })
     sleep(10)
     valuation_financial_health_driver.quit() 
     return 'DONE'    
