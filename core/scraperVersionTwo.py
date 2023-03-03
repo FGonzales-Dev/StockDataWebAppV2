@@ -277,7 +277,7 @@ def scrape(request):
             #ALL excel sheet generator        
             writer = pd.ExcelWriter("all.xls", engine = 'xlsxwriter')
             df1.to_excel(writer, sheet_name = 'Income Statement', index=False)
-            df2.to_excel(writer, sheet_name = 'Balance Seet', index=False)
+            df2.to_excel(writer, sheet_name = 'Balance Sheet', index=False)
             df3.to_excel(writer, sheet_name = 'Cash Flow', index=False)
             df4.to_excel(writer, sheet_name = 'Dividends', index=False)
             df5.to_excel(writer, sheet_name = 'Valuation Cash Flow', index=False)
