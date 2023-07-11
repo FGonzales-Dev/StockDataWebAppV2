@@ -247,9 +247,10 @@ def all_scraper(self,ticker_value,market_value):
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
     try:
-        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)    
-        data1 = df[0].to_json()
+        WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+        sleep(10)
+        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/financialHealth.xls")
+        data1 = excel_data_df.to_json()
         print(data1)
         database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
     except:
@@ -258,9 +259,10 @@ def all_scraper(self,ticker_value,market_value):
     sleep(10)
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
     try:
-        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)
-        data1 = df[0].to_json()
+        WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+        sleep(10)
+        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/operatingAndEfficiency.xls")
+        data1 = excel_data_df.to_json()
         print(data1)
         database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
     except:
@@ -269,10 +271,10 @@ def all_scraper(self,ticker_value,market_value):
     sleep(10)
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
     try:
-        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data) 
-        print(data)
-        data1 = df[0].to_json()
+        WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+        sleep(10)
+        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/cashFlow.xls")
+        data1 = excel_data_df.to_json()
         print(data1)
         database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
     except:
@@ -281,9 +283,10 @@ def all_scraper(self,ticker_value,market_value):
     sleep(10)    
     WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
     try:
-        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)    
-        data1 = df[0].to_json()
+        WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+        sleep(10)
+        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/growthTable.xls")
+        data1 = excel_data_df.to_json()
         print(data1)
         database.child("valuation_growth").set({"valuation_growth": data1 })
     except:
