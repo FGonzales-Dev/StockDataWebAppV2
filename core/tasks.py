@@ -167,10 +167,10 @@ def scraper_valuation(ticker_value,market_value,download_type):
         valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
         try: 
-            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-button__sal mds-button--secondary__sal mds-button--small__sal']"))).get_attribute("outerHTML")
-            df  = pd.read_html(data) 
-            print(data)
-            data1 = df[0].to_json()
+            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(10)
+            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/cashFlow.xls")
+            data1 = excel_data_df.to_json()
             print(data1)
             database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
         except:
@@ -182,9 +182,10 @@ def scraper_valuation(ticker_value,market_value,download_type):
     elif download_type == "VALUATION_GROWTH": 
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
         try:
-            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-button__sal mds-button--secondary__sal mds-button--small__sal']"))).get_attribute("outerHTML")
-            df  = pd.read_html(data)    
-            data1 = df[0].to_json()
+            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(10)
+            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/growthTable.xls")
+            data1 = excel_data_df.to_json()
             print(data1)
             database.child("valuation_growth").set({"valuation_growth": data1 })
         except:
@@ -196,9 +197,10 @@ def scraper_valuation(ticker_value,market_value,download_type):
     elif download_type == "VALUATION_FINANCIAL_HEALTH": 
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
         try:
-            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-button__sal mds-button--secondary__sal mds-button--small__sal']"))).get_attribute("outerHTML")
-            df  = pd.read_html(data)    
-            data1 = df[0].to_json()
+            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            sleep(10)
+            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/financialHealth.xls")
+            data1 = excel_data_df.to_json()
             print(data1)
             database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
         except:
@@ -210,9 +212,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
     elif download_type == "VALUATION_OPERATING_EFFICIENCY":
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
         try:
-            data = WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-            # data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health']"))).get_attribute("outerHTML")
-            # operatingAndEfficiency
+            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
             sleep(10)
             excel_data_df = pd.read_excel(BASE_DIR + "/selenium/operatingAndEfficiency.xls")
             data1 = excel_data_df.to_json()
