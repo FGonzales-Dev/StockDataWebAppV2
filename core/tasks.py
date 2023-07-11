@@ -149,7 +149,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
     prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
-    # chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument('--headless')
     chromeOptions.add_argument("--window-size=1920,1080")
     chromeOptions.add_argument(
     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
@@ -210,17 +210,20 @@ def scraper_valuation(ticker_value,market_value,download_type):
     elif download_type == "VALUATION_OPERATING_EFFICIENCY":
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
         try:
-            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-button__sal mds-button--secondary__sal mds-button--small__sal']"))).get_attribute("outerHTML")
-            df  = pd.read_html(data)
-            data1 = df[0].to_json()
+            data = WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            # data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health']"))).get_attribute("outerHTML")
+            # operatingAndEfficiency
+            sleep(10)
+            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/operatingAndEfficiency.xls")
+            data1 = excel_data_df.to_json()
             print(data1)
             database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
         except:
-             x =  '{"valuation_operating_efficiency":{"none":"no data"}}'
-             database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x })
+            x =  '{"valuation_operating_efficiency":{"none":"no data"}}'
+            database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x })
         sleep(5)
-        valuation_driver.quit() 
-        return 'DONE'       
+        valuation_driver.quit()
+        return 'DONE'    
 
 @shared_task(bind=True)
 def all_scraper(self,ticker_value,market_value):
