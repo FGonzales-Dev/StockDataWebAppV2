@@ -167,7 +167,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
         try: 
-            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-cash-flow sal-eqcss-key-stats-cash-flow']"))).get_attribute("outerHTML")
+            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-button__sal mds-button--secondary__sal mds-button--small__sal']"))).get_attribute("outerHTML")
             df  = pd.read_html(data) 
             print(data)
             data1 = df[0].to_json()
@@ -182,7 +182,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
     elif download_type == "VALUATION_GROWTH": 
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
         try:
-            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-growth-table sal-eqcss-key-stats-growth-table']"))).get_attribute("outerHTML")
+            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-button__sal mds-button--secondary__sal mds-button--small__sal']"))).get_attribute("outerHTML")
             df  = pd.read_html(data)    
             data1 = df[0].to_json()
             print(data1)
@@ -196,7 +196,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
     elif download_type == "VALUATION_FINANCIAL_HEALTH": 
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
         try:
-            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-financial-health sal-eqcss-key-stats-financial-health']"))).get_attribute("outerHTML")
+            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-button__sal mds-button--secondary__sal mds-button--small__sal']"))).get_attribute("outerHTML")
             df  = pd.read_html(data)    
             data1 = df[0].to_json()
             print(data1)
@@ -210,7 +210,11 @@ def scraper_valuation(ticker_value,market_value,download_type):
     elif download_type == "VALUATION_OPERATING_EFFICIENCY":
         WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
         try:
-            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='sal-component-ctn sal-component-key-stats-oper-efficiency sal-eqcss-key-stats-oper-efficiency']"))).get_attribute("outerHTML")
+            data = WebDriverWait(valuation_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-button__sal mds-button--secondary__sal mds-button--small__sal']"))).get_attribute("outerHTML")
+            
+            # mds-button__sal mds-button--secondary__sal mds-button--small__sal
+            
+            
             df  = pd.read_html(data)
             data1 = df[0].to_json()
             print(data1)
