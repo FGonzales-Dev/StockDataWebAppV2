@@ -1,4 +1,3 @@
-
 from operator import index
 import os
 from zlib import DEF_BUF_SIZE
@@ -7,7 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from django.http import HttpResponseRedirect
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from cb_dj_weather_app.settings import BASE_DIR, STATIC_ROOT
+from stock_scraper.settings import BASE_DIR, STATIC_ROOT
 import shutil
 from webdriver_manager.chrome import ChromeDriverManager
 from django.http import FileResponse
@@ -33,7 +32,7 @@ from django.shortcuts import render,redirect
 import requests
 import json 
 from typing import List, final
-from collections import Iterable
+from collections.abc import Iterable
 from django.http import HttpResponse
 import re
 from bs4 import BeautifulSoup
@@ -77,14 +76,38 @@ database =firebase.database()
 def get_task_info(request):
     task_id = request.GET.get('task_id', None)
     if task_id is not None:
-        task = AsyncResult(task_id)
-        data = {
-            'state': task.state,
-            'result': task.result,
-        }
-        return HttpResponse(json.dumps(data), content_type='application/json')
+        try:
+            task = AsyncResult(task_id)
+            data = {
+                'state': task.state,
+                'result': task.result,
+            }
+            
+            # Add more detailed information based on task state
+            if task.state == 'FAILURE':
+                # Get the exception information if available
+                if hasattr(task.result, 'args') and task.result.args:
+                    data['result'] = str(task.result.args[0])
+                else:
+                    data['result'] = str(task.result)
+            elif task.state == 'SUCCESS':
+                data['result'] = 'Task completed successfully'
+            elif task.state == 'PENDING':
+                data['result'] = 'Task is waiting to be processed'
+            elif task.state == 'STARTED':
+                data['result'] = 'Task is being processed'
+                
+            return JsonResponse(data)
+        except Exception as e:
+            return JsonResponse({
+                'state': 'ERROR',
+                'result': f'Error retrieving task status: {str(e)}'
+            })
     else:
-        return HttpResponse('No job id given.')
+        return JsonResponse({
+            'state': 'ERROR',
+            'result': 'No task ID provided'
+        })
 
 
 def download(request):
@@ -101,8 +124,24 @@ def remove_whitespaces(d):
         new_dict[key] = value
     return new_dict
 
+def clear_selenium_directory():
+    DOWNLOAD_DIRECTORY = "/selenium"
+    selenium_dir = BASE_DIR + DOWNLOAD_DIRECTORY
+    
+    if os.path.exists(selenium_dir):
+        for filename in os.listdir(selenium_dir):
+            file_path = os.path.join(selenium_dir, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
 
 def scrape(request):
+    clear_selenium_directory()
+
     ticker_value =  request.POST.get("ticker", "")
     market_value =  request.POST.get("market", "")
     download_type = request.POST.get("download_type", "")
@@ -123,8 +162,8 @@ def scrape(request):
             task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
-            all_scraper.delay(ticker_value=ticker_value, market_value=market_value)
-            return render(request, "../templates/load_screen_all.html",{ "download_type": download_type})
+            task = all_scraper.delay(ticker_value=ticker_value, market_value=market_value)
+            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         else:
             return render(request, "../templates/stockData.html")
     elif 'download' in request.POST:

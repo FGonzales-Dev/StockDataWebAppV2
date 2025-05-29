@@ -4,116 +4,515 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DOWNLOAD STOCK DATA</title>
+  <title>Stock Data Processing</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
-    <style>
-      * {
-          margin: 0;
-          box-sizing: border-box;
-          font-family: "Bitstream Vera Sans Mono", Monaco, "Courier New", Courier, monospace;
-      }
-      input[type='text'] {
-          width: 30%;
-          margin-bottom: 10px;
-          padding: 10px;
-          border: 2px solid black;
-      }
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-      input[type='submit'] {
-          width: 30%;
-          padding: 5px;
-          background: black;
-          color: white;
-          text-transform: uppercase;
-      }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
 
-      form {
-          margin-bottom: 20px;
+    .main-container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      padding: 3rem;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .main-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .logo-section {
+      margin-bottom: 2rem;
+    }
+
+    .logo-icon {
+      font-size: 3rem;
+      color: #667eea;
+      margin-bottom: 1rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .title {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #718096;
+      margin-bottom: 2rem;
+    }
+
+    /* Loading Section */
+    .loading-section {
+      margin: 2rem 0;
+    }
+
+    .status-card {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-message {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #4a5568;
+      margin-bottom: 1rem;
+    }
+
+    .progress-container {
+      background: #e2e8f0;
+      border-radius: 10px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.3s ease;
+      animation: indeterminate 2s infinite;
+    }
+
+    @keyframes indeterminate {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* Spinner Animation */
+    .spinner-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .spinner-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .spinner-dot:nth-child(1) { animation-delay: -0.32s; }
+    .spinner-dot:nth-child(2) { animation-delay: -0.16s; }
+    .spinner-dot:nth-child(3) { animation-delay: 0s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* Success Section */
+    .success-section {
+      display: none;
+    }
+
+    .success-icon {
+      font-size: 4rem;
+      color: #48bb78;
+      margin-bottom: 1rem;
+      animation: checkmark 0.6s ease-in-out;
+    }
+
+    @keyframes checkmark {
+      0% { transform: scale(0) rotate(45deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
+    .download-btn {
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      border: none;
+      color: white;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+      text-transform: none;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+    }
+
+    .download-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Error Section */
+    .error-section {
+      display: none;
+    }
+
+    .error-container {
+      background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+      border: 1px solid #fc8181;
+      border-radius: 12px;
+      padding: 2rem;
+      color: #742a2a;
+    }
+
+    .error-icon {
+      font-size: 3rem;
+      color: #e53e3e;
+      margin-bottom: 1rem;
+    }
+
+    .error-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .error-message {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .retry-btn {
+      background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+      border: none;
+      color: white;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
+    }
+
+    .retry-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(229, 62, 62, 0.4);
+    }
+
+    /* Hidden form inputs */
+    .hidden-input {
+      display: none;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 2rem;
+        margin: 1rem;
       }
+      
+      .title {
+        font-size: 1.5rem;
+      }
+      
+      .logo-icon {
+        font-size: 2.5rem;
+      }
+    }
+
+    /* Animation for state transitions */
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    .fade-out {
+      animation: fadeOut 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-20px); }
+    }
   </style>
 </head>
 
 <body>
-  <div class="container" style="text-align: center;">
-   
-        <form method="POST">
-          {% csrf_token %}
-          <div class="container">
-          <input type="text" name="download_type" value={{download_type}} style="visibility: hidden;" />
-          <input type="text" name="task_id" value={{task_id}} style="visibility: hidden;" />
+  <div class="main-container">
+    <!-- Logo and Title Section -->
+    <div class="logo-section">
+      <div class="logo-icon">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <h1 class="title">Stock Data Processing</h1>
+      <p class="subtitle">Preparing your financial data</p>
+    </div>
+
+    <!-- Form (Hidden) -->
+    <form method="POST">
+      {% csrf_token %}
+      <input type="text" name="download_type" value="{{download_type}}" class="hidden-input" />
+      <input type="text" name="task_id" value="{{task_id}}" class="hidden-input" />
+      
+      <!-- Success Section -->
+      <div id="success-section" class="success-section">
+        <div class="success-icon">
+          <i class="fas fa-check-circle"></i>
         </div>
-        <div class="container"  id="download-btn" style="visibility: hidden;">
-          <h4>Your data is ready to download! </h4>
-          <input type="submit" name="download" value="Download" />
+        <h3 class="title">Data Ready!</h3>
+        <p class="subtitle">Your stock data has been successfully processed</p>
+        <button type="submit" name="download" class="download-btn">
+          <i class="fas fa-download me-2"></i>
+          Download Excel File
+        </button>
+      </div>
+    </form>
+
+    <!-- Loading Section -->
+    <div id="loading-section" class="loading-section">
+      <div class="status-card">
+        <div class="status-message" id="status-message">
+          <i class="fas fa-cog fa-spin me-2"></i>
+          Initializing...
         </div>
-        </form>
-
-        <div class="container-fluid" id="spinner-div" style="text-align: center ;">
-          <h4>Get a coffee while we create your data... </h4>
-          <!-- <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
-            <span class="sr-only">Loading...</span>
-          </div> -->
-          <div class="spinner-grow" style="width: 3rem; height: 3rem;" role="status">
-          
-          </div>
-
-          <div class="spinner-grow" style="width: 2.8rem; height: 2.8rem;" role="status">
-          
-          </div>
-          
-          <div class="spinner-grow" style="width: 2.5rem; height: 2.5rem;" role="status">
-          
-          </div>
-
-          <div class="spinner-grow" style="width: 2.3rem; height: 2.3rem;" role="status">
-          
-          </div>
-
-          <div class="spinner-grow" style="width: 2rem; height: 2rem;" role="status">
-          
-          </div>
-
-          <div class="spinner-grow" style="width: 1.8rem; height: 1.8rem;" role="status">
-          
-          </div>
-
-          <div class="spinner-grow" style="width: 1.5rem; height: 1.5rem;" role="status">
-          
-          </div>
-
-          <div class="spinner-grow" style="width: 1.3rem; height: 1.3rem;" role="status">
-          
-          </div>
-     
+        
+        <div class="progress-container">
+          <div class="progress-bar" id="progress-bar"></div>
         </div>
-   
+        
+        <div class="spinner-container">
+          <div class="spinner-dot"></div>
+          <div class="spinner-dot"></div>
+          <div class="spinner-dot"></div>
+        </div>
+        
+        <small style="color: #718096;">
+          <i class="fas fa-coffee me-1"></i>
+          This may take a few minutes...
+        </small>
+      </div>
+    </div>
+
+    <!-- Error Section -->
+    <div id="error-section" class="error-section">
+      <div class="error-container">
+        <div class="error-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 class="error-title">Processing Failed</h3>
+        <p class="error-message" id="error-message">
+          An error occurred while processing your request.
+        </p>
+        <button class="retry-btn" onclick="window.location.href='/stock-data'">
+          <i class="fas fa-redo me-2"></i>
+          Try Again
+        </button>
+      </div>
+    </div>
   </div>
 
   <script>
+    const taskId = '{{task_id}}';
+    let pollInterval;
+    let retryCount = 0;
+    const maxRetries = 3;
+    let progressValue = 0;
 
-    setTimeout(() => {
-      const box = document.getElementById('spinner-div');
-      box.style.visibility = 'hidden';
-    }, 30000);
+    // Status icons mapping
+    const statusIcons = {
+      'PENDING': 'fas fa-clock',
+      'STARTED': 'fas fa-cog fa-spin',
+      'PROGRESS': 'fas fa-spinner fa-spin',
+      'SUCCESS': 'fas fa-check-circle',
+      'FAILURE': 'fas fa-exclamation-triangle',
+      'ERROR': 'fas fa-times-circle'
+    };
 
-    setTimeout(() => {
-      const btn = document.getElementById('download-btn');
-      btn.style.visibility = 'visible'
-    }, 30000);
+    // Status messages mapping
+    const statusMessages = {
+      'PENDING': 'Task is waiting to be processed...',
+      'STARTED': 'Task is being processed...',
+      'PROGRESS': 'Task is in progress...',
+      'SUCCESS': 'Task completed successfully!',
+      'FAILURE': 'Task failed to complete',
+      'RETRY': 'Task is being retried...',
+      'REVOKED': 'Task was cancelled',
+      'ERROR': 'Error checking task status'
+    };
 
+    function updateProgress() {
+      const progressBar = document.getElementById('progress-bar');
+      progressValue = Math.min(progressValue + Math.random() * 10, 85);
+      progressBar.style.width = progressValue + '%';
+    }
 
+    function checkTaskStatus() {
+      if (!taskId) {
+        console.error('No task ID provided');
+        showErrorMessage('No task ID provided');
+        return;
+      }
+
+      fetch(`/get_task_info/?task_id=${taskId}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Task status:', data);
+          retryCount = 0; // Reset retry count on successful response
+          
+          const statusMessage = document.getElementById('status-message');
+          const icon = statusIcons[data.state] || 'fas fa-info-circle';
+          const message = statusMessages[data.state] || `Task status: ${data.state}`;
+          
+          statusMessage.innerHTML = `<i class="${icon} me-2"></i>${message}`;
+          
+          // Update progress for active states
+          if (data.state === 'STARTED' || data.state === 'PROGRESS') {
+            updateProgress();
+          }
+          
+          switch(data.state) {
+            case 'SUCCESS':
+              document.getElementById('progress-bar').style.width = '100%';
+              setTimeout(() => {
+                showSuccessSection();
+                clearInterval(pollInterval);
+              }, 500);
+              break;
+            case 'FAILURE':
+              showErrorMessage(data.result || 'Unknown error occurred');
+              clearInterval(pollInterval);
+              break;
+            case 'REVOKED':
+              showErrorMessage('Task was cancelled');
+              clearInterval(pollInterval);
+              break;
+            case 'ERROR':
+              showErrorMessage(data.result || 'Error checking task status');
+              clearInterval(pollInterval);
+              break;
+          }
+        })
+        .catch(error => {
+          console.error('Error checking task status:', error);
+          retryCount++;
+          
+          if (retryCount >= maxRetries) {
+            showErrorMessage(`Failed to check task status after ${maxRetries} attempts. Please try again.`);
+            clearInterval(pollInterval);
+          } else {
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.innerHTML = `<i class="fas fa-wifi me-2"></i>Connection error, retrying... (${retryCount}/${maxRetries})`;
+          }
+        });
+    }
+
+    function showSuccessSection() {
+      const loadingSection = document.getElementById('loading-section');
+      const successSection = document.getElementById('success-section');
+      
+      loadingSection.classList.add('fade-out');
+      setTimeout(() => {
+        loadingSection.style.display = 'none';
+        successSection.style.display = 'block';
+        successSection.classList.add('fade-in');
+      }, 300);
+    }
+
+    function showErrorMessage(errorMsg) {
+      const loadingSection = document.getElementById('loading-section');
+      const errorSection = document.getElementById('error-section');
+      const errorMessage = document.getElementById('error-message');
+      
+      loadingSection.classList.add('fade-out');
+      setTimeout(() => {
+        loadingSection.style.display = 'none';
+        errorSection.style.display = 'block';
+        errorSection.classList.add('fade-in');
+        errorMessage.textContent = errorMsg;
+      }, 300);
+    }
+
+    // Start polling when page loads
+    if (taskId) {
+      // Check immediately
+      checkTaskStatus();
+      
+      // Update progress periodically
+      const progressInterval = setInterval(updateProgress, 1000);
+      
+      // Check task status every 2 seconds
+      pollInterval = setInterval(checkTaskStatus, 2000);
+      
+      // Fallback timeout after 10 minutes (600 seconds) for long-running tasks
+      setTimeout(() => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          clearInterval(progressInterval);
+          showErrorMessage('Task timed out after 10 minutes. Please try again.');
+        }
+      }, 600000);
+    } else {
+      showErrorMessage('No task ID provided');
+    }
   </script>
 
-
-  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
-    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
-    crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
-    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
-    crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
-    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8"
     crossorigin="anonymous"></script>
 </body>
 

@@ -3,7 +3,7 @@ from django.shortcuts import render
 import requests
 import json 
 from typing import List, final
-from collections import Iterable
+from collections.abc import Iterable
 from django.http import HttpResponse
 import re
 from bs4 import BeautifulSoup

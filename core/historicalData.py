@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from cb_dj_weather_app.settings import BASE_DIR, STATIC_ROOT
+from stock_scraper.settings import BASE_DIR, STATIC_ROOT
 import shutil
 from webdriver_manager.chrome import ChromeDriverManager
 from django.http import FileResponse
@@ -23,7 +23,7 @@ from django.shortcuts import render
 import requests
 import json 
 from typing import List, final
-from collections import Iterable
+from collections.abc import Iterable
 from django.http import HttpResponse
 import re
 from bs4 import BeautifulSoup
@@ -40,7 +40,67 @@ from .models import APIRequest
 from register.models import Profile
 from django.contrib.auth.models import User
 
+# Import scraper configuration
+try:
+    from scraper_config import *
+except ImportError:
+    # Fallback defaults if config file doesn't exist
+    SHOW_BROWSER = False
+    DEBUG_MODE = False
+    SAVE_DEBUG_SCREENSHOTS = False
+    SAVE_DEBUG_PAGE_SOURCE = False
+    ELEMENT_WAIT_TIMEOUT = 30
+    PAGE_LOAD_TIMEOUT = 60
+    BROWSER_WIDTH = 1920
+    BROWSER_HEIGHT = 1080
+    USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"
+    DOWNLOAD_DIRECTORY = "/selenium"
 
+def get_chrome_driver(chrome_options=None):
+    """
+    Create Chrome WebDriver with automatic environment detection.
+    Uses CHROMEDRIVER_PATH environment variable for production,
+    local chromedriver path for development, with WebDriverManager as fallback.
+    """
+    CHROME_DRIVER_PATH = BASE_DIR + "/chromedriver"
+    
+    # Create chrome options if not provided
+    if chrome_options is None:
+        chrome_options = webdriver.ChromeOptions()
+        
+        # Download preferences
+        prefs = {'download.default_directory': BASE_DIR + DOWNLOAD_DIRECTORY}
+        chrome_options.add_experimental_option('prefs', prefs)
+        
+        # Basic options
+        chrome_options.add_argument("--disable-infobars")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        
+        # Window size
+        chrome_options.add_argument(f"--window-size={BROWSER_WIDTH},{BROWSER_HEIGHT}")
+        
+        # User agent
+        chrome_options.add_argument(f"user-agent={USER_AGENT}")
+        
+        # Headless mode based on configuration
+        if not SHOW_BROWSER:
+            chrome_options.add_argument("--headless")
+            print("🔍 Running in HEADLESS mode (browser hidden)")
+        else:
+            chrome_options.add_argument("--start-maximized")
+            print("👁️ Running in VISIBLE mode (browser will be shown)")
+    
+    if os.environ.get("CHROMEDRIVER_PATH"):
+        # Production environment (Heroku, etc.)
+        return webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+    elif os.path.exists(CHROME_DRIVER_PATH):
+        # Local development environment with local chromedriver
+        return webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chrome_options)
+    else:
+        # Fallback: Use WebDriverManager to auto-download compatible ChromeDriver
+        return webdriver.Chrome(executable_path=ChromeDriverManager().install(), chrome_options=chrome_options)
 
 def scrape_operating_performance(request):
     if 'ticker' in request.GET and 'market' in request.GET:
@@ -54,11 +114,11 @@ def scrape_operating_performance(request):
         chromeOptions.add_argument("--start-maximized")
         chromeOptions.add_argument("--disable-extensions")
         chromeOptions.add_argument('--window-size=1920,1080')
-        chromeOptions.add_argument("--headless")
         chromeOptions.add_argument('--no-sandbox')   
         chromeOptions.add_argument("--disable-dev-shm-usage") 
-        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        
+        # Create Chrome driver with automatic environment detection
+        driver = get_chrome_driver(chromeOptions)
         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
       
         data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
@@ -82,11 +142,11 @@ def scrape_dividends(request):
         chromeOptions.add_argument("--start-maximized")
         chromeOptions.add_argument("--disable-extensions")
         chromeOptions.add_argument('--window-size=1920,1080')
-        chromeOptions.add_argument("--headless")
         chromeOptions.add_argument('--no-sandbox')   
         chromeOptions.add_argument("--disable-dev-shm-usage") 
-        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        
+        # Create Chrome driver with automatic environment detection
+        driver = get_chrome_driver(chromeOptions)
         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
       
         data = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
@@ -112,11 +172,11 @@ def scrape_valuation(request):
         chromeOptions.add_argument("--start-maximized")
         chromeOptions.add_argument("--disable-extensions")
         chromeOptions.add_argument('--window-size=1920,1080')
-        chromeOptions.add_argument("--headless")
         chromeOptions.add_argument('--no-sandbox')   
         chromeOptions.add_argument("--disable-dev-shm-usage") 
-       # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        
+        # Create Chrome driver with automatic environment detection
+        driver = get_chrome_driver(chromeOptions)
         if type_value == "cf":
             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
@@ -180,11 +240,11 @@ def scrape(request):
         chromeOptions.add_argument("--start-maximized")
         chromeOptions.add_argument("--disable-extensions")
         chromeOptions.add_argument('--window-size=1920,1080')
-        chromeOptions.add_argument("--headless")
         chromeOptions.add_argument('--no-sandbox')   
         chromeOptions.add_argument("--disable-dev-shm-usage") 
-        # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-        driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+        
+        # Create Chrome driver with automatic environment detection
+        driver = get_chrome_driver(chromeOptions)
         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
         if type_value == "is":
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
@@ -202,8 +262,26 @@ def scrape(request):
             return HttpResponse(pretty_json, content_type='text/json')
         elif type_value == "bs":
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+            # WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+            # Click the export button using multiple possible selectors
+            try:
+                # Try by ID first (most specific)
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "salEqsvFinancialsPopoverExport"))).click()
+            except:
+                try:
+                    # Try by aria-label
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Export']"))).click()
+                except:
+                    try:
+                        # Try by class and icon combination
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'mds-button--icon-only__sal') and .//span[@data-mds-icon-name='share']]"))).click()
+                    except:
+                        try:
+                            # Try by the export section container
+                            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class, 'sal-financials__exportSection')]//button"))).click()
+                        except:
+                            # Fallback to the original selector
+                            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
             sleep(5)
             driver.quit()
             with open(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls", 'rb') as file:

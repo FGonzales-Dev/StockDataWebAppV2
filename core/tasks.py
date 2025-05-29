@@ -9,7 +9,7 @@ from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from cb_dj_weather_app.settings import BASE_DIR
+from stock_scraper.settings import BASE_DIR
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -17,10 +17,30 @@ import pandas as pd
 from time import sleep
 import glob
 
+import undetected_chromedriver as uc
+import random
+
+
 import pyrebase
 import os
 from multiprocessing.pool import ThreadPool
 from functools import partial
+
+# Import scraper configuration
+try:
+    from scraper_config import *
+except ImportError:
+    # Fallback defaults if config file doesn't exist
+    SHOW_BROWSER = False
+    DEBUG_MODE = False
+    SAVE_DEBUG_SCREENSHOTS = False
+    SAVE_DEBUG_PAGE_SOURCE = False
+    ELEMENT_WAIT_TIMEOUT = 30
+    PAGE_LOAD_TIMEOUT = 60
+    BROWSER_WIDTH = 1920
+    BROWSER_HEIGHT = 1080
+    USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"
+    DOWNLOAD_DIRECTORY = "/selenium"
 
 config = {
     "apiKey": "AIzaSyD7fxurFiXK0agVyqr1wnfhnymIRCRiPXY",
@@ -38,110 +58,524 @@ firebase = pyrebase.initialize_app(config)
 storage = firebase.storage()
 database =firebase.database()
 
+def get_chrome_driver(chrome_options=None):
+    """
+    Create Chrome WebDriver with automatic environment detection.
+    Uses CHROMEDRIVER_PATH environment variable for production,
+    local chromedriver path for development, with WebDriverManager as fallback.
+    """
+    CHROME_DRIVER_PATH = BASE_DIR + "/chromedriver"
+    
+    # Create chrome options if not provided
+    if chrome_options is None:
+        chrome_options = webdriver.ChromeOptions()
+        
+        # Download preferences
+        prefs = {'download.default_directory': BASE_DIR + DOWNLOAD_DIRECTORY}
+        chrome_options.add_experimental_option('prefs', prefs)
+        
+        # Basic options
+        chrome_options.add_argument("--disable-infobars")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        
+        # Window size
+        chrome_options.add_argument(f"--window-size={BROWSER_WIDTH},{BROWSER_HEIGHT}")
+        
+        # User agent
+        chrome_options.add_argument(f"user-agent={USER_AGENT}")
+        
+        # Headless mode based on configuration
+        if not SHOW_BROWSER:
+            chrome_options.add_argument("--headless")
+            print("🔍 Running in HEADLESS mode (browser hidden)")
+        else:
+            chrome_options.add_argument("--start-maximized")
+            print("👁️ Running in VISIBLE mode (browser will be shown)")
+    
+    if os.environ.get("CHROMEDRIVER_PATH"):
+        # Production environment (Heroku, etc.)
+        return webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+    elif os.path.exists(CHROME_DRIVER_PATH):
+        # Local development environment with local chromedriver
+        return webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chrome_options)
+    else:
+        # Fallback: Use WebDriverManager to auto-download compatible ChromeDriver
+        return webdriver.Chrome(executable_path=ChromeDriverManager().install(), chrome_options=chrome_options)
+
 def format_dict(d):
     vals = list(d.values())
     return "={},".join(d.keys()).format(*vals) + "={}".format(vals[-1])
 
+
+
+# Testing: Adding options to undetected chrome driver
+def create_stealth_driver():
+    options = uc.ChromeOptions()
+    
+    # Set window size to common screen resolution
+    options.add_argument("--window-size=1920,1080")
+
+    # Set a random realistic user-agent
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
+        "Mozilla/5.0 (X11; Linux x86_64)..."
+    ]
+    options.add_argument(f"--user-agent={random.choice(user_agents)}")
+
+    # Anti-bot arguments
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-extensions")
+
+    # Optional: disable images to speed up
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        "download.default_directory": BASE_DIR + DOWNLOAD_DIRECTORY,  # Or your dynamic dir
+    }
+    options.add_experimental_option("prefs", prefs)
+
+    # Run headless if SHOW_BROWSER is False
+    if not SHOW_BROWSER:
+        options.headless = False  # ✅ this is the correct way for UC
+
+    # Launch driver
+    driver = uc.Chrome(options=options)
+
+    # Optional: Stealth tweaks inside browser
+    driver.execute_cdp_cmd(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {
+            "source": """
+                Object.defineProperty(navigator, 'webdriver', {
+                  get: () => undefined
+                });
+                window.navigator.chrome = {
+                  runtime: {},
+                };
+                Object.defineProperty(navigator, 'plugins', {
+                  get: () => [1, 2, 3],
+                });
+                Object.defineProperty(navigator, 'languages', {
+                  get: () => ['en-US', 'en'],
+                });
+            """
+        },
+    )
+
+    return driver
+
+
 @shared_task(bind=True)
 def scraper(self,ticker_value,market_value,download_type):
-    CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-    prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-    chromeOptions = webdriver.ChromeOptions()
-    chromeOptions.add_experimental_option('prefs', prefs)
-    chromeOptions.add_argument("--disable-infobars")
-    chromeOptions.add_argument("--start-maximized")
-    chromeOptions.add_argument("--disable-extensions")
-    chromeOptions.add_argument("--headless")
-    chromeOptions.add_argument("--window-size=1920,1080")
-    chromeOptions.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
-    chromeOptions.add_argument('--no-sandbox')   
-    chromeOptions.add_argument("--disable-dev-shm-usage")
-    # driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
-    driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
-    if download_type == "INCOME_STATEMENT":
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-        sleep(10)
+    # Create Chrome driver with automatic configuration
+    # driver = get_chrome_driver()
+    
+    options = uc.ChromeOptions()
+    options.add_argument("--window-size=1920,1080")
 
-        try:
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
-            data1 = excel_data_df.to_json()
-            print(data1)
-            database.child("income_statement").set({"income_statement": data1 })
-        except:
-            x =  '{"income_statement":{"none":"no data"}}'
-            database.child("income_statement").set({"income_statement": x })
-        sleep(10)
-        driver.quit()
-        return 'DONE'
-    elif download_type == "BALANCE_SHEET":
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-        sleep(10)
-        try:
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
-            data1 = excel_data_df.to_json()
-            print(data1)
-            database.child("balance_sheet").set({"balance_sheet": data1 })
-        except:
-            x =  '{"balance_sheet":{"none":"no data"}}'
-            database.child("balance_sheet").set({"balance_sheet": x })
-        sleep(10)
-        driver.quit()
-        return 'DONE'
-    elif download_type == "CASH_FLOW":
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-        WebDriverWait(driver, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-        sleep(10)
-        try:
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
-            data1 = excel_data_df.to_json()
-            print(data1)
-            database.child("cash_flow").set({"cash_flow": data1 })
-        except:
-            x =  '{"cash_flow":{"none":"no data"}}'
-            database.child("cash_flow").set({"cash_flow": x })
-        sleep(10)
-        driver.quit()
-        return 'DONE'
-
-@shared_task()
-def scraper_dividends(ticker_value,market_value):
-    CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-    prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-    chromeOptions = webdriver.ChromeOptions()
-    chromeOptions.add_experimental_option('prefs', prefs)
-    chromeOptions.add_argument('--headless')
-    chromeOptions.add_argument("--window-size=1920,1080")
-    chromeOptions.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
-    chromeOptions.add_argument('--disable-setuid-sandbox')
-    chromeOptions.add_argument('--remote-debugging-port=9222')
-    chromeOptions.add_argument('--disable-extensions')
-    chromeOptions.add_argument('start-maximized')
-    chromeOptions.add_argument('--disable-gpu')
-    chromeOptions.add_argument('--no-sandbox')
-    chromeOptions.add_argument('--disable-dev-shm-usage')
-    # driver_dividends = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    driver_dividends = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
-    driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
+    driver = create_stealth_driver()
     try:
-        data = WebDriverWait(driver_dividends, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)   
-        data1 = df[0].to_json()
-        print(data1)
-        database.child("dividends").set({"dividends": data1 })
-    except:
-        x =  '{"dividends":{"none":"no data"}}'
-        database.child("dividends").set({"dividends": x })
-    sleep(10)
-    driver_dividends.quit()
-    return 'DONE'
+        driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+        if download_type == "INCOME_STATEMENT":
+            print(f"Starting income statement scraping for {ticker_value}")
+            print(f"Current URL: {driver.current_url}")
+            
+            WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
+            print("Successfully clicked Income Statement button")
+            
+            # Add wait for page to load after clicking Income Statement
+            sleep(3)
+            
+            # Debug: Check what links are available on the page
+            try:
+                links = driver.find_elements(By.TAG_NAME, "a")
+                print(f"Found {len(links)} links on page")
+                for i, link in enumerate(links[:10]):  # Show first 10 links
+                    print(f"Link {i}: '{link.text}' - href: {link.get_attribute('href')}")
+            except Exception as e:
+                print(f"Error getting links: {e}")
+            
+            # Try multiple strategies to find and click Expand Detail View
+            expand_clicked = False
+            try:
+                # Strategy 1: Original selector
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                expand_clicked = True
+                print("Successfully clicked Expand Detail View (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: Look for any expand link
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Expand')]"))).click()
+                    expand_clicked = True
+                    print("Successfully clicked Expand link (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: Look for detail view link
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Detail View')]"))).click()
+                        expand_clicked = True
+                        print("Successfully clicked Detail View link (Strategy 3)")
+                    except:
+                        print("Warning: Could not find Expand Detail View link. Proceeding without expanding...")
+            
+            if expand_clicked:
+                sleep(2)  # Wait for expansion to complete
+            
+            # Debug: Check what buttons are available on the page
+            try:
+                buttons = driver.find_elements(By.TAG_NAME, "button")
+                print(f"Found {len(buttons)} buttons on page")
+                for i, button in enumerate(buttons[:10]):  # Show first 10 buttons
+                    print(f"Button {i}: '{button.text}' - id: {button.get_attribute('id')} - class: {button.get_attribute('class')}")
+            except Exception as e:
+                print(f"Error getting buttons: {e}")
+            
+            # Try multiple strategies to find and click Export button
+            export_clicked = False
+            try:
+                # Strategy 1: Original selector
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+                export_clicked = True
+                print("Successfully clicked Export Data button (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: By ID (from the HTML you provided)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "salEqsvFinancialsPopoverExport"))).click()
+                    export_clicked = True
+                    print("Successfully clicked Export button by ID (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: By aria-label
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Export']"))).click()
+                        export_clicked = True
+                        print("Successfully clicked Export button by aria-label (Strategy 3)")
+                    except:
+                        try:
+                            # Strategy 4: By class and icon combination
+                            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'mds-button--icon-only__sal') and .//span[@data-mds-icon-name='share']]"))).click()
+                            export_clicked = True
+                            print("Successfully clicked Export button by class/icon (Strategy 4)")
+                        except:
+                            print("Warning: Could not find Export button. Data may not be available for download.")
+            
+            if export_clicked:
+                sleep(10)  # Wait for download to complete
+                print("Waiting for download to complete...")
+            else:
+                sleep(5)   # Short wait even if export failed
+                print("No export performed, continuing...")
+
+            try:
+                excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Income Statement_Annual_As Originally Reported.xls")
+                data1 = excel_data_df.to_json()
+                print("Successfully read income statement Excel file")
+                print(data1)
+                database.child("income_statement").set({"income_statement": data1 })
+            except Exception as e:
+                print(f"Error reading income statement Excel file: {e}")
+                x =  '{"income_statement":{"none":"no data"}}'
+                database.child("income_statement").set({"income_statement": x })
+            sleep(10)
+            return 'DONE'
+        elif download_type == "BALANCE_SHEET":
+            print(f"Starting balance sheet scraping for {ticker_value}")
+            print(f"Current URL: {driver.current_url}")
+            
+            WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
+            print("Successfully clicked Balance Sheet button")
+            
+            # Add wait for page to load after clicking Balance Sheet
+            sleep(3)
+            
+            # Debug: Check what links are available on the page
+            try:
+                links = driver.find_elements(By.TAG_NAME, "a")
+                print(f"Found {len(links)} links on page")
+                for i, link in enumerate(links[:10]):  # Show first 10 links
+                    print(f"Link {i}: '{link.text}' - href: {link.get_attribute('href')}")
+            except Exception as e:
+                print(f"Error getting links: {e}")
+            
+            # Try multiple strategies to find and click Expand Detail View
+            expand_clicked = False
+            try:
+                # Strategy 1: Original selector
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                expand_clicked = True
+                print("Successfully clicked Expand Detail View (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: Look for any expand link
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Expand')]"))).click()
+                    expand_clicked = True
+                    print("Successfully clicked Expand link (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: Look for detail view link
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Detail View')]"))).click()
+                        expand_clicked = True
+                        print("Successfully clicked Detail View link (Strategy 3)")
+                    except:
+                        print("Warning: Could not find Expand Detail View link. Proceeding without expanding...")
+            
+            if expand_clicked:
+                sleep(2)  # Wait for expansion to complete
+            
+            # Debug: Check what buttons are available on the page
+            try:
+                buttons = driver.find_elements(By.TAG_NAME, "button")
+                print(f"Found {len(buttons)} buttons on page")
+                for i, button in enumerate(buttons[:10]):  # Show first 10 buttons
+                    print(f"Button {i}: '{button.text}' - id: {button.get_attribute('id')} - class: {button.get_attribute('class')}")
+            except Exception as e:
+                print(f"Error getting buttons: {e}")
+            
+            # Try multiple strategies to find and click Export button
+            export_clicked = False
+            try:
+                # Strategy 1: Original selector
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+                export_clicked = True
+                print("Successfully clicked Export Data button (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: By ID (from the HTML you provided)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "salEqsvFinancialsPopoverExport"))).click()
+                    export_clicked = True
+                    print("Successfully clicked Export button by ID (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: By aria-label
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Export']"))).click()
+                        export_clicked = True
+                        print("Successfully clicked Export button by aria-label (Strategy 3)")
+                    except:
+                        try:
+                            # Strategy 4: By class and icon combination
+                            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'mds-button--icon-only__sal') and .//span[@data-mds-icon-name='share']]"))).click()
+                            export_clicked = True
+                            print("Successfully clicked Export button by class/icon (Strategy 4)")
+                        except:
+                            print("Warning: Could not find Export button. Data may not be available for download.")
+            
+            if export_clicked:
+                sleep(10)  # Wait for download to complete
+                print("Waiting for download to complete...")
+            else:
+                sleep(5)   # Short wait even if export failed
+                print("No export performed, continuing...")
+                
+            try:
+                excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Balance Sheet_Annual_As Originally Reported.xls")
+                data1 = excel_data_df.to_json()
+                print("Successfully read balance sheet Excel file")
+                print(data1)
+                database.child("balance_sheet").set({"balance_sheet": data1 })
+            except Exception as e:
+                print(f"Error reading balance sheet Excel file: {e}")
+                x =  '{"balance_sheet":{"none":"no data"}}'
+                database.child("balance_sheet").set({"balance_sheet": x })
+            sleep(10)
+            return 'DONE'
+        elif download_type == "CASH_FLOW":
+            print(f"Starting cash flow scraping for {ticker_value}")
+            print(f"Current URL: {driver.current_url}")
+            
+            WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+            print("Successfully clicked Cash Flow button")
+            
+            # Add wait for page to load after clicking Cash Flow
+            sleep(3)
+            
+            # Debug: Check what links are available on the page
+            try:
+                links = driver.find_elements(By.TAG_NAME, "a")
+                print(f"Found {len(links)} links on page")
+                for i, link in enumerate(links[:10]):  # Show first 10 links
+                    print(f"Link {i}: '{link.text}' - href: {link.get_attribute('href')}")
+            except Exception as e:
+                print(f"Error getting links: {e}")
+            
+            # Try multiple strategies to find and click Expand Detail View
+            expand_clicked = False
+            try:
+                # Strategy 1: Original selector
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                expand_clicked = True
+                print("Successfully clicked Expand Detail View (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: Look for any expand link
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Expand')]"))).click()
+                    expand_clicked = True
+                    print("Successfully clicked Expand link (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: Look for detail view link
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Detail View')]"))).click()
+                        expand_clicked = True
+                        print("Successfully clicked Detail View link (Strategy 3)")
+                    except:
+                        print("Warning: Could not find Expand Detail View link. Proceeding without expanding...")
+            
+            if expand_clicked:
+                sleep(2)  # Wait for expansion to complete
+            
+            # Debug: Check what buttons are available on the page
+            try:
+                buttons = driver.find_elements(By.TAG_NAME, "button")
+                print(f"Found {len(buttons)} buttons on page")
+                for i, button in enumerate(buttons[:10]):  # Show first 10 buttons
+                    print(f"Button {i}: '{button.text}' - id: {button.get_attribute('id')} - class: {button.get_attribute('class')}")
+            except Exception as e:
+                print(f"Error getting buttons: {e}")
+            
+            # Try multiple strategies to find and click Export button
+            export_clicked = False
+            try:
+                # Strategy 1: Original selector
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
+                export_clicked = True
+                print("Successfully clicked Export Data button (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: By ID (from the HTML you provided)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "salEqsvFinancialsPopoverExport"))).click()
+                    export_clicked = True
+                    print("Successfully clicked Export button by ID (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: By aria-label
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Export']"))).click()
+                        export_clicked = True
+                        print("Successfully clicked Export button by aria-label (Strategy 3)")
+                    except:
+                        try:
+                            # Strategy 4: By class and icon combination
+                            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'mds-button--icon-only__sal') and .//span[@data-mds-icon-name='share']]"))).click()
+                            export_clicked = True
+                            print("Successfully clicked Export button by class/icon (Strategy 4)")
+                        except:
+                            print("Warning: Could not find Export button. Data may not be available for download.")
+            
+            if export_clicked:
+                sleep(10)  # Wait for download to complete
+                print("Waiting for download to complete...")
+            else:
+                sleep(5)   # Short wait even if export failed
+                print("No export performed, continuing...")
+                
+            try:
+                excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Cash Flow_Annual_As Originally Reported.xls")
+                data1 = excel_data_df.to_json()
+                print("Successfully read cash flow Excel file")
+                print(data1)
+                database.child("cash_flow").set({"cash_flow": data1 })
+            except Exception as e:
+                print(f"Error reading cash flow Excel file: {e}")
+                x =  '{"cash_flow":{"none":"no data"}}'
+                database.child("cash_flow").set({"cash_flow": x })
+            sleep(10)
+            return 'DONE'
+    finally:
+        driver.quit()
+
+@shared_task(bind=True)
+def scraper_dividends(self, ticker_value, market_value):
+    # Create Chrome driver with stealth configuration (same as scraper function)
+    driver_dividends = create_stealth_driver()
+    
+    try:
+        print(f"Starting dividends scraping for {ticker_value}")
+        driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
+        print(f"Current URL: {driver_dividends.current_url}")
+        
+        # Debug: Check what elements are available on the page
+        try:
+            tables = driver_dividends.find_elements(By.TAG_NAME, "table")
+            print(f"Found {len(tables)} tables on page")
+            
+            divs = driver_dividends.find_elements(By.TAG_NAME, "div")
+            table_divs = [div for div in divs if 'table' in div.get_attribute('class').lower()]
+            print(f"Found {len(table_divs)} table-related divs on page")
+        except Exception as e:
+            print(f"Error getting page elements: {e}")
+        
+        # Try multiple strategies to find the dividends table
+        data_found = False
+        data = None
+        
+        try:
+            # Strategy 1: Original selector
+            data = WebDriverWait(driver_dividends, 30).until(
+                EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))
+            ).get_attribute("outerHTML")
+            data_found = True
+            print("Successfully found dividends table (Strategy 1)")
+        except:
+            try:
+                # Strategy 2: Look for any table scroller
+                data = WebDriverWait(driver_dividends, 30).until(
+                    EC.visibility_of_element_located((By.XPATH, "//div[contains(@class, 'table__scroller')]"))
+                ).get_attribute("outerHTML")
+                data_found = True
+                print("Successfully found dividends table (Strategy 2)")
+            except:
+                try:
+                    # Strategy 3: Look for any table container
+                    data = WebDriverWait(driver_dividends, 30).until(
+                        EC.visibility_of_element_located((By.XPATH, "//div[contains(@class, 'table') and contains(@class, 'scroller')]"))
+                    ).get_attribute("outerHTML")
+                    data_found = True
+                    print("Successfully found dividends table (Strategy 3)")
+                except:
+                    try:
+                        # Strategy 4: Look for direct table element
+                        table_element = WebDriverWait(driver_dividends, 30).until(
+                            EC.visibility_of_element_located((By.TAG_NAME, "table"))
+                        )
+                        data = table_element.get_attribute("outerHTML")
+                        data_found = True
+                        print("Successfully found dividends table (Strategy 4)")
+                    except:
+                        print("Warning: Could not find dividends table with any strategy")
+        
+        if data_found and data:
+            try:
+                df = pd.read_html(data)
+                if df and len(df) > 0:
+                    data1 = df[0].to_json()
+                    print("Successfully parsed dividends data")
+                    print(f"Data preview: {data1[:200]}...")  # Show first 200 chars
+                    database.child("dividends").set({"dividends": data1})
+                else:
+                    print("Warning: No data found in parsed HTML")
+                    x = '{"dividends":{"none":"no data"}}'
+                    database.child("dividends").set({"dividends": x})
+            except Exception as e:
+                print(f"Error parsing dividends data: {e}")
+                x = '{"dividends":{"none":"no data"}}'
+                database.child("dividends").set({"dividends": x})
+        else:
+            print("No dividends data found")
+            x = '{"dividends":{"none":"no data"}}'
+            database.child("dividends").set({"dividends": x})
+            
+        sleep(10)
+        return 'DONE'
+        
+    except Exception as e:
+        print(f"Error in scraper_dividends: {e}")
+        x = '{"dividends":{"none":"no data"}}'
+        database.child("dividends").set({"dividends": x})
+        return 'ERROR'
+    finally:
+        driver_dividends.quit()
 
 @shared_task()
 def scraper_valuation(ticker_value,market_value,download_type):
@@ -149,7 +583,9 @@ def scraper_valuation(ticker_value,market_value,download_type):
     prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
-    chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument("--disable-infobars")
+    chromeOptions.add_argument("--start-maximized")
+    chromeOptions.add_argument("--disable-extensions")
     chromeOptions.add_argument("--window-size=1920,1080")
     chromeOptions.add_argument(
     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
@@ -160,8 +596,9 @@ def scraper_valuation(ticker_value,market_value,download_type):
     chromeOptions.add_argument('--disable-gpu')
     chromeOptions.add_argument('--no-sandbox')
     chromeOptions.add_argument('--disable-dev-shm-usage')
-    # valuation_driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    valuation_driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
+    
+    # Create Chrome driver with automatic environment detection
+    valuation_driver = get_chrome_driver(chromeOptions)
     valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
     if download_type == "VALUATION_CASH_FLOW": 
         valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
@@ -195,7 +632,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         valuation_driver.quit() 
         return 'DONE'      
     elif download_type == "VALUATION_FINANCIAL_HEALTH": 
-        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
+        WebDriverWait(valuation_driver, 30).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
         try:
             WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
             sleep(10)
@@ -231,21 +668,39 @@ def all_scraper(self,ticker_value,market_value):
     prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
-    chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument("--disable-infobars")
+    chromeOptions.add_argument("--start-maximized")
+    chromeOptions.add_argument("--disable-extensions")
     chromeOptions.add_argument("--window-size=1920,1080")
     chromeOptions.add_argument(
     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
-    chromeOptions.add_argument('--disable-setuid-sandbox')
-    chromeOptions.add_argument('--remote-debugging-port=9222')
-    chromeOptions.add_argument('--disable-extensions')
-    chromeOptions.add_argument('start-maximized')
-    chromeOptions.add_argument('--disable-gpu')
-    chromeOptions.add_argument('--no-sandbox')
-    chromeOptions.add_argument('--disable-dev-shm-usage')
-    # valuation_financial_health_driver = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    valuation_financial_health_driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions) 
+    chromeOptions.add_argument('--no-sandbox')   
+    chromeOptions.add_argument("--disable-dev-shm-usage")
+    
+    # Create Chrome driver with automatic environment detection
+    valuation_financial_health_driver = get_chrome_driver(chromeOptions)
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-    WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
+    
+    # Debug: Save page source and screenshot for troubleshooting
+    try:
+        print(f"Page title: {valuation_financial_health_driver.title}")
+        print(f"Current URL: {valuation_financial_health_driver.current_url}")
+        
+        # Save page source for debugging
+        with open(f"debug_page_source_{ticker_value}.html", "w", encoding="utf-8") as f:
+            f.write(valuation_financial_health_driver.page_source)
+        
+        # Take screenshot for debugging
+        valuation_financial_health_driver.save_screenshot(f"debug_screenshot_{ticker_value}.png")
+        
+        WebDriverWait(valuation_financial_health_driver, 30).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
+    except Exception as e:
+        print(f"Error finding Financial Health button: {e}")
+        print("Available buttons on page:")
+        buttons = valuation_financial_health_driver.find_elements(By.TAG_NAME, "button")
+        for i, button in enumerate(buttons[:10]):  # Show first 10 buttons
+            print(f"Button {i}: '{button.text}' - visible: {button.is_displayed()}")
+        raise e
     try:
         WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
@@ -374,19 +829,17 @@ def scraper_operating_performance(ticker_value, market_value):
     prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
-    chromeOptions.add_argument('--headless')
+    chromeOptions.add_argument("--disable-infobars")
+    chromeOptions.add_argument("--start-maximized")
+    chromeOptions.add_argument("--disable-extensions")
     chromeOptions.add_argument("--window-size=1920,1080")
     chromeOptions.add_argument(
     "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
-    chromeOptions.add_argument('--disable-setuid-sandbox')
-    chromeOptions.add_argument('--remote-debugging-port=9222')
-    chromeOptions.add_argument('--disable-extensions')
-    chromeOptions.add_argument('start-maximized')
-    chromeOptions.add_argument('--disable-gpu')
-    chromeOptions.add_argument('--no-sandbox')
-    chromeOptions.add_argument('--disable-dev-shm-usage')
-    # driver_operating_perfomance = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chromeOptions)
-    driver_operating_perfomance = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chromeOptions)
+    chromeOptions.add_argument('--no-sandbox')   
+    chromeOptions.add_argument("--disable-dev-shm-usage")
+    
+    # Create Chrome driver with automatic environment detection
+    driver_operating_perfomance = get_chrome_driver(chromeOptions)
     driver_operating_perfomance.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
     try:
         data = WebDriverWait(driver_operating_perfomance, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")

@@ -1,4 +1,5 @@
-web: gunicorn cb_dj_weather_app.wsgi --timeout 600 --log-file -
+web: gunicorn stock_scraper.wsgi --timeout 600 --log-file -
 
-celery: celery -A cb_dj_weather_app worker --loglevel=info 
+celery_worker: celery -A stock_scraper worker --loglevel=info
+celery: celery -A stock_scraper worker --loglevel=info 
 
