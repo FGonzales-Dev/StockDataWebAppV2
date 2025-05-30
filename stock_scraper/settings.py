@@ -157,6 +157,13 @@ if IS_PRODUCTION:
     SECURE_HSTS_SECONDS = 86400
     SECURE_REDIRECT_EXEMPT = []
     
+    # Add Railway domain to CSRF trusted origins
+    CSRF_TRUSTED_ORIGINS = [
+        'https://web-production-b236d.up.railway.app',
+        'https://*.railway.app',
+        'https://*.up.railway.app'
+    ]
+    
     # Only enable HTTPS redirect if not using Railway's proxy
     if not os.environ.get('RAILWAY_ENVIRONMENT'):
         SECURE_SSL_REDIRECT = True
