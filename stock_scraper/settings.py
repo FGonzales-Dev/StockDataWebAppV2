@@ -12,23 +12,22 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 
 import os
 import django_heroku
-from pathlib import Path
 
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm')
+SECRET_KEY = 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+DEBUG = True
 
-ALLOWED_HOSTS = ['*']  # Railway handles this
+ALLOWED_HOSTS = ['0.0.0.0','ancient-dawn-83050.herokuapp.com','127.0.0.1']
 
 CRISPY_TEMPLATE_PACK="bootstrap4"
 # Application definition
@@ -135,20 +134,11 @@ STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 django_heroku.settings(locals())
 
-# Celery Configuration
-USE_CELERY = os.environ.get('USE_CELERY', 'True').lower() == 'true'
-
-if USE_CELERY:
-    CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-    CELERY_RESULT_BACKEND = 'django-db'
-    CELERY_ACCEPT_CONTENT = ['json']
-    CELERY_TASK_SERIALIZER = 'json'
-    CELERY_RESULT_SERIALIZER = 'json'
-    CELERY_TIMEZONE = 'UTC'
-else:
-    # Disable Celery for deployment testing
-    CELERY_TASK_ALWAYS_EAGER = True
-    CELERY_TASK_EAGER_PROPAGATES = True
+# For Local
+CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
 
 # CELERY_BROKER_URL = os.environ['REDIS_URL']
 # CELERY_BACKEND_URL = 'redis://:p1e842a929016d5b23eb852b0d462dc69169c1535f156dc5ade1296118d56b93c@ec2-34-195-183-221.compute-1.amazonaws.com:15900'
