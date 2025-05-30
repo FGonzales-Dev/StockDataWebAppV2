@@ -61,8 +61,7 @@ database =firebase.database()
 def get_chrome_driver(chrome_options=None):
     """
     Create Chrome WebDriver with automatic environment detection.
-    Uses CHROMEDRIVER_PATH environment variable for production,
-    local chromedriver path for development, with WebDriverManager as fallback.
+    Uses WebDriverManager for ChromeDriver compatibility and CHROME_BIN for browser binary.
     """
     CHROME_DRIVER_PATH = BASE_DIR / "chromedriver"
     
@@ -107,47 +106,41 @@ def get_chrome_driver(chrome_options=None):
             chrome_options.add_argument("--start-maximized")
             print("👁️ Running in VISIBLE mode (browser will be shown)")
     
-    # Railway/Production environment with Google Chrome
-    if os.environ.get("CHROMEDRIVER_PATH") and os.environ.get("CHROME_BIN"):
-        print("🚀 Using Railway/Production Google Chrome environment")
+    # Set Chrome binary location if in production environment
+    if os.environ.get("CHROME_BIN"):
         chrome_options.binary_location = os.environ.get("CHROME_BIN")
+        print(f"🏗️ Chrome binary location: {os.environ.get('CHROME_BIN')}")
+    
+    # Try WebDriverManager first (most reliable for compatibility)
+    try:
+        from webdriver_manager.chrome import ChromeDriverManager
+        driver_path = ChromeDriverManager().install()
+        print(f"📦 Using WebDriverManager ChromeDriver: {driver_path}")
+        return webdriver.Chrome(
+            executable_path=driver_path, 
+            chrome_options=chrome_options
+        )
+    except Exception as wdm_error:
+        print(f"⚠️ WebDriverManager failed: {wdm_error}")
         
-        # Use WebDriverManager to get compatible ChromeDriver since Railway might not have the right version
-        try:
-            from webdriver_manager.chrome import ChromeDriverManager
-            driver_path = ChromeDriverManager().install()
-            print(f"📦 Using WebDriverManager ChromeDriver: {driver_path}")
-            return webdriver.Chrome(
-                executable_path=driver_path, 
-                chrome_options=chrome_options
-            )
-        except Exception as wdm_error:
-            print(f"⚠️ WebDriverManager failed: {wdm_error}, trying system ChromeDriver")
+        # Fallback 1: Try system ChromeDriver if available
+        if os.environ.get("CHROMEDRIVER_PATH") and os.path.exists(os.environ.get("CHROMEDRIVER_PATH")):
+            print("🚀 Using system ChromeDriver")
             return webdriver.Chrome(
                 executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
                 chrome_options=chrome_options
             )
-    # Legacy production environment (Heroku, etc.)
-    elif os.environ.get("CHROMEDRIVER_PATH"):
-        print("🚀 Using legacy production environment")
-        return webdriver.Chrome(
-            executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
-            chrome_options=chrome_options
-        )
-    # Local development environment with local chromedriver
-    elif os.path.exists(CHROME_DRIVER_PATH):
-        print("🏠 Using local development environment")
-        return webdriver.Chrome(
-            executable_path=str(CHROME_DRIVER_PATH), 
-            chrome_options=chrome_options
-        )
-    else:
-        # Fallback: Use WebDriverManager to auto-download compatible ChromeDriver
-        print("📦 Using WebDriverManager fallback")
-        return webdriver.Chrome(
-            executable_path=ChromeDriverManager().install(), 
-            chrome_options=chrome_options
-        )
+        
+        # Fallback 2: Try local development ChromeDriver
+        elif os.path.exists(CHROME_DRIVER_PATH):
+            print("🏠 Using local development ChromeDriver")
+            return webdriver.Chrome(
+                executable_path=str(CHROME_DRIVER_PATH), 
+                chrome_options=chrome_options
+            )
+        else:
+            print("❌ No ChromeDriver found")
+            raise wdm_error
 
 def format_dict(d):
     vals = list(d.values())
