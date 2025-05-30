@@ -1,7 +1,9 @@
 [phases.install]
-# Install Chrome and dependencies in a single comprehensive command
+# Install Chrome and dependencies with proper prerequisites
 cmds = [
-    # Add Google Chrome repository and install everything in one go
+    # First install basic tools needed for Chrome repository setup
+    "apt-get update && apt-get install -y wget gnupg ca-certificates",
+    # Add Google Chrome repository and install Chrome with all dependencies
     "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list && apt-get update && apt-get install -y google-chrome-stable xvfb fonts-liberation libappindicator3-1 libasound2t64 libatk-bridge2.0-0 libnspr4 libnss3 libxss1 libxtst6 libatspi2.0-0 libgtk-3-0 libxdamage1 libdrm2 libxcomposite1 libxrandr2 && apt-get clean && rm -rf /var/lib/apt/lists/*"
 ]
 
