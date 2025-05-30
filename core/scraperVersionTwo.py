@@ -126,7 +126,7 @@ def remove_whitespaces(d):
 
 def clear_selenium_directory():
     DOWNLOAD_DIRECTORY = "/selenium"
-    selenium_dir = BASE_DIR + DOWNLOAD_DIRECTORY
+    selenium_dir = BASE_DIR / "selenium"
     
     if os.path.exists(selenium_dir):
         for filename in os.listdir(selenium_dir):
