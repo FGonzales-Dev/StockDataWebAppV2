@@ -1,0 +1,11 @@
+[providers]
+python = "python311"
+
+[phases.setup]
+nixPkgs = ["python311", "nodejs", "npm"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt", "npm ci"]
+
+[start]
+cmd = "python3 manage.py collectstatic --noinput && python3 manage.py migrate --noinput && python3 -m gunicorn stock_scraper.wsgi:application --bind 0.0.0.0:$PORT" 

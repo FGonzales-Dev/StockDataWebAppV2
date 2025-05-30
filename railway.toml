@@ -1,8 +1,4 @@
-[build]
-builder = "nixpacks"
-
 [deploy]
-startCommand = "echo 'Starting deployment...' && python3 manage.py collectstatic --noinput && echo 'Static files collected' && python3 manage.py migrate --noinput && echo 'Migrations completed' && echo 'Starting gunicorn on port:' $PORT && python3 -m gunicorn stock_scraper.wsgi:application --bind 0.0.0.0:${PORT:-8000} --log-level info"
 healthcheckPath = "/health/"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
