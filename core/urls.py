@@ -20,7 +20,7 @@ urlpatterns = [
 
 
 
-    path('stock-data', scraperVersionTwo.scrape, name='stockData'),
+    path('', scraperVersionTwo.scrape, name='stockData'),
     path('stockDataDownload', scraperVersionTwo.download, name='stockDataDownload'),
     path('get_task_info/', scraperVersionTwo.get_task_info, name='get_task_info'),
 

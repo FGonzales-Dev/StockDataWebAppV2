@@ -579,88 +579,284 @@ def scraper_dividends(self, ticker_value, market_value):
 
 @shared_task()
 def scraper_valuation(ticker_value,market_value,download_type):
-    CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-    prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-    chromeOptions = webdriver.ChromeOptions()
-    chromeOptions.add_experimental_option('prefs', prefs)
-    chromeOptions.add_argument("--disable-infobars")
-    chromeOptions.add_argument("--start-maximized")
-    chromeOptions.add_argument("--disable-extensions")
-    chromeOptions.add_argument("--window-size=1920,1080")
-    chromeOptions.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
-    chromeOptions.add_argument('--disable-setuid-sandbox')
-    chromeOptions.add_argument('--remote-debugging-port=9222')
-    chromeOptions.add_argument('--disable-extensions')
-    chromeOptions.add_argument('start-maximized')
-    chromeOptions.add_argument('--disable-gpu')
-    chromeOptions.add_argument('--no-sandbox')
-    chromeOptions.add_argument('--disable-dev-shm-usage')
+    # Create Chrome driver with stealth configuration (same as scraper_dividends)
+    valuation_driver = create_stealth_driver()
     
-    # Create Chrome driver with automatic environment detection
-    valuation_driver = get_chrome_driver(chromeOptions)
-    valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-    if download_type == "VALUATION_CASH_FLOW": 
-        valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
-        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-        try: 
-            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-            sleep(10)
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/cashFlow.xls")
-            data1 = excel_data_df.to_json()
-            print(data1)
-            database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
+    try:
+        print(f"Starting valuation scraping for {ticker_value}, type: {download_type}")
+        valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
+        print(f"Current URL: {valuation_driver.current_url}")
+        
+        # Wait for page to load
+        sleep(3)
+        
+        # Click the appropriate tab based on download_type FIRST
+        tab_clicked = False
+        if download_type == "VALUATION_CASH_FLOW":
+            # Click Cash Flow tab
+            try:
+                # Strategy 1: By ID
+                WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.ID, "keyMetricscashFlow"))).click()
+                tab_clicked = True
+                print("Successfully clicked Cash Flow tab (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: By data attribute
+                    WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@data='cashFlow']"))).click()
+                    tab_clicked = True
+                    print("Successfully clicked Cash Flow tab (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: By text content
+                        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+                        tab_clicked = True
+                        print("Successfully clicked Cash Flow tab (Strategy 3)")
+                    except:
+                        print("Warning: Could not find Cash Flow tab")
+                        
+        elif download_type == "VALUATION_GROWTH":
+            # Click Growth tab
+            try:
+                # Strategy 1: By ID
+                WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.ID, "keyMetricsgrowthTable"))).click()
+                tab_clicked = True
+                print("Successfully clicked Growth tab (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: By data attribute
+                    WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@data='growthTable']"))).click()
+                    tab_clicked = True
+                    print("Successfully clicked Growth tab (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: By text content (exact match for Growth to avoid confusion)
+                        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='Growth' or contains(., 'Growth') and not(contains(., 'Growth Rate'))]"))).click()
+                        tab_clicked = True
+                        print("Successfully clicked Growth tab (Strategy 3)")
+                    except:
+                        print("Warning: Could not find Growth tab")
+                        
+        elif download_type == "VALUATION_FINANCIAL_HEALTH":
+            # Click Financial Health tab
+            try:
+                # Strategy 1: By ID
+                WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.ID, "keyMetricsfinancialHealth"))).click()
+                tab_clicked = True
+                print("Successfully clicked Financial Health tab (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: By data attribute
+                    WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@data='financialHealth']"))).click()
+                    tab_clicked = True
+                    print("Successfully clicked Financial Health tab (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: By text content
+                        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
+                        tab_clicked = True
+                        print("Successfully clicked Financial Health tab (Strategy 3)")
+                    except:
+                        print("Warning: Could not find Financial Health tab")
+                        
+        elif download_type == "VALUATION_OPERATING_EFFICIENCY":
+            # Click Profitability and Efficiency tab
+            try:
+                # Strategy 1: By ID
+                WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.ID, "keyMetricsprofitabilityAndEfficiency"))).click()
+                tab_clicked = True
+                print("Successfully clicked Profitability and Efficiency tab (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: By data attribute
+                    WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@data='profitabilityAndEfficiency']"))).click()
+                    tab_clicked = True
+                    print("Successfully clicked Profitability and Efficiency tab (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: By text content
+                        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Profitability and Efficiency')]"))).click()
+                        tab_clicked = True
+                        print("Successfully clicked Profitability and Efficiency tab (Strategy 3)")
+                    except:
+                        try:
+                            # Strategy 4: Shorter text match
+                            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Profitability')]"))).click()
+                            tab_clicked = True
+                            print("Successfully clicked Profitability tab (Strategy 4)")
+                        except:
+                            print("Warning: Could not find Profitability and Efficiency tab")
+        
+        if tab_clicked:
+            sleep(3)  # Wait for tab content to load
+            print(f"Successfully navigated to {download_type} tab")
+        else:
+            print(f"Using default tab for {download_type}")
+        
+        # NOW select "10 Years" time period after tab is selected
+        # Try multiple strategies to find and click the time period dropdown (currently showing "5 Years")
+        time_period_clicked = False
+        try:
+            # Strategy 1: Find button containing "5 Years" text
+            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '5 Years')]"))).click()
+            time_period_clicked = True
+            print("Successfully clicked 5 Years dropdown (Strategy 1)")
         except:
-            x =  '{"valuation_cash_flow":{"none":"no data"}}'
-            database.child("valuation_cash_flow").set({"valuation_cash_flow": x })
-            sleep(5)
-        valuation_driver.quit()   
+            try:
+                # Strategy 2: Find button with specific classes
+                WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'mds-button--secondary') and contains(., 'Years')]"))).click()
+                time_period_clicked = True
+                print("Successfully clicked time period dropdown (Strategy 2)")
+            except:
+                try:
+                    # Strategy 3: Find any button with "Years" text and aria-haspopup
+                    WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-haspopup='true' and contains(., 'Years')]"))).click()
+                    time_period_clicked = True
+                    print("Successfully clicked time period dropdown (Strategy 3)")
+                except:
+                    print("Warning: Could not find time period dropdown button")
+        
+        if time_period_clicked:
+            sleep(2)  # Wait for dropdown to open
+            
+            # Try multiple strategies to find and click "10 Years" option
+            ten_years_selected = False
+            try:
+                # Strategy 1: Direct text match
+                WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '10 Years')] | //li[contains(., '10 Years')] | //div[contains(., '10 Years')]"))).click()
+                ten_years_selected = True
+                print("Successfully selected 10 Years option (Strategy 1)")
+            except:
+                try:
+                    # Strategy 2: Look for clickable element with "10" and "Years"
+                    WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[contains(., '10') and contains(., 'Years')]"))).click()
+                    ten_years_selected = True
+                    print("Successfully selected 10 Years option (Strategy 2)")
+                except:
+                    try:
+                        # Strategy 3: Look in dropdown menu or list items
+                        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//ul//li[contains(text(), '10')] | //div[@role='menu']//div[contains(text(), '10')]"))).click()
+                        ten_years_selected = True
+                        print("Successfully selected 10 Years option (Strategy 3)")
+                    except:
+                        print("Warning: Could not find 10 Years option in dropdown")
+            
+            if ten_years_selected:
+                sleep(3)  # Wait for page to reload with 10-year data
+                print("Successfully set time period to 10 years")
+            else:
+                print("Using default time period (could not select 10 years)")
+        else:
+            print("Using default time period (could not open dropdown)")
+        
+        # Click the export button to download XLS file
+        export_clicked = False
+        try:
+            # Strategy 1: By ID (salKeyStatsPopoverExport)
+            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.ID, "salKeyStatsPopoverExport"))).click()
+            export_clicked = True
+            print("Successfully clicked Export button by ID (Strategy 1)")
+        except:
+            try:
+                # Strategy 2: By aria-label
+                WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Export']"))).click()
+                export_clicked = True
+                print("Successfully clicked Export button by aria-label (Strategy 2)")
+            except:
+                try:
+                    # Strategy 3: By class and icon combination
+                    WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'mds-button--icon-only__sal') and .//span[@data-mds-icon-name='share']]"))).click()
+                    export_clicked = True
+                    print("Successfully clicked Export button by class/icon (Strategy 3)")
+                except:
+                    try:
+                        # Strategy 4: Look in export div
+                        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//div[@class='export']//button"))).click()
+                        export_clicked = True
+                        print("Successfully clicked Export button in export div (Strategy 4)")
+                    except:
+                        print("Warning: Could not find Export button")
+        
+        if export_clicked:
+            sleep(10)  # Wait for download to complete
+            print("Waiting for download to complete...")
+            
+            # Read the downloaded file based on download_type
+            try:
+                if download_type == "VALUATION_CASH_FLOW":
+                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/cashFlow.xls")
+                    data1 = excel_data_df.to_json()
+                    print("Successfully read cash flow valuation Excel file")
+                    print(data1)
+                    database.child("valuation_cash_flow").set({"valuation_cash_flow": data1})
+                elif download_type == "VALUATION_GROWTH":
+                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/growthTable.xls")
+                    data1 = excel_data_df.to_json()
+                    print("Successfully read growth valuation Excel file")
+                    print(data1)
+                    database.child("valuation_growth").set({"valuation_growth": data1})
+                elif download_type == "VALUATION_FINANCIAL_HEALTH":
+                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/financialHealth.xls")
+                    data1 = excel_data_df.to_json()
+                    print("Successfully read financial health valuation Excel file")
+                    print(data1)
+                    database.child("valuation_financial_health").set({"valuation_financial_health": data1})
+                elif download_type == "VALUATION_OPERATING_EFFICIENCY":
+                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/operatingAndEfficiency.xls")
+                    data1 = excel_data_df.to_json()
+                    print("Successfully read operating efficiency valuation Excel file")
+                    print(data1)
+                    database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1})
+            except Exception as e:
+                print(f"Error reading Excel file for {download_type}: {e}")
+                # Set fallback data based on download_type
+                if download_type == "VALUATION_CASH_FLOW":
+                    x = '{"valuation_cash_flow":{"none":"no data"}}'
+                    database.child("valuation_cash_flow").set({"valuation_cash_flow": x})
+                elif download_type == "VALUATION_GROWTH":
+                    x = '{"valuation_growth":{"none":"no data"}}'
+                    database.child("valuation_growth").set({"valuation_growth": x})
+                elif download_type == "VALUATION_FINANCIAL_HEALTH":
+                    x = '{"valuation_financial_health":{"none":"no data"}}'
+                    database.child("valuation_financial_health").set({"valuation_financial_health": x})
+                elif download_type == "VALUATION_OPERATING_EFFICIENCY":
+                    x = '{"valuation_operating_efficiency":{"none":"no data"}}'
+                    database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x})
+        else:
+            print("Export failed, setting fallback data")
+            # Set fallback data based on download_type
+            if download_type == "VALUATION_CASH_FLOW":
+                x = '{"valuation_cash_flow":{"none":"no data"}}'
+                database.child("valuation_cash_flow").set({"valuation_cash_flow": x})
+            elif download_type == "VALUATION_GROWTH":
+                x = '{"valuation_growth":{"none":"no data"}}'
+                database.child("valuation_growth").set({"valuation_growth": x})
+            elif download_type == "VALUATION_FINANCIAL_HEALTH":
+                x = '{"valuation_financial_health":{"none":"no data"}}'
+                database.child("valuation_financial_health").set({"valuation_financial_health": x})
+            elif download_type == "VALUATION_OPERATING_EFFICIENCY":
+                x = '{"valuation_operating_efficiency":{"none":"no data"}}'
+                database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x})
+                
+        sleep(5)
         return 'DONE'
-    elif download_type == "VALUATION_GROWTH": 
-        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
-        try:
-            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-            sleep(10)
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/growthTable.xls")
-            data1 = excel_data_df.to_json()
-            print(data1)
-            database.child("valuation_growth").set({"valuation_growth": data1 })
-        except:
-            x =  '{"valuation_growth":{"none":"no data"}}'
-            database.child("valuation_growth").set({"valuation_growth": x })
-        sleep(5)
-        valuation_driver.quit() 
-        return 'DONE'      
-    elif download_type == "VALUATION_FINANCIAL_HEALTH": 
-        WebDriverWait(valuation_driver, 30).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
-        try:
-            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-            sleep(10)
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/financialHealth.xls")
-            data1 = excel_data_df.to_json()
-            print(data1)
-            database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
-        except:
-            x =  '{"valuation_financial_health":{"none":"no data"}}'
-            database.child("valuation_financial_health").set({"valuation_financial_health": x })
-        sleep(5)
-        valuation_driver.quit()  
-        return 'DONE'    
-    elif download_type == "VALUATION_OPERATING_EFFICIENCY":
-        WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
-        try:
-            WebDriverWait(valuation_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-            sleep(10)
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/operatingAndEfficiency.xls")
-            data1 = excel_data_df.to_json()
-            print(data1)
-            database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
-        except:
-            x =  '{"valuation_operating_efficiency":{"none":"no data"}}'
-            database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x })
-        sleep(5)
+    except Exception as e:
+        print(f"Error in scraper_valuation: {e}")
+        # Set appropriate error data based on download_type
+        if download_type == "VALUATION_CASH_FLOW":
+            x = '{"valuation_cash_flow":{"none":"no data"}}'
+            database.child("valuation_cash_flow").set({"valuation_cash_flow": x})
+        elif download_type == "VALUATION_GROWTH":
+            x = '{"valuation_growth":{"none":"no data"}}'
+            database.child("valuation_growth").set({"valuation_growth": x})
+        elif download_type == "VALUATION_FINANCIAL_HEALTH":
+            x = '{"valuation_financial_health":{"none":"no data"}}'
+            database.child("valuation_financial_health").set({"valuation_financial_health": x})
+        elif download_type == "VALUATION_OPERATING_EFFICIENCY":
+            x = '{"valuation_operating_efficiency":{"none":"no data"}}'
+            database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x})
+        return 'ERROR'
+    finally:
         valuation_driver.quit()
-        return 'DONE'    
 
 @shared_task(bind=True)
 def all_scraper(self,ticker_value,market_value):
