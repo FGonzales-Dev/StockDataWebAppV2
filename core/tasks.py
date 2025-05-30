@@ -158,96 +158,176 @@ def format_dict(d):
 # Testing: Adding options to undetected chrome driver
 def create_stealth_driver():
     """
-    Create a stealth Chrome driver with fallback to regular Chrome driver.
-    First tries undetected_chromedriver for better bot detection avoidance,
-    but falls back to regular Chrome driver if UC fails (e.g., in production environments).
+    Create a highly stealth Chrome driver with advanced anti-detection features.
+    Designed to avoid human verification and bot detection on websites like Morningstar.
     """
     options = uc.ChromeOptions()
     
-    # Set window size to common screen resolution
+    # Set realistic window size
     options.add_argument("--window-size=1920,1080")
 
-    # Set a random realistic user-agent
-    user_agents = [
+    # Advanced stealth user agents (rotate to appear more human)
+    stealth_user_agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
     ]
-    options.add_argument(f"--user-agent={random.choice(user_agents)}")
+    options.add_argument(f"--user-agent={random.choice(stealth_user_agents)}")
 
-    # Anti-bot arguments
+    # Core stealth arguments
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-infobars")
     options.add_argument("--disable-extensions")
-
-    # Railway/Production specific flags for UC
+    
+    # Advanced anti-detection arguments
+    options.add_argument("--disable-plugins-discovery")
+    options.add_argument("--disable-web-security")
+    options.add_argument("--allow-running-insecure-content")
+    options.add_argument("--disable-features=VizDisplayCompositor")
+    options.add_argument("--disable-features=TranslateUI")
+    options.add_argument("--disable-default-apps")
+    options.add_argument("--disable-sync")
+    options.add_argument("--no-default-browser-check")
+    options.add_argument("--no-first-run")
+    options.add_argument("--disable-background-timer-throttling")
+    options.add_argument("--disable-backgrounding-occluded-windows")
+    options.add_argument("--disable-renderer-backgrounding")
+    options.add_argument("--disable-field-trial-config")
+    options.add_argument("--disable-back-forward-cache")
+    options.add_argument("--disable-hang-monitor")
+    options.add_argument("--disable-prompt-on-repost")
+    options.add_argument("--disable-client-side-phishing-detection")
+    options.add_argument("--disable-component-update")
+    options.add_argument("--disable-domain-reliability")
+    
+    # Railway/Production specific flags
     if os.environ.get("CHROME_BIN"):
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--disable-background-timer-throttling")
-        options.add_argument("--disable-backgrounding-occluded-windows")
-        options.add_argument("--disable-renderer-backgrounding")
-        options.add_argument("--disable-features=TranslateUI")
-        options.add_argument("--disable-ipc-flooding-protection")
         options.add_argument("--single-process")
-        options.add_argument("--disable-web-security")
-        options.add_argument("--allow-running-insecure-content")
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--disable-ipc-flooding-protection")
+        options.add_argument("--memory-pressure-off")
+        options.add_argument("--max_old_space_size=4096")
 
-    # Optional: disable images to speed up
+    # Advanced stealth preferences
     prefs = {
-        "profile.managed_default_content_settings.images": 2,
+        "profile.managed_default_content_settings.images": 2,  # Don't load images for speed
         "download.default_directory": str(BASE_DIR / "selenium"),
+        # Disable password manager
+        "credentials_enable_service": False,
+        "profile.password_manager_enabled": False,
+        # Disable notifications
+        "profile.default_content_setting_values.notifications": 2,
+        # Disable location sharing
+        "profile.default_content_setting_values.geolocation": 2,
+        # Disable media stream
+        "profile.default_content_setting_values.media_stream": 2,
+        # Stealth mode preferences
+        "profile.managed_default_content_settings.geolocation": 2,
+        "profile.managed_default_content_settings.plugins": 2,
+        "profile.managed_default_content_settings.popups": 2,
+        "profile.managed_default_content_settings.geolocation": 2,
+        "profile.managed_default_content_settings.media_stream": 2,
+        # Disable automation indicators
+        "excludeSwitches": ["enable-automation"],
+        "useAutomationExtension": False
     }
     options.add_experimental_option("prefs", prefs)
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
 
-    # Run headless if SHOW_BROWSER is False
+    # Run headless if configured
     if not SHOW_BROWSER:
-        options.add_argument("--headless")
-        print("🔍 Running in HEADLESS mode (browser hidden)")
+        options.add_argument("--headless=new")  # Use new headless mode
+        print("🔍 Running in STEALTH HEADLESS mode")
     else:
         options.add_argument("--start-maximized")
-        print("👁️ Running in VISIBLE mode (browser will be shown)")
+        print("👁️ Running in STEALTH VISIBLE mode")
 
     # Try to launch undetected Chrome driver first
     try:
-        print("🚀 Attempting to create undetected Chrome driver...")
+        print("🚀 Attempting to create STEALTH undetected Chrome driver...")
         
         # Handle Railway Google Chrome binary location for UC
         if os.environ.get("CHROME_BIN"):
             print(f"🏗️ Setting Chrome binary location to: {os.environ.get('CHROME_BIN')}")
-            driver = uc.Chrome(options=options, browser_executable_path=os.environ.get("CHROME_BIN"))
+            # Let UC handle its own ChromeDriver to avoid version conflicts
+            driver = uc.Chrome(options=options, browser_executable_path=os.environ.get("CHROME_BIN"), version_main=None)
         else:
-            driver = uc.Chrome(options=options)
+            driver = uc.Chrome(options=options, version_main=None)
         
-        # Optional: Stealth tweaks inside browser
+        # Advanced stealth injection - Execute BEFORE any page loads
         driver.execute_cdp_cmd(
             "Page.addScriptToEvaluateOnNewDocument",
             {
                 "source": """
+                    // Remove webdriver property
                     Object.defineProperty(navigator, 'webdriver', {
                       get: () => undefined
                     });
+                    
+                    // Add chrome runtime
                     window.navigator.chrome = {
                       runtime: {},
+                      app: {
+                        isInstalled: false,
+                      },
+                      webstore: {
+                        onInstallStageChanged: {},
+                        onDownloadProgress: {},
+                      },
                     };
+                    
+                    // Mock plugins
                     Object.defineProperty(navigator, 'plugins', {
-                      get: () => [1, 2, 3],
+                      get: () => [1, 2, 3, 4, 5],
                     });
+                    
+                    // Mock languages
                     Object.defineProperty(navigator, 'languages', {
                       get: () => ['en-US', 'en'],
                     });
+                    
+                    // Mock permissions
+                    const originalQuery = window.navigator.permissions.query;
+                    window.navigator.permissions.query = (parameters) => (
+                      parameters.name === 'notifications' ?
+                        Promise.resolve({ state: Cypress.env('NOTIFICATION_PERMISSION') || 'granted' }) :
+                        originalQuery(parameters)
+                    );
+                    
+                    // Hide automation indicators
+                    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+                    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+                    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+                    
+                    // Override getParameter to hide WebGL vendor
+                    const getParameter = WebGLRenderingContext.getParameter;
+                    WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                      if (parameter === 37445) {
+                        return 'Intel Inc.';
+                      }
+                      if (parameter === 37446) {
+                        return 'Intel Iris OpenGL Engine';
+                      }
+                      return getParameter(parameter);
+                    };
                 """
             },
         )
         
-        print("✅ Successfully created undetected Chrome driver")
+        # Set additional stealth properties
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
+        print("✅ Successfully created STEALTH undetected Chrome driver")
         return driver
     
     except Exception as e:
         print(f"⚠️  Undetected Chrome driver failed: {e}")
-        print("🔄 Falling back to regular Chrome driver...")
+        print("🔄 Falling back to STEALTH regular Chrome driver...")
         
         # Convert UC options to regular Chrome options
         chrome_options = webdriver.ChromeOptions()
@@ -260,13 +340,35 @@ def create_stealth_driver():
         for option_name, option_value in options.experimental_options.items():
             chrome_options.add_experimental_option(option_name, option_value)
         
-        # Use the existing get_chrome_driver function with our options
+        # Use the existing get_chrome_driver function with our stealth options
         try:
             driver = get_chrome_driver(chrome_options)
-            print("✅ Successfully created regular Chrome driver as fallback")
+            
+            # Apply stealth scripts to regular Chrome driver too
+            driver.execute_cdp_cmd(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {
+                    "source": """
+                        Object.defineProperty(navigator, 'webdriver', {
+                          get: () => undefined
+                        });
+                        window.navigator.chrome = {
+                          runtime: {},
+                        };
+                        Object.defineProperty(navigator, 'plugins', {
+                          get: () => [1, 2, 3],
+                        });
+                        Object.defineProperty(navigator, 'languages', {
+                          get: () => ['en-US', 'en'],
+                        });
+                    """
+                },
+            )
+            
+            print("✅ Successfully created STEALTH regular Chrome driver as fallback")
             return driver
         except Exception as fallback_error:
-            print(f"❌ Both undetected and regular Chrome drivers failed: {fallback_error}")
+            print(f"❌ Both STEALTH drivers failed: {fallback_error}")
             raise fallback_error
 
 

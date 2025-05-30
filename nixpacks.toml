@@ -1,40 +1,36 @@
 [phases.install]
-# Install Google Chrome and ChromeDriver with related dependencies for Selenium WebDriver
+# Install Google Chrome and ChromeDriver with stealth capabilities
 cmds = [
     "apt-get update",
-    "apt-get install -y wget gnupg unzip curl ca-certificates apt-transport-https software-properties-common",
+    "apt-get install -y wget gnupg unzip curl ca-certificates apt-transport-https software-properties-common jq",
     # Install Google Chrome
     "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -",
     "echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' | tee /etc/apt/sources.list.d/google-chrome.list",
     "apt-get update",
     "apt-get install -y google-chrome-stable",
-    # Install ChromeDriver
-    "CHROME_VERSION=$(google-chrome-stable --version | awk '{print $3}' | awk -F. '{print $1}')",
-    "CHROMEDRIVER_VERSION=$(curl -s https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)",
-    "wget -q https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip",
-    "unzip chromedriver_linux64.zip -d /usr/bin/",
-    "chmod +x /usr/bin/chromedriver",
-    "rm chromedriver_linux64.zip",
-    # Install virtual display
-    "apt-get install -y xvfb",
+    # Install ChromeDriver using new Chrome for Testing API
+    "CHROME_VERSION=$(google-chrome-stable --version | awk '{print $3}' | cut -d. -f1) && echo \"Chrome major version: $CHROME_VERSION\" && CHROMEDRIVER_URL=\"https://storage.googleapis.com/chrome-for-testing-public/$CHROME_VERSION.0.0.0/linux64/chromedriver-linux64.zip\" && echo \"Trying ChromeDriver URL: $CHROMEDRIVER_URL\" && wget -q \"$CHROMEDRIVER_URL\" -O chromedriver_linux64.zip && unzip chromedriver_linux64.zip && mv chromedriver-linux64/chromedriver /usr/bin/chromedriver && chmod +x /usr/bin/chromedriver && rm -rf chromedriver_linux64.zip chromedriver-linux64 || echo \"Fallback: Installing ChromeDriver via webdriver-manager\"",
+    # Install virtual display and fonts for stealth
+    "apt-get install -y xvfb fonts-liberation libappindicator3-1 libasound2 libatk-bridge2.0-0 libnspr4 libnss3 libxss1 libxtst6 libatspi2.0-0 libgtk-3-0 libxdamage1 libdrm2 libxcomposite1 libxrandr2",
     # Clean up
-    "apt-get clean",
-    "rm -rf /var/lib/apt/lists/*"
+    "apt-get clean && rm -rf /var/lib/apt/lists/*"
 ]
 
 [phases.setup]
-# Setup Chrome and configure environment
+# Setup Chrome with stealth configuration
 cmds = [
-    "which google-chrome-stable || echo 'Chrome not found'",
-    "google-chrome-stable --version || echo 'Chrome version check failed'",
-    "which chromedriver || echo 'ChromeDriver not found'",
-    "chromedriver --version || echo 'ChromeDriver version check failed'",
+    "echo 'Setting up Chrome and ChromeDriver...'",
+    "google-chrome-stable --version",
+    "chromedriver --version 2>/dev/null || echo 'ChromeDriver not found, will use WebDriverManager'",
     "export CHROME_BIN=/usr/bin/google-chrome-stable",
     "export CHROMEDRIVER_PATH=/usr/bin/chromedriver"
 ]
 
 [variables]
-# Environment variables for Chrome/ChromeDriver
+# Environment variables for stealth Chrome operation
 CHROME_BIN = "/usr/bin/google-chrome-stable"
 CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
-DISPLAY = ":99" 
+DISPLAY = ":99"
+# Stealth environment variables
+CHROME_NO_SANDBOX = "true"
+CHROME_DISABLE_GPU = "true" 
