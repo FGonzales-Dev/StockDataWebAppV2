@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'  # Default to True for local dev
 
 # Environment detection
 RAILWAY_ENVIRONMENT = os.environ.get('RAILWAY_ENVIRONMENT', False)
@@ -131,7 +131,7 @@ STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Celery Configuration
-USE_CELERY = os.environ.get('USE_CELERY', 'True').lower() == 'true'
+USE_CELERY = os.environ.get('USE_CELERY', 'False').lower() == 'true'  # Default to False for easier local dev
 
 if USE_CELERY:
     if IS_PRODUCTION:
