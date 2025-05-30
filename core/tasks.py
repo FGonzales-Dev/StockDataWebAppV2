@@ -80,6 +80,19 @@ def get_chrome_driver(chrome_options=None):
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument("--disable-dev-shm-usage")
         
+        # Railway/Production specific flags
+        if os.environ.get("CHROME_BIN"):
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-software-rasterizer")
+            chrome_options.add_argument("--disable-background-timer-throttling")
+            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+            chrome_options.add_argument("--disable-renderer-backgrounding")
+            chrome_options.add_argument("--disable-features=TranslateUI")
+            chrome_options.add_argument("--disable-ipc-flooding-protection")
+            chrome_options.add_argument("--single-process")
+            chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--allow-running-insecure-content")
+        
         # Window size
         chrome_options.add_argument(f"--window-size={BROWSER_WIDTH},{BROWSER_HEIGHT}")
         
@@ -94,14 +107,26 @@ def get_chrome_driver(chrome_options=None):
             chrome_options.add_argument("--start-maximized")
             print("👁️ Running in VISIBLE mode (browser will be shown)")
     
-    # Railway/Production environment with Chromium
+    # Railway/Production environment with Google Chrome
     if os.environ.get("CHROMEDRIVER_PATH") and os.environ.get("CHROME_BIN"):
-        print("🚀 Using Railway/Production Chromium environment")
+        print("🚀 Using Railway/Production Google Chrome environment")
         chrome_options.binary_location = os.environ.get("CHROME_BIN")
-        return webdriver.Chrome(
-            executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
-            chrome_options=chrome_options
-        )
+        
+        # Use WebDriverManager to get compatible ChromeDriver since Railway might not have the right version
+        try:
+            from webdriver_manager.chrome import ChromeDriverManager
+            driver_path = ChromeDriverManager().install()
+            print(f"📦 Using WebDriverManager ChromeDriver: {driver_path}")
+            return webdriver.Chrome(
+                executable_path=driver_path, 
+                chrome_options=chrome_options
+            )
+        except Exception as wdm_error:
+            print(f"⚠️ WebDriverManager failed: {wdm_error}, trying system ChromeDriver")
+            return webdriver.Chrome(
+                executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
+                chrome_options=chrome_options
+            )
     # Legacy production environment (Heroku, etc.)
     elif os.environ.get("CHROMEDRIVER_PATH"):
         print("🚀 Using legacy production environment")
@@ -158,6 +183,18 @@ def create_stealth_driver():
     options.add_argument("--disable-infobars")
     options.add_argument("--disable-extensions")
 
+    # Railway/Production specific flags for UC
+    if os.environ.get("CHROME_BIN"):
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-renderer-backgrounding")
+        options.add_argument("--disable-features=TranslateUI")
+        options.add_argument("--disable-ipc-flooding-protection")
+        options.add_argument("--single-process")
+        options.add_argument("--disable-web-security")
+        options.add_argument("--allow-running-insecure-content")
+
     # Optional: disable images to speed up
     prefs = {
         "profile.managed_default_content_settings.images": 2,
@@ -177,7 +214,7 @@ def create_stealth_driver():
     try:
         print("🚀 Attempting to create undetected Chrome driver...")
         
-        # Handle Railway Chromium binary location for UC
+        # Handle Railway Google Chrome binary location for UC
         if os.environ.get("CHROME_BIN"):
             print(f"🏗️ Setting Chrome binary location to: {os.environ.get('CHROME_BIN')}")
             driver = uc.Chrome(options=options, browser_executable_path=os.environ.get("CHROME_BIN"))
