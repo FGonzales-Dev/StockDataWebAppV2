@@ -1,24 +1,19 @@
 [phases.install]
-# Install Chrome and ChromeDriver with matching versions using Chrome for Testing API
+# Simplified Chrome installation - let WebDriverManager handle ChromeDriver
 cmds = [
-    # First install basic tools needed for Chrome repository setup
-    "apt-get update && apt-get install -y wget gnupg ca-certificates curl unzip",
+    # Install basic tools for Chrome repository setup
+    "apt-get update && apt-get install -y wget gnupg ca-certificates",
     # Add Google Chrome repository and install stable Chrome
-    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list && apt-get update && apt-get install -y google-chrome-stable xvfb fonts-liberation libappindicator3-1 libasound2t64 libatk-bridge2.0-0 libnspr4 libnss3 libxss1 libxtst6 libatspi2.0-0 libgtk-3-0 libxdamage1 libdrm2 libxcomposite1 libxrandr2 && apt-get clean && rm -rf /var/lib/apt/lists/*",
-    # Download and install matching ChromeDriver from Chrome for Testing API (latest stable)
-    "wget -O /tmp/chromedriver.zip 'https://storage.googleapis.com/chrome-for-testing-public/137.0.7151.55/linux64/chromedriver-linux64.zip' && unzip /tmp/chromedriver.zip -d /tmp && mv /tmp/chromedriver-linux64/chromedriver /usr/bin/chromedriver && chmod +x /usr/bin/chromedriver && rm -rf /tmp/chromedriver.zip /tmp/chromedriver-linux64"
+    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list",
+    # Update and install Chrome with dependencies
+    "apt-get update && apt-get install -y google-chrome-stable xvfb fonts-liberation libappindicator3-1 libasound2t64 libatk-bridge2.0-0 libnspr4 libnss3 libxss1 libxtst6 libatspi2.0-0 libgtk-3-0 libxdamage1 libdrm2 libxcomposite1 libxrandr2 && apt-get clean && rm -rf /var/lib/apt/lists/*"
 ]
 
 [phases.setup]
-# Verify Chrome and ChromeDriver installation after packages are installed
+# Set environment variables for Chrome
 cmds = [
-    "echo 'Verifying Chrome installation...'",
-    "which google-chrome-stable && echo 'Chrome binary found' || echo 'Chrome binary not found'",
-    "google-chrome-stable --version && echo 'Chrome version check successful' || echo 'Chrome version check failed'",
-    "echo 'Verifying ChromeDriver installation...'",
-    "which chromedriver && echo 'ChromeDriver binary found' || echo 'ChromeDriver binary not found'",
-    "chromedriver --version && echo 'ChromeDriver version check successful' || echo 'ChromeDriver version check failed'",
-    "echo 'Installation complete - Chrome and ChromeDriver are ready'"
+    "export CHROME_BIN=/usr/bin/google-chrome-stable",
+    "export DISPLAY=:99"
 ]
 
 [variables]

@@ -58,10 +58,145 @@ firebase = pyrebase.initialize_app(config)
 storage = firebase.storage()
 database =firebase.database()
 
+def get_chrome_for_testing_driver():
+    """
+    Download ChromeDriver using the new Chrome for Testing API
+    This replaces WebDriverManager with the official Chrome for Testing endpoints
+    """
+    import requests
+    import zipfile
+    import tempfile
+    import platform
+    import subprocess
+    
+    try:
+        # Detect Chrome installation based on environment
+        chrome_candidates = []
+        
+        if os.environ.get("CHROME_BIN"):
+            # Production environment (Railway)
+            chrome_candidates.append(os.environ.get("CHROME_BIN"))
+        
+        # Add platform-specific Chrome paths
+        system = platform.system().lower()
+        if system == "darwin":  # macOS
+            chrome_candidates.extend([
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "/Applications/Chromium.app/Contents/MacOS/Chromium",
+                "/usr/bin/google-chrome-stable",
+                "/usr/bin/google-chrome",
+                "/usr/bin/chromium-browser",
+                "google-chrome",
+                "chromium"
+            ])
+        elif system == "linux":  # Linux/Railway
+            chrome_candidates.extend([
+                "/usr/bin/google-chrome-stable",
+                "/usr/bin/google-chrome",
+                "/usr/bin/chromium-browser",
+                "/usr/bin/chromium",
+                "google-chrome-stable", 
+                "google-chrome",
+                "chromium-browser",
+                "chromium"
+            ])
+        elif system == "windows":  # Windows
+            chrome_candidates.extend([
+                "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+                "google-chrome",
+                "chrome"
+            ])
+        
+        # Find working Chrome executable
+        chrome_bin = None
+        for candidate in chrome_candidates:
+            try:
+                # Test if this Chrome path works
+                result = subprocess.run([candidate, "--version"], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    chrome_bin = candidate
+                    print(f"✅ Found Chrome at: {chrome_bin}")
+                    break
+            except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+                continue
+        
+        if not chrome_bin:
+            raise Exception("No Chrome installation found. Please install Google Chrome or Chromium.")
+        
+        # Get Chrome version
+        result = subprocess.run([chrome_bin, "--version"], capture_output=True, text=True)
+        chrome_version = result.stdout.strip().split()[-1]
+        print(f"🔍 Detected Chrome version: {chrome_version}")
+        
+        # Determine platform for download
+        machine = platform.machine().lower()
+        
+        if system == "linux":
+            if "arm" in machine or "aarch64" in machine:
+                platform_name = "linux64"  # No ARM builds available, use x64
+            else:
+                platform_name = "linux64"
+        elif system == "darwin":
+            if "arm" in machine or machine == "arm64":
+                platform_name = "mac-arm64"
+            else:
+                platform_name = "mac-x64"
+        elif system == "windows":
+            platform_name = "win64" if "64" in machine else "win32"
+        else:
+            platform_name = "linux64"  # Default fallback
+        
+        # Download URL using Chrome for Testing API
+        url = f"https://storage.googleapis.com/chrome-for-testing-public/{chrome_version}/{platform_name}/chromedriver-{platform_name}.zip"
+        print(f"📥 Downloading ChromeDriver from: {url}")
+        
+        # Download ChromeDriver
+        response = requests.get(url, timeout=30)
+        if response.status_code != 200:
+            raise Exception(f"Failed to download ChromeDriver: HTTP {response.status_code}")
+        
+        # Extract to temporary directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_path = os.path.join(temp_dir, "chromedriver.zip")
+            with open(zip_path, "wb") as f:
+                f.write(response.content)
+            
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+            
+            # Find the chromedriver executable
+            chromedriver_name = "chromedriver.exe" if system == "windows" else "chromedriver"
+            
+            # Look for chromedriver in extracted directories
+            for root, dirs, files in os.walk(temp_dir):
+                if chromedriver_name in files:
+                    src_path = os.path.join(root, chromedriver_name)
+                    
+                    # Copy to a permanent location
+                    dest_dir = BASE_DIR / "drivers"
+                    dest_dir.mkdir(exist_ok=True)
+                    dest_path = dest_dir / chromedriver_name
+                    
+                    import shutil
+                    shutil.copy2(src_path, dest_path)
+                    os.chmod(dest_path, 0o755)
+                    
+                    print(f"✅ ChromeDriver installed to: {dest_path}")
+                    return str(dest_path)
+        
+        raise Exception("ChromeDriver executable not found in downloaded archive")
+        
+    except Exception as e:
+        print(f"⚠️ Chrome for Testing download failed: {e}")
+        return None
+
+
 def get_chrome_driver(chrome_options=None):
     """
     Create Chrome WebDriver with automatic environment detection.
-    Uses system ChromeDriver first, then WebDriverManager as fallback.
+    Uses Chrome for Testing API for the most reliable compatibility.
     """
     CHROME_DRIVER_PATH = BASE_DIR / "chromedriver"
     
@@ -111,47 +246,65 @@ def get_chrome_driver(chrome_options=None):
         chrome_options.binary_location = os.environ.get("CHROME_BIN")
         print(f"🏗️ Chrome binary location: {os.environ.get('CHROME_BIN')}")
     
-    # Priority 1: Use system-installed ChromeDriver (from nixpacks)
-    if os.environ.get("CHROMEDRIVER_PATH") and os.path.exists(os.environ.get("CHROMEDRIVER_PATH")):
-        try:
-            print(f"🚀 Using system ChromeDriver: {os.environ.get('CHROMEDRIVER_PATH')}")
-            return webdriver.Chrome(
-                executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
-                chrome_options=chrome_options
-            )
-        except Exception as system_error:
-            print(f"⚠️ System ChromeDriver failed: {system_error}")
+    # Priority 1: Use Chrome for Testing API (most reliable for exact compatibility)
+    try:
+        driver_path = get_chrome_for_testing_driver()
+        if driver_path and os.path.exists(driver_path):
+            print(f"🎯 Using Chrome for Testing ChromeDriver: {driver_path}")
+            return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
+    except Exception as cft_error:
+        print(f"⚠️ Chrome for Testing failed: {cft_error}")
     
-    # Priority 2: Use WebDriverManager (most reliable for compatibility)
+    # Priority 2: Use WebDriverManager (fallback for local development)
     try:
         from webdriver_manager.chrome import ChromeDriverManager
         driver_path = ChromeDriverManager().install()
         print(f"📦 Using WebDriverManager ChromeDriver: {driver_path}")
-        return webdriver.Chrome(
-            executable_path=driver_path, 
-            chrome_options=chrome_options
-        )
+        return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
     except Exception as wdm_error:
         print(f"⚠️ WebDriverManager failed: {wdm_error}")
         
-        # Priority 3: Try environment variable path
+        # Priority 3: Try system-installed ChromeDriver (from nixpacks) with error logging
         if os.environ.get("CHROMEDRIVER_PATH") and os.path.exists(os.environ.get("CHROMEDRIVER_PATH")):
-            print("🔄 Retrying with CHROMEDRIVER_PATH")
-            return webdriver.Chrome(
-                executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
-                chrome_options=chrome_options
-            )
+            try:
+                print(f"🔄 Trying system ChromeDriver: {os.environ.get('CHROMEDRIVER_PATH')}")
+                
+                # Test ChromeDriver version compatibility first
+                import subprocess
+                result = subprocess.run([os.environ.get("CHROMEDRIVER_PATH"), "--version"], 
+                                     capture_output=True, text=True, timeout=10)
+                print(f"ChromeDriver version: {result.stdout}")
+                
+                return webdriver.Chrome(
+                    executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
+                    options=chrome_options
+                )
+            except Exception as system_error:
+                print(f"⚠️ System ChromeDriver failed: {system_error}")
         
         # Priority 4: Try local development ChromeDriver
-        elif os.path.exists(CHROME_DRIVER_PATH):
-            print("🏠 Using local development ChromeDriver")
-            return webdriver.Chrome(
-                executable_path=str(CHROME_DRIVER_PATH), 
-                chrome_options=chrome_options
-            )
-        else:
-            print("❌ No ChromeDriver found")
-            raise wdm_error
+        if os.path.exists(CHROME_DRIVER_PATH):
+            try:
+                print("🏠 Trying local development ChromeDriver")
+                return webdriver.Chrome(
+                    executable_path=str(CHROME_DRIVER_PATH), 
+                    options=chrome_options
+                )
+            except Exception as local_error:
+                print(f"⚠️ Local ChromeDriver failed: {local_error}")
+        
+        # Priority 5: Use Chrome's built-in DevTools (emergency fallback)
+        try:
+            print("🆘 Attempting Chrome with remote debugging (emergency fallback)")
+            chrome_options.add_argument("--remote-debugging-port=9222")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor,VizHitTestSurfaceLayer")
+            
+            # Try without specifying executable_path (let Selenium find it)
+            return webdriver.Chrome(options=chrome_options)
+            
+        except Exception as emergency_error:
+            print(f"❌ All ChromeDriver methods failed. Last error: {emergency_error}")
+            raise Exception(f"Could not create Chrome driver. CfT: Chrome for Testing failed, WDM: {wdm_error}, Emergency: {emergency_error}")
 
 def format_dict(d):
     vals = list(d.values())
