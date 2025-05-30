@@ -1,38 +1,16 @@
 [phases.install]
-# Add Google Chrome repository and install Chrome with dependencies
+# Install Chrome and dependencies in a single comprehensive command
 cmds = [
-    # Add Google Chrome repository
-    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -",
-    "echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list",
-    "apt-get update"
-]
-
-# Install packages including Chrome
-aptPkgs = [
-    "google-chrome-stable",
-    "xvfb",
-    "fonts-liberation", 
-    "libappindicator3-1",
-    "libasound2",
-    "libatk-bridge2.0-0",
-    "libnspr4",
-    "libnss3",
-    "libxss1",
-    "libxtst6",
-    "libatspi2.0-0",
-    "libgtk-3-0",
-    "libxdamage1",
-    "libdrm2",
-    "libxcomposite1",
-    "libxrandr2"
+    # Add Google Chrome repository and install everything in one go
+    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list && apt-get update && apt-get install -y google-chrome-stable xvfb fonts-liberation libappindicator3-1 libasound2t64 libatk-bridge2.0-0 libnspr4 libnss3 libxss1 libxtst6 libatspi2.0-0 libgtk-3-0 libxdamage1 libdrm2 libxcomposite1 libxrandr2 && apt-get clean && rm -rf /var/lib/apt/lists/*"
 ]
 
 [phases.setup]
 # Verify Chrome installation after packages are installed
 cmds = [
     "echo 'Verifying Chrome installation...'",
-    "which google-chrome-stable || echo 'Chrome binary not found in PATH'",
-    "google-chrome-stable --version || echo 'Chrome version check failed'",
+    "which google-chrome-stable && echo 'Chrome binary found' || echo 'Chrome binary not found'",
+    "google-chrome-stable --version && echo 'Chrome version check successful' || echo 'Chrome version check failed'",
     "echo 'ChromeDriver will be managed by WebDriverManager for compatibility'"
 ]
 
