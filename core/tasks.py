@@ -94,15 +94,35 @@ def get_chrome_driver(chrome_options=None):
             chrome_options.add_argument("--start-maximized")
             print("👁️ Running in VISIBLE mode (browser will be shown)")
     
-    if os.environ.get("CHROMEDRIVER_PATH"):
-        # Production environment (Heroku, etc.)
-        return webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+    # Railway/Production environment with Chromium
+    if os.environ.get("CHROMEDRIVER_PATH") and os.environ.get("CHROME_BIN"):
+        print("🚀 Using Railway/Production Chromium environment")
+        chrome_options.binary_location = os.environ.get("CHROME_BIN")
+        return webdriver.Chrome(
+            executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
+            chrome_options=chrome_options
+        )
+    # Legacy production environment (Heroku, etc.)
+    elif os.environ.get("CHROMEDRIVER_PATH"):
+        print("🚀 Using legacy production environment")
+        return webdriver.Chrome(
+            executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
+            chrome_options=chrome_options
+        )
+    # Local development environment with local chromedriver
     elif os.path.exists(CHROME_DRIVER_PATH):
-        # Local development environment with local chromedriver
-        return webdriver.Chrome(executable_path=str(CHROME_DRIVER_PATH), chrome_options=chrome_options)
+        print("🏠 Using local development environment")
+        return webdriver.Chrome(
+            executable_path=str(CHROME_DRIVER_PATH), 
+            chrome_options=chrome_options
+        )
     else:
         # Fallback: Use WebDriverManager to auto-download compatible ChromeDriver
-        return webdriver.Chrome(executable_path=ChromeDriverManager().install(), chrome_options=chrome_options)
+        print("📦 Using WebDriverManager fallback")
+        return webdriver.Chrome(
+            executable_path=ChromeDriverManager().install(), 
+            chrome_options=chrome_options
+        )
 
 def format_dict(d):
     vals = list(d.values())
@@ -112,6 +132,11 @@ def format_dict(d):
 
 # Testing: Adding options to undetected chrome driver
 def create_stealth_driver():
+    """
+    Create a stealth Chrome driver with fallback to regular Chrome driver.
+    First tries undetected_chromedriver for better bot detection avoidance,
+    but falls back to regular Chrome driver if UC fails (e.g., in production environments).
+    """
     options = uc.ChromeOptions()
     
     # Set window size to common screen resolution
@@ -119,9 +144,9 @@ def create_stealth_driver():
 
     # Set a random realistic user-agent
     user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
-        "Mozilla/5.0 (X11; Linux x86_64)..."
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     ]
     options.add_argument(f"--user-agent={random.choice(user_agents)}")
 
@@ -136,51 +161,89 @@ def create_stealth_driver():
     # Optional: disable images to speed up
     prefs = {
         "profile.managed_default_content_settings.images": 2,
-        "download.default_directory": str(BASE_DIR / "selenium"),  # Or your dynamic dir
+        "download.default_directory": str(BASE_DIR / "selenium"),
     }
     options.add_experimental_option("prefs", prefs)
 
     # Run headless if SHOW_BROWSER is False
     if not SHOW_BROWSER:
-        options.headless = False  # ✅ this is the correct way for UC
+        options.add_argument("--headless")
+        print("🔍 Running in HEADLESS mode (browser hidden)")
+    else:
+        options.add_argument("--start-maximized")
+        print("👁️ Running in VISIBLE mode (browser will be shown)")
 
-    # Launch driver
-    driver = uc.Chrome(options=options)
-
-    # Optional: Stealth tweaks inside browser
-    driver.execute_cdp_cmd(
-        "Page.addScriptToEvaluateOnNewDocument",
-        {
-            "source": """
-                Object.defineProperty(navigator, 'webdriver', {
-                  get: () => undefined
-                });
-                window.navigator.chrome = {
-                  runtime: {},
-                };
-                Object.defineProperty(navigator, 'plugins', {
-                  get: () => [1, 2, 3],
-                });
-                Object.defineProperty(navigator, 'languages', {
-                  get: () => ['en-US', 'en'],
-                });
-            """
-        },
-    )
-
-    return driver
+    # Try to launch undetected Chrome driver first
+    try:
+        print("🚀 Attempting to create undetected Chrome driver...")
+        
+        # Handle Railway Chromium binary location for UC
+        if os.environ.get("CHROME_BIN"):
+            print(f"🏗️ Setting Chrome binary location to: {os.environ.get('CHROME_BIN')}")
+            driver = uc.Chrome(options=options, browser_executable_path=os.environ.get("CHROME_BIN"))
+        else:
+            driver = uc.Chrome(options=options)
+        
+        # Optional: Stealth tweaks inside browser
+        driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": """
+                    Object.defineProperty(navigator, 'webdriver', {
+                      get: () => undefined
+                    });
+                    window.navigator.chrome = {
+                      runtime: {},
+                    };
+                    Object.defineProperty(navigator, 'plugins', {
+                      get: () => [1, 2, 3],
+                    });
+                    Object.defineProperty(navigator, 'languages', {
+                      get: () => ['en-US', 'en'],
+                    });
+                """
+            },
+        )
+        
+        print("✅ Successfully created undetected Chrome driver")
+        return driver
+    
+    except Exception as e:
+        print(f"⚠️  Undetected Chrome driver failed: {e}")
+        print("🔄 Falling back to regular Chrome driver...")
+        
+        # Convert UC options to regular Chrome options
+        chrome_options = webdriver.ChromeOptions()
+        
+        # Copy all arguments from UC options
+        for arg in options.arguments:
+            chrome_options.add_argument(arg)
+        
+        # Copy experimental options
+        for option_name, option_value in options.experimental_options.items():
+            chrome_options.add_experimental_option(option_name, option_value)
+        
+        # Use the existing get_chrome_driver function with our options
+        try:
+            driver = get_chrome_driver(chrome_options)
+            print("✅ Successfully created regular Chrome driver as fallback")
+            return driver
+        except Exception as fallback_error:
+            print(f"❌ Both undetected and regular Chrome drivers failed: {fallback_error}")
+            raise fallback_error
 
 
 @shared_task(bind=True)
 def scraper(self,ticker_value,market_value,download_type):
-    # Create Chrome driver with automatic configuration
-    # driver = get_chrome_driver()
+    """
+    Main scraper task for financial data with improved error handling.
+    """
+    print(f"🎯 Starting scraper task: {download_type} for {ticker_value} ({market_value})")
     
-    options = uc.ChromeOptions()
-    options.add_argument("--window-size=1920,1080")
-
-    driver = create_stealth_driver()
+    driver = None
     try:
+        # Create Chrome driver with fallback mechanism
+        driver = create_stealth_driver()
         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
         if download_type == "INCOME_STATEMENT":
             print(f"Starting income statement scraping for {ticker_value}")
@@ -483,14 +546,25 @@ def scraper(self,ticker_value,market_value,download_type):
             sleep(10)
             return 'DONE'
     finally:
-        driver.quit()
+        if driver:
+            try:
+                driver.quit()
+                print("🔄 Driver closed successfully")
+            except Exception as e:
+                print(f"Warning: Error closing driver: {e}")
 
 @shared_task(bind=True)
 def scraper_dividends(self, ticker_value, market_value):
-    # Create Chrome driver with stealth configuration (same as scraper function)
-    driver_dividends = create_stealth_driver()
+    """
+    Scraper task for dividends data with improved error handling.
+    """
+    print(f"🎯 Starting dividends scraper for {ticker_value} ({market_value})")
     
+    driver_dividends = None
     try:
+        # Create Chrome driver with fallback mechanism (same as scraper function)
+        driver_dividends = create_stealth_driver()
+        
         print(f"Starting dividends scraping for {ticker_value}")
         driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
         print(f"Current URL: {driver_dividends.current_url}")
@@ -570,19 +644,30 @@ def scraper_dividends(self, ticker_value, market_value):
         return 'DONE'
         
     except Exception as e:
-        print(f"Error in scraper_dividends: {e}")
+        print(f"❌ Error in scraper_dividends: {e}")
         x = '{"dividends":{"none":"no data"}}'
         database.child("dividends").set({"dividends": x})
         return 'ERROR'
     finally:
-        driver_dividends.quit()
+        if driver_dividends:
+            try:
+                driver_dividends.quit()
+                print("🔄 Driver closed successfully")
+            except Exception as e:
+                print(f"Warning: Error closing driver: {e}")
 
 @shared_task()
 def scraper_valuation(ticker_value,market_value,download_type):
-    # Create Chrome driver with stealth configuration (same as scraper_dividends)
-    valuation_driver = create_stealth_driver()
+    """
+    Scraper task for valuation data with improved error handling.
+    """
+    print(f"🎯 Starting valuation scraper: {download_type} for {ticker_value} ({market_value})")
     
+    valuation_driver = None
     try:
+        # Create Chrome driver with fallback mechanism (same as scraper_dividends)
+        valuation_driver = create_stealth_driver()
+        
         print(f"Starting valuation scraping for {ticker_value}, type: {download_type}")
         valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
         print(f"Current URL: {valuation_driver.current_url}")
@@ -840,7 +925,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         sleep(5)
         return 'DONE'
     except Exception as e:
-        print(f"Error in scraper_valuation: {e}")
+        print(f"❌ Error in scraper_valuation: {e}")
         # Set appropriate error data based on download_type
         if download_type == "VALUATION_CASH_FLOW":
             x = '{"valuation_cash_flow":{"none":"no data"}}'
@@ -856,7 +941,12 @@ def scraper_valuation(ticker_value,market_value,download_type):
             database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x})
         return 'ERROR'
     finally:
-        valuation_driver.quit()
+        if valuation_driver:
+            try:
+                valuation_driver.quit()
+                print("🔄 Driver closed successfully")
+            except Exception as e:
+                print(f"Warning: Error closing driver: {e}")
 
 @shared_task(bind=True)
 def all_scraper(self,ticker_value,market_value):

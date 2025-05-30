@@ -1,0 +1,27 @@
+[phases.install]
+# Install Chrome and related dependencies for Selenium WebDriver
+aptPkgs = [
+    "wget",
+    "gnupg",
+    "unzip",
+    "curl",
+    "ca-certificates",
+    "apt-transport-https",
+    "software-properties-common",
+    "chromium",
+    "chromium-driver",
+    "xvfb"
+]
+
+[phases.setup]
+# Setup Chrome and configure environment
+cmds = [
+    "export CHROME_BIN=/usr/bin/chromium",
+    "export CHROMEDRIVER_PATH=/usr/bin/chromedriver"
+]
+
+[variables]
+# Environment variables for Chrome/ChromeDriver
+CHROME_BIN = "/usr/bin/chromium"
+CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
+DISPLAY = ":99" 
