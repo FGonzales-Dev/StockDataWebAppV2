@@ -11,27 +11,30 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 import os
-import django_heroku
+from pathlib import Path
+import dj_database_url
 
-
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['0.0.0.0','ancient-dawn-83050.herokuapp.com','127.0.0.1']
+# Environment detection
+RAILWAY_ENVIRONMENT = os.environ.get('RAILWAY_ENVIRONMENT', False)
+IS_PRODUCTION = RAILWAY_ENVIRONMENT or os.environ.get('PRODUCTION', 'False').lower() == 'true'
 
-CRISPY_TEMPLATE_PACK="bootstrap4"
+if IS_PRODUCTION:
+    ALLOWED_HOSTS = ['*']  # Railway handles this
+else:
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0']
+
+CRISPY_TEMPLATE_PACK = "bootstrap4"
+
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -44,7 +47,6 @@ INSTALLED_APPS = [
     'crispy_forms',
     'django_celery_results',
     'celery_progress',
-
 ]
 
 MIDDLEWARE = [
@@ -78,24 +80,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'stock_scraper.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-      'ENGINE': 'django.db.backends.sqlite3',
-      'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+if IS_PRODUCTION:
+    # Production database (Railway will provide DATABASE_URL)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
+            conn_max_age=600
+        )
     }
-}
-import dj_database_url
-db_from_env = dj_database_url.config(conn_max_age=600)
-DATABASES['default'].update(db_from_env)
-
+else:
+    # Local development database
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -111,35 +116,50 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'Asia/Chungking'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = False
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
-
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-django_heroku.settings(locals())
 
-# For Local
-CELERY_BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'django-db'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+# Celery Configuration
+USE_CELERY = os.environ.get('USE_CELERY', 'True').lower() == 'true'
 
-# CELERY_BROKER_URL = os.environ['REDIS_URL']
-# CELERY_BACKEND_URL = 'redis://:p1e842a929016d5b23eb852b0d462dc69169c1535f156dc5ade1296118d56b93c@ec2-34-195-183-221.compute-1.amazonaws.com:15900'
+if USE_CELERY:
+    if IS_PRODUCTION:
+        CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+    else:
+        CELERY_BROKER_URL = 'redis://localhost:6379'
+    
+    CELERY_RESULT_BACKEND = 'django-db'
+    CELERY_ACCEPT_CONTENT = ['json']
+    CELERY_TASK_SERIALIZER = 'json'
+    CELERY_RESULT_SERIALIZER = 'json'
+    CELERY_TIMEZONE = 'UTC'
+else:
+    # Disable Celery for deployment testing - tasks run synchronously
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
 
+# Security settings for production
+if IS_PRODUCTION:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = 86400
+    SECURE_REDIRECT_EXEMPT = []
+    
+    # Only enable HTTPS redirect if not using Railway's proxy
+    if not os.environ.get('RAILWAY_ENVIRONMENT'):
+        SECURE_SSL_REDIRECT = True
+
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
