@@ -64,14 +64,14 @@ def get_chrome_driver(chrome_options=None):
     Uses CHROMEDRIVER_PATH environment variable for production,
     local chromedriver path for development, with WebDriverManager as fallback.
     """
-    CHROME_DRIVER_PATH = BASE_DIR + "/chromedriver"
+    CHROME_DRIVER_PATH = BASE_DIR / "chromedriver"
     
     # Create chrome options if not provided
     if chrome_options is None:
         chrome_options = webdriver.ChromeOptions()
         
         # Download preferences
-        prefs = {'download.default_directory': BASE_DIR + DOWNLOAD_DIRECTORY}
+        prefs = {'download.default_directory': str(BASE_DIR / "selenium")}
         chrome_options.add_experimental_option('prefs', prefs)
         
         # Basic options
@@ -99,7 +99,7 @@ def get_chrome_driver(chrome_options=None):
         return webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
     elif os.path.exists(CHROME_DRIVER_PATH):
         # Local development environment with local chromedriver
-        return webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, chrome_options=chrome_options)
+        return webdriver.Chrome(executable_path=str(CHROME_DRIVER_PATH), chrome_options=chrome_options)
     else:
         # Fallback: Use WebDriverManager to auto-download compatible ChromeDriver
         return webdriver.Chrome(executable_path=ChromeDriverManager().install(), chrome_options=chrome_options)
@@ -136,7 +136,7 @@ def create_stealth_driver():
     # Optional: disable images to speed up
     prefs = {
         "profile.managed_default_content_settings.images": 2,
-        "download.default_directory": BASE_DIR + DOWNLOAD_DIRECTORY,  # Or your dynamic dir
+        "download.default_directory": str(BASE_DIR / "selenium"),  # Or your dynamic dir
     }
     options.add_experimental_option("prefs", prefs)
 
@@ -271,7 +271,7 @@ def scraper(self,ticker_value,market_value,download_type):
                 print("No export performed, continuing...")
 
             try:
-                excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Income Statement_Annual_As Originally Reported.xls")
+                excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "Income Statement_Annual_As Originally Reported.xls")
                 data1 = excel_data_df.to_json()
                 print("Successfully read income statement Excel file")
                 print(data1)
@@ -371,7 +371,7 @@ def scraper(self,ticker_value,market_value,download_type):
                 print("No export performed, continuing...")
                 
             try:
-                excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Balance Sheet_Annual_As Originally Reported.xls")
+                excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "Balance Sheet_Annual_As Originally Reported.xls")
                 data1 = excel_data_df.to_json()
                 print("Successfully read balance sheet Excel file")
                 print(data1)
@@ -471,7 +471,7 @@ def scraper(self,ticker_value,market_value,download_type):
                 print("No export performed, continuing...")
                 
             try:
-                excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Cash Flow_Annual_As Originally Reported.xls")
+                excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "Cash Flow_Annual_As Originally Reported.xls")
                 data1 = excel_data_df.to_json()
                 print("Successfully read cash flow Excel file")
                 print(data1)
@@ -783,25 +783,25 @@ def scraper_valuation(ticker_value,market_value,download_type):
             # Read the downloaded file based on download_type
             try:
                 if download_type == "VALUATION_CASH_FLOW":
-                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/cashFlow.xls")
+                    excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "cashFlow.xls")
                     data1 = excel_data_df.to_json()
                     print("Successfully read cash flow valuation Excel file")
                     print(data1)
                     database.child("valuation_cash_flow").set({"valuation_cash_flow": data1})
                 elif download_type == "VALUATION_GROWTH":
-                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/growthTable.xls")
+                    excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "growthTable.xls")
                     data1 = excel_data_df.to_json()
                     print("Successfully read growth valuation Excel file")
                     print(data1)
                     database.child("valuation_growth").set({"valuation_growth": data1})
                 elif download_type == "VALUATION_FINANCIAL_HEALTH":
-                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/financialHealth.xls")
+                    excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "financialHealth.xls")
                     data1 = excel_data_df.to_json()
                     print("Successfully read financial health valuation Excel file")
                     print(data1)
                     database.child("valuation_financial_health").set({"valuation_financial_health": data1})
                 elif download_type == "VALUATION_OPERATING_EFFICIENCY":
-                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/operatingAndEfficiency.xls")
+                    excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "operatingAndEfficiency.xls")
                     data1 = excel_data_df.to_json()
                     print("Successfully read operating efficiency valuation Excel file")
                     print(data1)
@@ -860,8 +860,8 @@ def scraper_valuation(ticker_value,market_value,download_type):
 
 @shared_task(bind=True)
 def all_scraper(self,ticker_value,market_value):
-    CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-    prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
+    CHROME_DRIVER_PATH = BASE_DIR / "chromedriver"
+    prefs = {'download.default_directory' :  str(BASE_DIR / "selenium")}
     chromeOptions = webdriver.ChromeOptions()
     chromeOptions.add_experimental_option('prefs', prefs)
     chromeOptions.add_argument("--disable-infobars")
@@ -900,7 +900,7 @@ def all_scraper(self,ticker_value,market_value):
     try:
         WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/financialHealth.xls")
+        excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "financialHealth.xls")
         data1 = excel_data_df.to_json()
         print(data1)
         database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
@@ -912,7 +912,7 @@ def all_scraper(self,ticker_value,market_value):
     try:
         WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/operatingAndEfficiency.xls")
+        excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "operatingAndEfficiency.xls")
         data1 = excel_data_df.to_json()
         print(data1)
         database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
@@ -924,7 +924,7 @@ def all_scraper(self,ticker_value,market_value):
     try:
         WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/cashFlow.xls")
+        excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "cashFlow.xls")
         data1 = excel_data_df.to_json()
         print(data1)
         database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
@@ -936,7 +936,7 @@ def all_scraper(self,ticker_value,market_value):
     try:
         WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
         sleep(10)
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/growthTable.xls")
+        excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "growthTable.xls")
         data1 = excel_data_df.to_json()
         print(data1)
         database.child("valuation_growth").set({"valuation_growth": data1 })
@@ -976,11 +976,12 @@ def all_scraper(self,ticker_value,market_value):
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
     try:
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
+        excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "Income Statement_Annual_As Originally Reported.xls")
         data1 = excel_data_df.to_json()
         print(data1)
         database.child("income_statement").set({"income_statement": data1 })
-    except:
+    except Exception as e:
+        print(f"Error reading income statement Excel file: {e}")
         x =  '{"income_statement":{"none":"no data"}}'
         database.child("income_statement").set({"income_statement": x })
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
@@ -991,11 +992,12 @@ def all_scraper(self,ticker_value,market_value):
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
     try:
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
+            excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "Balance Sheet_Annual_As Originally Reported.xls")
             data1 = excel_data_df.to_json()
             print(data1)
             database.child("balance_sheet").set({"balance_sheet": data1 })
-    except:
+    except Exception as e:
+        print(f"Error reading balance sheet Excel file: {e}")
         x =  '{"balance_sheet":{"none":"no data"}}'
         database.child("balance_sheet").set({"balance_sheet": x })
     valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
@@ -1006,7 +1008,7 @@ def all_scraper(self,ticker_value,market_value):
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
     try:
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
+        excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "Cash Flow_Annual_As Originally Reported.xls")
         data1 = excel_data_df.to_json()
         print(data1)
         database.child("cash_flow").set({"cash_flow": data1 })
