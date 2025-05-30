@@ -3,6 +3,7 @@ from django.urls import path
 from core import historicalData, scraperVersionTwo, views
 
 urlpatterns = [
+    path('health/', views.health_check, name='health_check'),
     path('stock/<data_param>/', views.home, name='home'),
     path('history', views.stockhistory, name='home'),
     path('income_statement', views.stock_income_statement, name='home'),

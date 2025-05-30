@@ -1,4 +1,3 @@
-
 from django.shortcuts import render
 import requests
 import json 
@@ -239,7 +238,7 @@ def stock_balance_sheet(request):
                         "Deferred taxes liabilities", 
                         "Deferred revenues", 
                         "Other long-term liabilities",
-                        "Total stockholders’ equity", 
+                        "Total stockholders' equity", 
                         "Common  stock", 
                         "Retained earnings", 
                         "Accumulated other com"]
@@ -668,3 +667,7 @@ def home(request, data_param):
         finalRestV2 = json.dumps({ 'data': finaldict})
 
     return HttpResponse(finalRestV2, content_type='text/json')
+
+def health_check(request):
+    """Simple health check endpoint for Railway"""
+    return HttpResponse("OK", status=200)
