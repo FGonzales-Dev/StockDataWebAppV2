@@ -1,24 +1,30 @@
 [phases.install]
-# Install Chrome and dependencies with proper prerequisites
+# Install Chrome and ChromeDriver with matching versions using Chrome for Testing API
 cmds = [
     # First install basic tools needed for Chrome repository setup
-    "apt-get update && apt-get install -y wget gnupg ca-certificates",
-    # Add Google Chrome repository and install Chrome with all dependencies
-    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list && apt-get update && apt-get install -y google-chrome-stable xvfb fonts-liberation libappindicator3-1 libasound2t64 libatk-bridge2.0-0 libnspr4 libnss3 libxss1 libxtst6 libatspi2.0-0 libgtk-3-0 libxdamage1 libdrm2 libxcomposite1 libxrandr2 && apt-get clean && rm -rf /var/lib/apt/lists/*"
+    "apt-get update && apt-get install -y wget gnupg ca-certificates curl unzip",
+    # Add Google Chrome repository and install stable Chrome
+    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list && apt-get update && apt-get install -y google-chrome-stable xvfb fonts-liberation libappindicator3-1 libasound2t64 libatk-bridge2.0-0 libnspr4 libnss3 libxss1 libxtst6 libatspi2.0-0 libgtk-3-0 libxdamage1 libdrm2 libxcomposite1 libxrandr2 && apt-get clean && rm -rf /var/lib/apt/lists/*",
+    # Download and install matching ChromeDriver from Chrome for Testing API (latest stable)
+    "wget -O /tmp/chromedriver.zip 'https://storage.googleapis.com/chrome-for-testing-public/137.0.7151.55/linux64/chromedriver-linux64.zip' && unzip /tmp/chromedriver.zip -d /tmp && mv /tmp/chromedriver-linux64/chromedriver /usr/bin/chromedriver && chmod +x /usr/bin/chromedriver && rm -rf /tmp/chromedriver.zip /tmp/chromedriver-linux64"
 ]
 
 [phases.setup]
-# Verify Chrome installation after packages are installed
+# Verify Chrome and ChromeDriver installation after packages are installed
 cmds = [
     "echo 'Verifying Chrome installation...'",
     "which google-chrome-stable && echo 'Chrome binary found' || echo 'Chrome binary not found'",
     "google-chrome-stable --version && echo 'Chrome version check successful' || echo 'Chrome version check failed'",
-    "echo 'ChromeDriver will be managed by WebDriverManager for compatibility'"
+    "echo 'Verifying ChromeDriver installation...'",
+    "which chromedriver && echo 'ChromeDriver binary found' || echo 'ChromeDriver binary not found'",
+    "chromedriver --version && echo 'ChromeDriver version check successful' || echo 'ChromeDriver version check failed'",
+    "echo 'Installation complete - Chrome and ChromeDriver are ready'"
 ]
 
 [variables]
 # Environment variables for stealth Chrome operation
 CHROME_BIN = "/usr/bin/google-chrome-stable"
+CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
 DISPLAY = ":99"
 # Stealth environment variables
 CHROME_NO_SANDBOX = "true"
