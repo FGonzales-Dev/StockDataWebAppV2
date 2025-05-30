@@ -13,7 +13,7 @@ class APIRequest(models.Model):
     user_email = models.TextField(null=True, blank=True)
     user_country = models.TextField(null=True, blank=True)
     
-    created = models.DateTimeField(default=timezone.now())
+    created = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.title

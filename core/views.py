@@ -3,7 +3,7 @@ import requests
 import json 
 from typing import List, final
 from collections.abc import Iterable
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 import re
 from bs4 import BeautifulSoup
 import csv
@@ -11,6 +11,7 @@ import pandas as pd
 from json import loads
 import requests
 from time import time
+import os
 
 # Create your views here.
 
@@ -670,4 +671,15 @@ def home(request, data_param):
 
 def health_check(request):
     """Simple health check endpoint for Railway"""
-    return HttpResponse("OK", status=200)
+    # Basic health check response
+    health_data = {
+        'status': 'OK',
+        'timestamp': int(time()),
+        'environment': 'production' if os.environ.get('RAILWAY_ENVIRONMENT') else 'development'
+    }
+    
+    # Return simple OK for Railway health checks
+    if request.GET.get('format') == 'json':
+        return JsonResponse(health_data)
+    else:
+        return HttpResponse("OK", status=200)

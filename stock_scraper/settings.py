@@ -167,6 +167,38 @@ if IS_PRODUCTION:
     # Only enable HTTPS redirect if not using Railway's proxy
     if not os.environ.get('RAILWAY_ENVIRONMENT'):
         SECURE_SSL_REDIRECT = True
+    
+    # Production optimizations for faster startup
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+            },
+        },
+        'root': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'loggers': {
+            'django': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        },
+    }
+    
+    # Disable debug toolbar and other dev tools
+    DEBUG_TOOLBAR = False
+    
+    # Optimize database connections
+    DATABASES['default']['CONN_MAX_AGE'] = 600
+    DATABASES['default']['OPTIONS'] = {
+        'MAX_CONNS': 20,
+        'connect_timeout': 10,
+    }
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
