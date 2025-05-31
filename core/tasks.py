@@ -264,7 +264,7 @@ def get_chrome_for_testing_driver():
 def get_chrome_driver(chrome_options=None):
     """
     Create Chrome WebDriver with automatic environment detection.
-    Uses Chrome for Testing API for the most reliable compatibility.
+    Production-optimized version prioritizing Selenium 4 auto-management.
     """
     CHROME_DRIVER_PATH = BASE_DIR / "chromedriver"
     
@@ -314,90 +314,109 @@ def get_chrome_driver(chrome_options=None):
         chrome_options.binary_location = os.environ.get("CHROME_BIN")
         print(f"🏗️ Chrome binary location: {os.environ.get('CHROME_BIN')}")
     
-    # Priority 1: Use Chrome for Testing API (most reliable for exact compatibility)
-    try:
-        print("🎯 Attempting Chrome for Testing API...")
-        driver_path = get_chrome_for_testing_driver()
-        if driver_path and os.path.exists(driver_path):
-            print(f"✅ Using Chrome for Testing ChromeDriver: {driver_path}")
+    # Production environment detected - use aggressive approach
+    if os.environ.get("CHROME_BIN") or os.environ.get("RAILWAY_ENVIRONMENT"):
+        print("🚂 Railway production environment detected - using optimized driver selection")
+        
+        # Priority 1: Selenium 4 Auto-Management (FIRST in production)
+        try:
+            print("🎯 [PRODUCTION] Attempting Selenium 4 automatic ChromeDriver management...")
+            from selenium.webdriver.chrome.service import Service
+            
+            # Let Selenium 4 automatically download and manage ChromeDriver
+            service = Service()  # No executable_path - let Selenium handle it
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+            print("✅ [PRODUCTION] Selenium 4 automatic ChromeDriver management successful!")
+            return driver
+        except Exception as selenium_auto_error:
+            print(f"⚠️ [PRODUCTION] Selenium 4 auto-management failed: {selenium_auto_error}")
+        
+        # Priority 2: WebDriverManager (reliable fallback)
+        try:
+            print("📦 [PRODUCTION] Attempting WebDriverManager...")
+            from webdriver_manager.chrome import ChromeDriverManager
+            
+            # Force fresh download in production
+            driver_path = ChromeDriverManager(cache_valid_range=1).install()
+            print(f"✅ [PRODUCTION] Using WebDriverManager ChromeDriver: {driver_path}")
             return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
-        else:
-            print("⚠️ Chrome for Testing API returned no valid driver path")
-    except Exception as cft_error:
-        print(f"❌ Chrome for Testing failed: {cft_error}")
+        except Exception as wdm_error:
+            print(f"⚠️ [PRODUCTION] WebDriverManager failed: {wdm_error}")
+        
+        # Priority 3: Chrome with no ChromeDriver specified (let system handle it)
+        try:
+            print("🔧 [PRODUCTION] Attempting Chrome with system-managed driver...")
+            # Don't specify any service or executable_path
+            driver = webdriver.Chrome(options=chrome_options)
+            print("✅ [PRODUCTION] System-managed Chrome driver successful!")
+            return driver
+        except Exception as system_error:
+            print(f"⚠️ [PRODUCTION] System-managed Chrome failed: {system_error}")
+        
+        # Priority 4: Emergency fallback with remote debugging
+        try:
+            print("🆘 [PRODUCTION] Emergency fallback with remote debugging...")
+            chrome_options.add_argument("--remote-debugging-port=9222")
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor,VizHitTestSurfaceLayer")
+            driver = webdriver.Chrome(options=chrome_options)
+            print("✅ [PRODUCTION] Emergency fallback successful!")
+            return driver
+        except Exception as emergency_error:
+            print(f"❌ [PRODUCTION] Emergency fallback failed: {emergency_error}")
+            raise Exception(f"All production ChromeDriver methods failed. Selenium: {selenium_auto_error}, WDM: {wdm_error}, System: {system_error}, Emergency: {emergency_error}")
     
-    # Priority 2: Use Selenium 4's automatic ChromeDriver management (NEW!)
-    try:
-        print("🔧 Attempting Selenium 4 automatic ChromeDriver management...")
-        from selenium.webdriver.chrome.service import Service
+    else:
+        # Local development environment - use full fallback chain
+        print("🏠 Local development environment detected")
         
-        # Let Selenium 4 automatically download and manage ChromeDriver
-        service = Service()  # No executable_path - let Selenium handle it
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-        print("✅ Selenium 4 automatic ChromeDriver management successful!")
-        return driver
-    except Exception as selenium_auto_error:
-        print(f"⚠️ Selenium 4 auto-management failed: {selenium_auto_error}")
-    
-    # Priority 3: Use WebDriverManager (fallback for local development)
-    try:
-        print("📦 Attempting WebDriverManager...")
-        from webdriver_manager.chrome import ChromeDriverManager
-        driver_path = ChromeDriverManager().install()
-        print(f"✅ Using WebDriverManager ChromeDriver: {driver_path}")
-        return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
-    except Exception as wdm_error:
-        print(f"⚠️ WebDriverManager failed: {wdm_error}")
+        # Priority 1: Chrome for Testing API (for local development)
+        try:
+            print("🎯 Attempting Chrome for Testing API...")
+            driver_path = get_chrome_for_testing_driver()
+            if driver_path and os.path.exists(driver_path):
+                print(f"✅ Using Chrome for Testing ChromeDriver: {driver_path}")
+                return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
+            else:
+                print("⚠️ Chrome for Testing API returned no valid driver path")
+        except Exception as cft_error:
+            print(f"❌ Chrome for Testing failed: {cft_error}")
         
-        # Priority 4: Try system-installed ChromeDriver (from nixpacks) with error logging
-        if os.environ.get("CHROMEDRIVER_PATH") and os.path.exists(os.environ.get("CHROMEDRIVER_PATH")):
-            try:
-                print(f"🔄 Trying system ChromeDriver: {os.environ.get('CHROMEDRIVER_PATH')}")
-                
-                # Test ChromeDriver version compatibility first
-                import subprocess
-                result = subprocess.run([os.environ.get("CHROMEDRIVER_PATH"), "--version"], 
-                                     capture_output=True, text=True, timeout=10)
-                print(f"System ChromeDriver version: {result.stdout}")
-                
-                return webdriver.Chrome(
-                    executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
-                    options=chrome_options
-                )
-            except Exception as system_error:
-                print(f"⚠️ System ChromeDriver failed: {system_error}")
+        # Priority 2: Selenium 4 Auto-Management
+        try:
+            print("🔧 Attempting Selenium 4 automatic ChromeDriver management...")
+            from selenium.webdriver.chrome.service import Service
+            service = Service()
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+            print("✅ Selenium 4 automatic ChromeDriver management successful!")
+            return driver
+        except Exception as selenium_auto_error:
+            print(f"⚠️ Selenium 4 auto-management failed: {selenium_auto_error}")
         
-        # Priority 5: Try local development ChromeDriver
+        # Priority 3: WebDriverManager
+        try:
+            print("📦 Attempting WebDriverManager...")
+            from webdriver_manager.chrome import ChromeDriverManager
+            driver_path = ChromeDriverManager().install()
+            print(f"✅ Using WebDriverManager ChromeDriver: {driver_path}")
+            return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
+        except Exception as wdm_error:
+            print(f"⚠️ WebDriverManager failed: {wdm_error}")
+        
+        # Priority 4: Local ChromeDriver
         if os.path.exists(CHROME_DRIVER_PATH):
             try:
                 print("🏠 Trying local development ChromeDriver")
-                return webdriver.Chrome(
-                    executable_path=str(CHROME_DRIVER_PATH), 
-                    options=chrome_options
-                )
+                return webdriver.Chrome(executable_path=str(CHROME_DRIVER_PATH), options=chrome_options)
             except Exception as local_error:
                 print(f"⚠️ Local ChromeDriver failed: {local_error}")
         
-        # Priority 6: Use Chrome's built-in DevTools (emergency fallback)
+        # Final fallback
         try:
-            print("🆘 Attempting Chrome with remote debugging (emergency fallback)")
-            chrome_options.add_argument("--remote-debugging-port=9222")
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor,VizHitTestSurfaceLayer")
-            
-            # Try without specifying executable_path (let Selenium find it)
+            print("🆘 Final fallback - Chrome with no driver specified")
             return webdriver.Chrome(options=chrome_options)
-            
-        except Exception as emergency_error:
-            print(f"❌ All ChromeDriver methods failed. Last error: {emergency_error}")
-            
-            # Comprehensive error report
-            print("\n🔍 COMPREHENSIVE ERROR REPORT:")
-            print(f"   Chrome for Testing: Failed")
-            print(f"   Selenium 4 Auto: {selenium_auto_error}")
-            print(f"   WebDriverManager: {wdm_error}")
-            print(f"   Emergency fallback: {emergency_error}")
-            
-            raise Exception(f"Could not create Chrome driver after trying all methods. Selenium Auto: {selenium_auto_error}, WDM: {wdm_error}, Emergency: {emergency_error}")
+        except Exception as final_error:
+            print(f"❌ All methods failed: {final_error}")
+            raise Exception(f"Could not create Chrome driver in development environment: {final_error}")
 
 def format_dict(d):
     vals = list(d.values())
