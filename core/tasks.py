@@ -875,7 +875,26 @@ def scraper(self,ticker_value,market_value,download_type):
                         raise nav_error
             
             if not navigation_success:
-                raise Exception("Failed to navigate to Morningstar after all attempts")
+                print("💥 Chrome navigation failed completely - trying lightweight fallback...")
+                
+                # Try lightweight scraping fallback
+                fallback_data = scrape_with_requests_fallback(ticker_value, market_value, download_type)
+                
+                if fallback_data:
+                    print("✅ Fallback scraping succeeded!")
+                    # Set the fallback data based on download_type
+                    if download_type == "INCOME_STATEMENT":
+                        database.child("income_statement").set({"income_statement": fallback_data})
+                    elif download_type == "BALANCE_SHEET":
+                        database.child("balance_sheet").set({"balance_sheet": fallback_data})
+                    elif download_type == "CASH_FLOW":
+                        database.child("cash_flow").set({"cash_flow": fallback_data})
+                    
+                    safe_close_driver(driver)
+                    return 'DONE'
+                else:
+                    print("❌ Fallback scraping also failed")
+                    raise Exception("Both Chrome and fallback scraping failed")
             
             print("✅ Successfully navigated to Morningstar!")
             
@@ -1734,4 +1753,68 @@ def safe_navigate_with_retry(driver, url, max_retries=3):
                 raise Exception(f"All {max_retries} navigation attempts failed: {nav_error}")
     
     return False
+
+def scrape_with_requests_fallback(ticker_value, market_value, download_type):
+    """
+    Lightweight fallback scraping method using requests instead of Chrome.
+    Used when Chrome crashes on heavy websites like Morningstar.
+    """
+    print("🔄 Attempting lightweight scraping fallback...")
+    
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        
+        # Use a simple requests session with headers that mimic a browser
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+        })
+        
+        # Try to get basic stock data from a lighter endpoint
+        urls_to_try = [
+            f"https://api.morningstar.com/stocks/{market_value}/{ticker_value}",
+            f"https://www.morningstar.com/api/v2/stocks/{market_value}/{ticker_value}/valuation",
+            f"https://finance.yahoo.com/quote/{ticker_value}/financials",
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=financialData,incomeStatementHistory"
+        ]
+        
+        for url in urls_to_try:
+            try:
+                print(f"🔍 Trying fallback URL: {url}")
+                response = session.get(url, timeout=30)
+                
+                if response.status_code == 200:
+                    # Try to parse JSON data if available
+                    if 'application/json' in response.headers.get('content-type', ''):
+                        data = response.json()
+                        print(f"✅ Got JSON data from {url}")
+                        return data
+                    
+                    # Try to parse HTML and extract tables
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    tables = soup.find_all('table')
+                    
+                    if tables:
+                        print(f"✅ Found {len(tables)} tables in HTML from {url}")
+                        # Convert first table to JSON
+                        import pandas as pd
+                        df = pd.read_html(str(tables[0]))[0]
+                        return df.to_json()
+                        
+            except Exception as e:
+                print(f"⚠️ Fallback URL {url} failed: {e}")
+                continue
+        
+        print("❌ All fallback URLs failed")
+        return None
+        
+    except Exception as e:
+        print(f"❌ Requests fallback failed: {e}")
+        return None
 

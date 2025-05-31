@@ -1,6 +1,20 @@
+[build]
+builder = "nixpacks"
+
 [deploy]
 startCommand = "./start_app.sh"
-healthcheckPath = "/health/"
-healthcheckTimeout = 120
+healthcheckPath = "/"
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
+restartPolicyMaxRetries = 3
+
+[env]
+# Chrome optimization for Railway containers
+CHROME_BIN = "/usr/bin/google-chrome-stable"
+CHROMEDRIVER_PATH = "/usr/local/bin/chromedriver"
+PYTHONUNBUFFERED = "1"
+MALLOC_ARENA_MAX = "2"
+CHROME_ARGS = "--memory-pressure-off,--disable-features=VizDisplayCompositor,--single-process"
+
+# Django settings
+DJANGO_SETTINGS_MODULE = "stock_scraper.settings"

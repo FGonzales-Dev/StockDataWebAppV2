@@ -2,43 +2,50 @@
 
 echo "🚀 Starting Stock Data Web App..."
 
-# Set environment variables
-export RAILWAY_ENVIRONMENT=true
-export CHROME_BIN=/usr/bin/google-chrome-stable
-export CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+# Railway environment optimization
+export MALLOC_ARENA_MAX=2
+export PYTHONUNBUFFERED=1
 
-# Ensure /tmp directory exists and is writable
-mkdir -p /tmp
-chmod 777 /tmp
+# Chrome environment optimization for Railway
+export CHROME_BIN="/usr/bin/google-chrome-stable"
+export CHROMEDRIVER_PATH="/usr/local/bin/chromedriver"
+export CHROME_FLAGS="--memory-pressure-off --disable-features=VizDisplayCompositor --single-process"
+
+# Create necessary directories
+mkdir -p selenium
+mkdir -p drivers
 
 echo "📊 Checking database setup..."
 
-# Try to run migrations, but don't fail if they don't work
-python manage.py migrate --noinput --run-syncdb 2>/dev/null || {
+# Try database migrations with fallback
+python manage.py migrate --noinput 2>/dev/null || {
     echo "⚠️ Database migrations failed, but continuing..."
-    
-    # Try to create a simple SQLite database
-    python -c "
+}
+
+# Ensure SQLite database exists
+python -c "
 import os
 import sqlite3
-import django
-from django.conf import settings
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stock_scraper.settings')
-django.setup()
-
-try:
-    # Create a simple database file
-    db_path = '/tmp/db.sqlite3'
+db_path = 'db.sqlite3'
+if not os.path.exists(db_path):
     conn = sqlite3.connect(db_path)
     conn.close()
     print('✅ SQLite database file created')
-except Exception as e:
-    print(f'❌ Failed to create database: {e}')
-" || echo "Database creation also failed, but continuing..."
-}
+else:
+    print('✅ SQLite database exists')
+" 2>/dev/null || echo "⚠️ Database check failed"
 
 echo "🌐 Starting Gunicorn server..."
 
-# Start the application
-exec gunicorn stock_scraper.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120 
+# Optimized Gunicorn configuration for Railway
+exec gunicorn \
+    --bind 0.0.0.0:$PORT \
+    --workers 1 \
+    --threads 2 \
+    --timeout 120 \
+    --max-requests 50 \
+    --max-requests-jitter 10 \
+    --preload \
+    --access-logfile - \
+    --error-logfile - \
+    stock_scraper.wsgi:application 
