@@ -490,6 +490,32 @@ def create_stealth_driver():
         options.add_argument("--disable-setuid-sandbox")
         options.add_argument("--disable-seccomp-filter-sandbox")
         
+        # ENHANCED: Additional memory/resource optimization for Railway
+        options.add_argument("--max_old_space_size=2048")  # Limit memory usage
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-renderer-backgrounding")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--disable-features=TranslateUI,VizDisplayCompositor")
+        options.add_argument("--aggressive-cache-discard")
+        options.add_argument("--memory-pressure-off")
+        options.add_argument("--disable-sync")
+        options.add_argument("--disable-default-apps")
+        options.add_argument("--disable-session-crashed-bubble")
+        options.add_argument("--disable-infobars")
+        options.add_argument("--disable-component-update")
+        options.add_argument("--no-pings")
+        options.add_argument("--no-first-run")
+        options.add_argument("--no-service-autorun")
+        options.add_argument("--password-store=basic")
+        options.add_argument("--use-mock-keychain")
+        options.add_argument("--disable-accelerated-2d-canvas")
+        options.add_argument("--disable-accelerated-jpeg-decoding")
+        options.add_argument("--disable-accelerated-mjpeg-decode")
+        options.add_argument("--disable-accelerated-video-decode")
+        options.add_argument("--disable-accelerated-video-encode")
+        options.add_argument("--disable-gpu-memory-buffer-video-frames")
+        
         # Set binary location
         options.binary_location = chrome_bin
         print(f"🔧 Chrome binary: {chrome_bin}")
@@ -601,6 +627,25 @@ def create_stealth_driver():
             print(f"❌ Fallback Chrome driver also failed: {fallback_error}")
             raise fallback_error
 
+def get_memory_info():
+    """
+    Get current memory usage information for debugging.
+    """
+    try:
+        import psutil
+        process = psutil.Process()
+        memory_info = process.memory_info()
+        print(f"📊 Memory usage: RSS={memory_info.rss / 1024 / 1024:.1f}MB, VMS={memory_info.vms / 1024 / 1024:.1f}MB")
+        
+        # System memory info
+        sys_memory = psutil.virtual_memory()
+        print(f"📊 System memory: {sys_memory.percent}% used, {sys_memory.available / 1024 / 1024:.1f}MB available")
+        
+        return True
+    except Exception as e:
+        print(f"⚠️ Could not get memory info: {e}")
+        return False
+
 def safe_create_stealth_driver():
     """
     Create Chrome driver with global session management and retry logic to prevent conflicts.
@@ -620,12 +665,20 @@ def safe_create_stealth_driver():
             print(f"🕐 Waiting {wait_time:.1f}s before creating new Chrome session...")
             time.sleep(wait_time)
         
+        # Monitor memory before creating driver
+        print("📊 Memory info before Chrome creation:")
+        get_memory_info()
+        
         # Retry logic for session creation
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 print(f"🚀 Creating new Chrome session (attempt {attempt + 1}/{max_retries})...")
                 driver = create_stealth_driver()
+                
+                # Monitor memory after creating driver
+                print("📊 Memory info after Chrome creation:")
+                get_memory_info()
                 
                 # Validate session is working
                 try:
@@ -723,12 +776,10 @@ def scraper(self,ticker_value,market_value,download_type):
             if not validate_driver_session(driver):
                 raise Exception("Initial session validation failed")
             
-            print(f"🌐 Navigating to Morningstar for {ticker_value}...")
-            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
-            
-            # Validate session after navigation
-            if not validate_driver_session(driver):
-                raise Exception("Session failed after navigation")
+            # Use robust navigation with retry logic
+            navigation_url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials"
+            if not safe_navigate_with_retry(driver, navigation_url):
+                raise Exception("Failed to navigate to Morningstar after all retry attempts")
             
             if download_type == "INCOME_STATEMENT":
                 print(f"Starting income statement scraping for {ticker_value}")
@@ -1466,4 +1517,63 @@ def scraper_operating_performance(ticker_value, market_value):
     sleep(10)
     driver_operating_perfomance.quit()
     return 'DONE'
+
+def safe_navigate_with_retry(driver, url, max_retries=3):
+    """
+    Navigate to a URL with retry logic and resource management.
+    """
+    for attempt in range(max_retries):
+        try:
+            print(f"🌐 Navigation attempt {attempt + 1}/{max_retries} to: {url}")
+            
+            # Set page load timeout to prevent hanging
+            driver.set_page_load_timeout(60)  # 60 seconds max
+            
+            # Test simple navigation first if this is the first attempt
+            if attempt == 0:
+                print("🧪 Testing basic navigation capability...")
+                driver.get("about:blank")
+                time.sleep(1)
+                
+                if not validate_driver_session(driver):
+                    raise Exception("Session failed after basic navigation test")
+                print("✅ Basic navigation test passed")
+                
+                # Test a simple external website to verify internet connectivity
+                print("🌐 Testing external connectivity...")
+                driver.get("https://httpbin.org/get")
+                time.sleep(2)
+                
+                if not validate_driver_session(driver):
+                    raise Exception("Session failed after connectivity test")
+                print("✅ External connectivity test passed")
+            
+            # Navigate to target URL
+            print(f"🎯 Navigating to target URL...")
+            driver.get(url)
+            
+            # Validate navigation completed
+            if not validate_driver_session(driver):
+                raise Exception("Session failed after navigation")
+            
+            # Wait for page to stabilize
+            time.sleep(3)
+            
+            print(f"✅ Successfully navigated to: {driver.current_url}")
+            return True
+            
+        except Exception as nav_error:
+            print(f"❌ Navigation attempt {attempt + 1} failed: {nav_error}")
+            
+            # Check if session is still alive
+            if not validate_driver_session(driver):
+                raise Exception(f"Chrome session died during navigation: {nav_error}")
+            
+            if attempt < max_retries - 1:
+                print(f"🔄 Retrying navigation in 3 seconds...")
+                time.sleep(3)
+            else:
+                raise Exception(f"All {max_retries} navigation attempts failed: {nav_error}")
+    
+    return False
 
