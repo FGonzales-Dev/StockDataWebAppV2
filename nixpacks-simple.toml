@@ -1,0 +1,29 @@
+[phases.install]
+# Simple Chrome and ChromeDriver installation with fixed versions
+cmds = [
+    # Update and install basic dependencies
+    "apt-get update && apt-get install -y wget gnupg ca-certificates unzip curl",
+    
+    # Install Chrome
+    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -",
+    "echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list",
+    "apt-get update && apt-get install -y google-chrome-stable",
+    
+    # Install ChromeDriver using fixed recent version (simpler approach)
+    "wget -q https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/131.0.6778.108/linux64/chromedriver-linux64.zip -O chromedriver.zip",
+    "unzip -q chromedriver.zip && cp chromedriver-linux64/chromedriver /usr/local/bin/ && chmod +x /usr/local/bin/chromedriver && rm -rf chromedriver.zip chromedriver-linux64",
+    
+    # Install additional dependencies for headless Chrome
+    "apt-get install -y fonts-liberation libasound2 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libnss3",
+    
+    # Clean up and verify
+    "apt-get clean && rm -rf /var/lib/apt/lists/*",
+    "google-chrome --version && /usr/local/bin/chromedriver --version"
+]
+
+[variables]
+# Environment variables for Chrome and ChromeDriver
+CHROME_BIN = "/usr/bin/google-chrome-stable"
+CHROMEDRIVER_PATH = "/usr/local/bin/chromedriver"
+DISPLAY = ":99"
+RAILWAY_ENVIRONMENT = "true" 
