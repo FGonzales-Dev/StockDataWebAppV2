@@ -311,9 +311,17 @@ def get_chrome_driver(chrome_options=None):
     
     # Set Chrome binary location
     chrome_bin = os.environ.get("CHROME_BIN")
-    if chrome_bin:
+    if chrome_bin and os.path.exists(chrome_bin):
         chrome_options.binary_location = chrome_bin
         print(f"🏗️ Chrome binary: {chrome_bin}")
+    elif is_railway:
+        # Try alternative Chrome paths on Railway
+        alternatives = ["/usr/bin/google-chrome-stable", "/usr/bin/google-chrome", "/usr/bin/chromium-browser"]
+        for alt in alternatives:
+            if os.path.exists(alt):
+                chrome_options.binary_location = alt
+                print(f"🏗️ Chrome binary (alternative): {alt}")
+                break
 
     # Method 1: Railway system ChromeDriver (RAILWAY SPECIFIC)
     if is_railway:
@@ -321,14 +329,25 @@ def get_chrome_driver(chrome_options=None):
             print("🚂 Method 1: Railway system ChromeDriver...")
             from selenium.webdriver.chrome.service import Service
             
-            chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
-            if os.path.exists(chromedriver_path):
-                service = Service(executable_path=chromedriver_path)
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-                print(f"✅ SUCCESS: Railway system ChromeDriver at {chromedriver_path}")
-                return driver
-            else:
-                print(f"❌ ChromeDriver not found at {chromedriver_path}")
+            # Try multiple ChromeDriver locations
+            chromedriver_paths = [
+                os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver"),
+                "/usr/local/bin/chromedriver",
+                "/usr/bin/chromedriver",
+                "/app/drivers/chromedriver"
+            ]
+            
+            for chromedriver_path in chromedriver_paths:
+                if chromedriver_path and os.path.exists(chromedriver_path):
+                    print(f"🎯 Found ChromeDriver at: {chromedriver_path}")
+                    service = Service(executable_path=chromedriver_path)
+                    driver = webdriver.Chrome(service=service, options=chrome_options)
+                    print(f"✅ SUCCESS: Railway system ChromeDriver at {chromedriver_path}")
+                    return driver
+                else:
+                    print(f"❌ ChromeDriver not found at {chromedriver_path}")
+            
+            print("❌ No ChromeDriver found in any Railway location")
         except Exception as e:
             print(f"❌ Railway system ChromeDriver failed: {e}")
     
@@ -349,11 +368,15 @@ def get_chrome_driver(chrome_options=None):
     try:
         print("📦 Method 3: WebDriverManager...")
         from webdriver_manager.chrome import ChromeDriverManager
+        from selenium.webdriver.chrome.service import Service
         
         # Force fresh download
         driver_path = ChromeDriverManager(cache_valid_range=1).install()
-        print(f"✅ SUCCESS: WebDriverManager downloaded ChromeDriver to {driver_path}")
-        return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
+        print(f"📦 WebDriverManager downloaded ChromeDriver to {driver_path}")
+        service = Service(executable_path=driver_path)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        print("✅ SUCCESS: WebDriverManager worked!")
+        return driver
     except Exception as e:
         print(f"❌ Method 3 failed: {e}")
     
@@ -367,9 +390,8 @@ def get_chrome_driver(chrome_options=None):
     except Exception as e:
         print(f"❌ Method 4 failed: {e}")
     
-    # If all methods fail
-    print("💥 ALL METHODS FAILED - This indicates a fundamental Chrome installation issue")
-    raise Exception("Could not create ChromeDriver with any method. Chrome may not be properly installed.")
+    # If all methods fail, raise the last exception
+    raise Exception("❌ ALL ChromeDriver methods failed. Check Chrome/ChromeDriver installation.")
 
 def format_dict(d):
     vals = list(d.values())
@@ -389,6 +411,33 @@ def create_stealth_driver():
     # Check if running on Railway
     is_railway = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("CHROME_BIN")
     print(f"🚂 Railway environment detected: {is_railway}")
+    
+    # Railway-specific paths
+    if is_railway:
+        chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome-stable")
+        chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
+        
+        print(f"🔍 Checking Chrome binary: {chrome_bin}")
+        print(f"   Exists: {os.path.exists(chrome_bin)}")
+        print(f"🔍 Checking ChromeDriver: {chromedriver_path}")
+        print(f"   Exists: {os.path.exists(chromedriver_path)}")
+        
+        # If paths don't exist, try alternatives
+        if not os.path.exists(chrome_bin):
+            alternatives = ["/usr/bin/google-chrome-stable", "/usr/bin/google-chrome", "/usr/bin/chromium-browser"]
+            for alt in alternatives:
+                if os.path.exists(alt):
+                    chrome_bin = alt
+                    print(f"✅ Found Chrome alternative: {chrome_bin}")
+                    break
+        
+        if not os.path.exists(chromedriver_path):
+            alternatives = ["/usr/local/bin/chromedriver", "/usr/bin/chromedriver", "/app/drivers/chromedriver"]
+            for alt in alternatives:
+                if os.path.exists(alt):
+                    chromedriver_path = alt
+                    print(f"✅ Found ChromeDriver alternative: {chromedriver_path}")
+                    break
     
     # Undetected Chrome options
     options = uc.ChromeOptions()
@@ -435,7 +484,6 @@ def create_stealth_driver():
         options.add_argument("--disable-seccomp-filter-sandbox")
         
         # Set binary location
-        chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome-stable")
         options.binary_location = chrome_bin
         print(f"🔧 Chrome binary: {chrome_bin}")
 
@@ -485,53 +533,42 @@ def create_stealth_driver():
     else:
         print("👁️ Running stealth driver in VISIBLE mode")
     
+    # Try to launch undetected Chrome driver first
     try:
-        # Prepare driver kwargs
-        driver_kwargs = {"options": options}
+        print("🚀 Attempting to create undetected Chrome driver...")
         
-        # Use system ChromeDriver on Railway
-        if is_railway:
-            chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
-            if os.path.exists(chromedriver_path):
-                driver_kwargs["driver_executable_path"] = chromedriver_path
-                print(f"🎯 Using system ChromeDriver: {chromedriver_path}")
-            else:
-                print(f"⚠️ ChromeDriver not found at {chromedriver_path}")
+        # Handle Railway Chromium binary location for UC
+        if os.environ.get("CHROME_BIN"):
+            print(f"🏗️ Setting Chrome binary location to: {os.environ.get('CHROME_BIN')}")
+            driver = uc.Chrome(options=options, browser_executable_path=os.environ.get("CHROME_BIN"))
+        else:
+            driver = uc.Chrome(options=options)
         
-        # Set Chrome binary if available
-        chrome_bin = os.environ.get("CHROME_BIN")
-        if chrome_bin:
-            driver_kwargs["browser_executable_path"] = chrome_bin
-            print(f"🔧 Using Chrome binary: {chrome_bin}")
+        # Optional: Stealth tweaks inside browser
+        driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": """
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined,
+                    });
+                    
+                    window.navigator.chrome = {
+                        runtime: {},
+                    };
+                    
+                    Object.defineProperty(navigator, 'languages', {
+                        get: () => ['en-US', 'en'],
+                    });
+                    
+                    Object.defineProperty(navigator, 'plugins', {
+                        get: () => [1, 2, 3, 4, 5],
+                    });
+                """
+            },
+        )
         
-        driver = uc.Chrome(**driver_kwargs)
-        
-        # Inject stealth JavaScript to hide automation
-        driver.execute_script("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined,
-            });
-        """)
-        
-        driver.execute_script("""
-            window.navigator.chrome = {
-                runtime: {},
-            };
-        """)
-        
-        driver.execute_script("""
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['en-US', 'en'],
-            });
-        """)
-        
-        driver.execute_script("""
-            Object.defineProperty(navigator, 'plugins', {
-                get: () => [1, 2, 3, 4, 5],
-            });
-        """)
-        
-        print("✅ Stealth driver created successfully with undetected-chromedriver")
+        print("✅ SUCCESS: Undetected Chrome driver created!")
         return driver
         
     except Exception as uc_error:
@@ -547,6 +584,11 @@ def create_stealth_driver():
             # Add the experimental options
             for key, value in options.experimental_options.items():
                 chrome_options.add_experimental_option(key, value)
+            
+            # Set binary location for regular Chrome
+            if is_railway and chrome_bin:
+                chrome_options.binary_location = chrome_bin
+                print(f"🔧 Setting binary location for regular Chrome: {chrome_bin}")
             
             # Use our improved get_chrome_driver function
             fallback_driver = get_chrome_driver(chrome_options)

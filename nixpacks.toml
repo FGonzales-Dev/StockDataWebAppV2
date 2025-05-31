@@ -18,8 +18,11 @@ cmds = [
     # Extract ChromeDriver
     "if [ -f chromedriver.zip ]; then unzip -q chromedriver.zip; if [ -d chromedriver-linux64 ]; then cp chromedriver-linux64/chromedriver /usr/local/bin/; else cp chromedriver /usr/local/bin/; fi; chmod +x /usr/local/bin/chromedriver; rm -f chromedriver.zip; rm -rf chromedriver-linux64; echo \"ChromeDriver installation completed\"; else echo \"ERROR: ChromeDriver zip file not found\"; exit 1; fi",
     
+    # Create symlink for compatibility with different libraries
+    "ln -sf /usr/local/bin/chromedriver /usr/bin/chromedriver && echo 'ChromeDriver symlink created'",
+    
     # Verify ChromeDriver installation
-    "/usr/local/bin/chromedriver --version || echo 'ChromeDriver installation failed'",
+    "/usr/local/bin/chromedriver --version && /usr/bin/chromedriver --version || echo 'ChromeDriver installation failed'",
     
     # Install additional dependencies for headless Chrome (Ubuntu 24.04 compatible)
     "apt-get install -y fonts-liberation libasound2t64 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libnss3",
@@ -28,7 +31,7 @@ cmds = [
     "apt-get clean && rm -rf /var/lib/apt/lists/*",
     
     # Final verification
-    "echo 'Installation completed:' && ls -la /usr/bin/google-chrome-stable /usr/local/bin/chromedriver"
+    "echo 'Installation completed:' && ls -la /usr/bin/google-chrome-stable /usr/local/bin/chromedriver /usr/bin/chromedriver"
 ]
 
 [variables]
