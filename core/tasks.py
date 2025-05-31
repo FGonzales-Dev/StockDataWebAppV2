@@ -490,15 +490,15 @@ def create_stealth_driver():
         options.add_argument("--disable-setuid-sandbox")
         options.add_argument("--disable-seccomp-filter-sandbox")
         
-        # ENHANCED: Additional memory/resource optimization for Railway
-        options.add_argument("--max_old_space_size=2048")  # Limit memory usage
+        # EXTREME: Railway Hobby Plan optimization (512MB-1GB RAM limit)
+        options.add_argument("--memory-pressure-off")
+        options.add_argument("--max_old_space_size=256")  # Ultra-low memory limit for hobby plan
         options.add_argument("--disable-background-timer-throttling")
         options.add_argument("--disable-renderer-backgrounding")
         options.add_argument("--disable-backgrounding-occluded-windows")
         options.add_argument("--disable-background-networking")
-        options.add_argument("--disable-features=TranslateUI,VizDisplayCompositor")
+        options.add_argument("--disable-features=TranslateUI,VizDisplayCompositor,AudioServiceOutOfProcess")
         options.add_argument("--aggressive-cache-discard")
-        options.add_argument("--memory-pressure-off")
         options.add_argument("--disable-sync")
         options.add_argument("--disable-default-apps")
         options.add_argument("--disable-session-crashed-bubble")
@@ -545,8 +545,18 @@ def create_stealth_driver():
         options.add_argument("--disable-session-storage")  # Disable session storage
         options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
         options.add_argument("--max-gum-fps=5")  # Limit frame rate
-        options.add_argument("--memory-pressure-thresholds=0.7,0.9")  # Set memory pressure thresholds
+        options.add_argument("--memory-pressure-thresholds=0.5,0.7")  # Very aggressive memory thresholds
         options.add_argument("--purge-memory-button")  # Enable memory purging
+        
+        # HOBBY PLAN SPECIFIC: Ultra-minimal resource usage
+        options.add_argument("--process-per-site")  # Limit processes
+        options.add_argument("--no-zygote")  # Disable zygote process
+        options.add_argument("--disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,MediaSessionService")
+        options.add_argument("--disable-background-mode")  # Disable background mode
+        options.add_argument("--disable-extensions-file-access-check")
+        options.add_argument("--disable-extensions-http-throttling")
+        options.add_argument("--disable-ipc-flooding-protection")
+        options.add_argument("--force-gpu-mem-available-mb=64")  # Minimal GPU memory
         
         # Set binary location
         options.binary_location = chrome_bin
@@ -1758,54 +1768,78 @@ def scrape_with_requests_fallback(ticker_value, market_value, download_type):
     """
     Lightweight fallback scraping method using requests instead of Chrome.
     Used when Chrome crashes on heavy websites like Morningstar.
+    Optimized for Railway Hobby Plan constraints.
     """
-    print("🔄 Attempting lightweight scraping fallback...")
+    print("🔄 Attempting lightweight scraping fallback for Hobby Plan...")
     
     try:
         import requests
         from bs4 import BeautifulSoup
         
-        # Use a simple requests session with headers that mimic a browser
+        # Use a simple requests session with minimal headers for hobby plan
         session = requests.Session()
         session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml',
+            'Accept-Language': 'en-US,en;q=0.9',
             'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
         })
         
-        # Try to get basic stock data from a lighter endpoint
+        # Try simpler, lighter endpoints first for hobby plan
         urls_to_try = [
-            f"https://api.morningstar.com/stocks/{market_value}/{ticker_value}",
-            f"https://www.morningstar.com/api/v2/stocks/{market_value}/{ticker_value}/valuation",
+            # Try Yahoo Finance first (lighter than Morningstar)
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=financialData",
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=incomeStatementHistory",
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=balanceSheetHistory", 
+            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=cashflowStatementHistory",
+            # Yahoo Finance web scraping (lighter)
             f"https://finance.yahoo.com/quote/{ticker_value}/financials",
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=financialData,incomeStatementHistory"
+            f"https://finance.yahoo.com/quote/{ticker_value}/balance-sheet",
+            f"https://finance.yahoo.com/quote/{ticker_value}/cash-flow",
+            # Last resort: Morningstar simple pages
+            f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}",
         ]
         
         for url in urls_to_try:
             try:
                 print(f"🔍 Trying fallback URL: {url}")
-                response = session.get(url, timeout=30)
+                response = session.get(url, timeout=15)  # Shorter timeout for hobby plan
                 
                 if response.status_code == 200:
                     # Try to parse JSON data if available
                     if 'application/json' in response.headers.get('content-type', ''):
                         data = response.json()
                         print(f"✅ Got JSON data from {url}")
-                        return data
+                        
+                        # Extract relevant financial data from Yahoo Finance API response
+                        if 'quoteSummary' in data and data['quoteSummary']['result']:
+                            result = data['quoteSummary']['result'][0]
+                            
+                            # Convert to simplified format
+                            simplified_data = {}
+                            for module_name, module_data in result.items():
+                                if isinstance(module_data, dict):
+                                    simplified_data[module_name] = module_data
+                            
+                            return json.dumps(simplified_data)
+                        else:
+                            return json.dumps(data)
                     
-                    # Try to parse HTML and extract tables
+                    # Try to parse HTML and extract tables (for web pages)
                     soup = BeautifulSoup(response.content, 'html.parser')
                     tables = soup.find_all('table')
                     
                     if tables:
                         print(f"✅ Found {len(tables)} tables in HTML from {url}")
-                        # Convert first table to JSON
-                        import pandas as pd
-                        df = pd.read_html(str(tables[0]))[0]
-                        return df.to_json()
+                        try:
+                            # Convert first table to JSON
+                            import pandas as pd
+                            df = pd.read_html(str(tables[0]))[0]
+                            return df.to_json()
+                        except Exception as table_error:
+                            print(f"⚠️ Could not parse table: {table_error}")
+                            # Return basic data structure
+                            return json.dumps({"source": url, "data": "table_found_but_unparseable"})
                         
             except Exception as e:
                 print(f"⚠️ Fallback URL {url} failed: {e}")

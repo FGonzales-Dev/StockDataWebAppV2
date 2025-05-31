@@ -1,15 +1,16 @@
 #!/bin/bash
 
-echo "🚀 Starting Stock Data Web App..."
+echo "🚀 Starting Stock Data Web App on Railway Hobby Plan..."
 
-# Railway environment optimization
-export MALLOC_ARENA_MAX=2
+# Railway Hobby Plan optimization (512MB-1GB memory limit)
+export MALLOC_ARENA_MAX=1
 export PYTHONUNBUFFERED=1
+export NODE_OPTIONS="--max-old-space-size=256"
 
-# Chrome environment optimization for Railway
+# Chrome environment optimization for Railway Hobby Plan
 export CHROME_BIN="/usr/bin/google-chrome-stable"
 export CHROMEDRIVER_PATH="/usr/local/bin/chromedriver"
-export CHROME_FLAGS="--memory-pressure-off --disable-features=VizDisplayCompositor --single-process"
+export CHROME_FLAGS="--memory-pressure-off --disable-features=VizDisplayCompositor --single-process --max_old_space_size=256"
 
 # Create necessary directories
 mkdir -p selenium
@@ -35,14 +36,15 @@ else:
     print('✅ SQLite database exists')
 " 2>/dev/null || echo "⚠️ Database check failed"
 
-echo "🌐 Starting Gunicorn server..."
+echo "🌐 Starting Gunicorn server for Hobby Plan..."
 
-# Optimized Gunicorn configuration for Railway
+# Ultra-optimized Gunicorn configuration for Railway Hobby Plan
 exec gunicorn \
     --bind 0.0.0.0:$PORT \
     --workers 1 \
-    --threads 2 \
-    --timeout 120 \
-    --max-requests 100 \
-    --max-requests-jitter 10 \
+    --threads 1 \
+    --timeout 90 \
+    --max-requests 25 \
+    --max-requests-jitter 5 \
+    --worker-class sync \
     stock_scraper.wsgi:application 
