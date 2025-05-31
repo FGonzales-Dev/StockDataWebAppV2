@@ -85,6 +85,9 @@ RUN pip install --upgrade pip \
 # Copy project files
 COPY . .
 
+# Make startup script executable
+RUN chmod +x start_app.sh
+
 # Create selenium directory
 RUN mkdir -p /app/selenium
 
@@ -94,8 +97,11 @@ RUN mkdir -p /tmp && chmod 777 /tmp
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
+# Initialize database during build (create tables)
+RUN RAILWAY_ENVIRONMENT=true python manage.py migrate --noinput --run-syncdb || echo "Migration failed but continuing..."
+
 # Expose port
 EXPOSE 8000
 
 # Start command
-CMD ["gunicorn", "stock_scraper.wsgi:application", "--bind", "0.0.0.0:8000"] 
+CMD ["./start_app.sh"] 

@@ -1,6 +1,6 @@
 [deploy]
-startCommand = "python manage.py migrate --noinput --run-syncdb && gunicorn stock_scraper.wsgi:application --bind 0.0.0.0:$PORT"
+startCommand = "./start_app.sh"
 healthcheckPath = "/health/"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10 
+restartPolicyMaxRetries = 10
