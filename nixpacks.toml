@@ -1,5 +1,9 @@
+# Let nixpacks auto-detect Python and handle requirements.txt
+# We only add Chrome installation to the existing Python setup
+
 [phases.install]
-# Install Chrome and ChromeDriver for Railway deployment
+# Install Chrome and ChromeDriver after Python dependencies are installed
+dependsOn = ["setup"]  # Ensure this runs after Python setup
 cmds = [
     # Update and install basic dependencies
     "apt-get update && apt-get install -y wget gnupg ca-certificates unzip curl",
@@ -12,19 +16,19 @@ cmds = [
     # Verify Chrome installation
     "google-chrome --version || echo 'Chrome installation failed'",
     
-    # Install ChromeDriver with version detection and error handling (combined command)
+    # Install ChromeDriver with version detection
     "CHROME_VERSION=$(google-chrome --version | grep -oP '\\d+' | head -1) && echo \"Detected Chrome major version: $CHROME_VERSION\" && if [ -n \"$CHROME_VERSION\" ] && [ \"$CHROME_VERSION\" -ge 115 ]; then echo \"Using Chrome for Testing API for version $CHROME_VERSION\"; CHROMEDRIVER_VERSION=$(curl -s \"https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_VERSION\" 2>/dev/null); if [ -n \"$CHROMEDRIVER_VERSION\" ] && [ \"$CHROMEDRIVER_VERSION\" != \"Not Found\" ]; then echo \"Downloading ChromeDriver $CHROMEDRIVER_VERSION\"; wget -q \"https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip\" -O chromedriver.zip; else echo \"Chrome for Testing failed, using fixed version\"; wget -q \"https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/131.0.6778.108/linux64/chromedriver-linux64.zip\" -O chromedriver.zip; fi; else echo \"Using legacy ChromeDriver for older Chrome\"; wget -q \"https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip\" -O chromedriver.zip; fi",
     
     # Extract ChromeDriver
     "if [ -f chromedriver.zip ]; then unzip -q chromedriver.zip; if [ -d chromedriver-linux64 ]; then cp chromedriver-linux64/chromedriver /usr/local/bin/; else cp chromedriver /usr/local/bin/; fi; chmod +x /usr/local/bin/chromedriver; rm -f chromedriver.zip; rm -rf chromedriver-linux64; echo \"ChromeDriver installation completed\"; else echo \"ERROR: ChromeDriver zip file not found\"; exit 1; fi",
     
-    # Create symlink for compatibility with different libraries
+    # Create symlink for compatibility
     "ln -sf /usr/local/bin/chromedriver /usr/bin/chromedriver && echo 'ChromeDriver symlink created'",
     
     # Verify ChromeDriver installation
     "/usr/local/bin/chromedriver --version && /usr/bin/chromedriver --version || echo 'ChromeDriver installation failed'",
     
-    # Install additional dependencies for headless Chrome (Ubuntu 24.04 compatible)
+    # Install additional dependencies for headless Chrome
     "apt-get install -y fonts-liberation libasound2t64 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libnss3",
     
     # Clean up
