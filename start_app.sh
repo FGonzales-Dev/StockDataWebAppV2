@@ -43,9 +43,6 @@ exec gunicorn \
     --workers 1 \
     --threads 2 \
     --timeout 120 \
-    --max-requests 50 \
+    --max-requests 100 \
     --max-requests-jitter 10 \
-    --preload \
-    --access-logfile - \
-    --error-logfile - \
     stock_scraper.wsgi:application 
