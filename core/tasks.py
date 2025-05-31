@@ -265,8 +265,13 @@ def get_chrome_driver(chrome_options=None):
     """
     SIMPLIFIED ChromeDriver creation - ONLY uses reliable methods.
     Completely avoids system ChromeDriver to prevent version mismatches.
+    Enhanced for Railway deployment.
     """
     print("🚀 SIMPLIFIED ChromeDriver creation starting...")
+    
+    # Check if running on Railway
+    is_railway = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("CHROME_BIN")
+    print(f"🚂 Railway environment detected: {is_railway}")
     
     # Create chrome options if not provided
     if chrome_options is None:
@@ -282,19 +287,22 @@ def get_chrome_driver(chrome_options=None):
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument("--disable-dev-shm-usage")
         
-        # Production specific flags
-        if os.environ.get("CHROME_BIN"):
+        # Railway specific flags
+        if is_railway:
+            chrome_options.add_argument("--headless")  # Force headless on Railway
             chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("--disable-software-rasterizer")
             chrome_options.add_argument("--single-process")
             chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--disable-gpu-sandbox")
+            chrome_options.add_argument("--remote-debugging-port=9222")
         
         # Window size and user agent
         chrome_options.add_argument(f"--window-size={BROWSER_WIDTH},{BROWSER_HEIGHT}")
         chrome_options.add_argument(f"user-agent={USER_AGENT}")
         
-        # Headless mode
-        if not SHOW_BROWSER:
+        # Headless mode (force on Railway)
+        if not SHOW_BROWSER or is_railway:
             chrome_options.add_argument("--headless")
             print("🔍 Running in HEADLESS mode")
         else:
@@ -302,13 +310,31 @@ def get_chrome_driver(chrome_options=None):
             print("👁️ Running in VISIBLE mode")
     
     # Set Chrome binary location
-    if os.environ.get("CHROME_BIN"):
-        chrome_options.binary_location = os.environ.get("CHROME_BIN")
-        print(f"🏗️ Chrome binary: {os.environ.get('CHROME_BIN')}")
+    chrome_bin = os.environ.get("CHROME_BIN")
+    if chrome_bin:
+        chrome_options.binary_location = chrome_bin
+        print(f"🏗️ Chrome binary: {chrome_bin}")
+
+    # Method 1: Railway system ChromeDriver (RAILWAY SPECIFIC)
+    if is_railway:
+        try:
+            print("🚂 Method 1: Railway system ChromeDriver...")
+            from selenium.webdriver.chrome.service import Service
+            
+            chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
+            if os.path.exists(chromedriver_path):
+                service = Service(executable_path=chromedriver_path)
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+                print(f"✅ SUCCESS: Railway system ChromeDriver at {chromedriver_path}")
+                return driver
+            else:
+                print(f"❌ ChromeDriver not found at {chromedriver_path}")
+        except Exception as e:
+            print(f"❌ Railway system ChromeDriver failed: {e}")
     
-    # Method 1: Selenium 4 Auto-Management (MOST RELIABLE)
+    # Method 2: Selenium 4 Auto-Management (MOST RELIABLE)
     try:
-        print("🎯 Method 1: Selenium 4 auto-management...")
+        print("🎯 Method 2: Selenium 4 auto-management...")
         from selenium.webdriver.chrome.service import Service
         
         # Let Selenium 4 handle everything automatically
@@ -317,11 +343,11 @@ def get_chrome_driver(chrome_options=None):
         print("✅ SUCCESS: Selenium 4 auto-management worked!")
         return driver
     except Exception as e:
-        print(f"❌ Method 1 failed: {e}")
+        print(f"❌ Method 2 failed: {e}")
     
-    # Method 2: WebDriverManager (RELIABLE FALLBACK)
+    # Method 3: WebDriverManager (RELIABLE FALLBACK)
     try:
-        print("📦 Method 2: WebDriverManager...")
+        print("📦 Method 3: WebDriverManager...")
         from webdriver_manager.chrome import ChromeDriverManager
         
         # Force fresh download
@@ -329,17 +355,17 @@ def get_chrome_driver(chrome_options=None):
         print(f"✅ SUCCESS: WebDriverManager downloaded ChromeDriver to {driver_path}")
         return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
     except Exception as e:
-        print(f"❌ Method 2 failed: {e}")
+        print(f"❌ Method 3 failed: {e}")
     
-    # Method 3: Direct Chrome without ChromeDriver (EMERGENCY)
+    # Method 4: Direct Chrome without ChromeDriver (EMERGENCY)
     try:
-        print("🆘 Method 3: Direct Chrome (emergency)...")
+        print("🆘 Method 4: Direct Chrome (emergency)...")
         # Try to use Chrome without specifying ChromeDriver at all
         driver = webdriver.Chrome(options=chrome_options)
         print("✅ SUCCESS: Direct Chrome worked!")
         return driver
     except Exception as e:
-        print(f"❌ Method 3 failed: {e}")
+        print(f"❌ Method 4 failed: {e}")
     
     # If all methods fail
     print("💥 ALL METHODS FAILED - This indicates a fundamental Chrome installation issue")
@@ -356,8 +382,13 @@ def create_stealth_driver():
     """
     Create a stealth Chrome driver using undetected-chromedriver.
     Falls back to regular Chrome driver if UC fails.
+    Enhanced for Railway deployment.
     """
     print("🥷 Creating stealth Chrome driver...")
+    
+    # Check if running on Railway
+    is_railway = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("CHROME_BIN")
+    print(f"🚂 Railway environment detected: {is_railway}")
     
     # Undetected Chrome options
     options = uc.ChromeOptions()
@@ -389,12 +420,24 @@ def create_stealth_driver():
     options.add_argument("--disable-domain-reliability")
     
     # Railway/Production specific flags
-    if os.environ.get("CHROME_BIN"):
+    if is_railway:
+        print("🚂 Adding Railway-specific Chrome options...")
+        options.add_argument("--headless")  # Force headless on Railway
         options.add_argument("--single-process")
         options.add_argument("--disable-software-rasterizer")
         options.add_argument("--disable-ipc-flooding-protection")
         options.add_argument("--memory-pressure-off")
         options.add_argument("--max_old_space_size=4096")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-gpu-sandbox")
+        options.add_argument("--remote-debugging-port=9222")
+        options.add_argument("--disable-setuid-sandbox")
+        options.add_argument("--disable-seccomp-filter-sandbox")
+        
+        # Set binary location
+        chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome-stable")
+        options.binary_location = chrome_bin
+        print(f"🔧 Chrome binary: {chrome_bin}")
 
     # Advanced stealth preferences
     prefs = {
@@ -435,29 +478,31 @@ def create_stealth_driver():
     # Set window size
     options.add_argument(f"--window-size={BROWSER_WIDTH},{BROWSER_HEIGHT}")
     
-    # Headless mode
-    if not SHOW_BROWSER:
+    # Headless mode (force on Railway)
+    if not SHOW_BROWSER or is_railway:
         options.add_argument("--headless")
         print("🥷 Running stealth driver in HEADLESS mode")
     else:
         print("👁️ Running stealth driver in VISIBLE mode")
     
     try:
+        # Prepare driver kwargs
+        driver_kwargs = {"options": options}
+        
+        # Use system ChromeDriver on Railway
+        if is_railway:
+            chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
+            if os.path.exists(chromedriver_path):
+                driver_kwargs["driver_executable_path"] = chromedriver_path
+                print(f"🎯 Using system ChromeDriver: {chromedriver_path}")
+            else:
+                print(f"⚠️ ChromeDriver not found at {chromedriver_path}")
+        
         # Set Chrome binary if available
         chrome_bin = os.environ.get("CHROME_BIN")
         if chrome_bin:
-            print(f"🔧 Using Chrome binary: {chrome_bin}")
-            
-        # Try creating UC driver with explicit paths if available
-        driver_kwargs = {"options": options}
-        
-        if chrome_bin:
             driver_kwargs["browser_executable_path"] = chrome_bin
-            
-        # Try system ChromeDriver first
-        if os.environ.get("CHROMEDRIVER_PATH") and os.path.exists(os.environ.get("CHROMEDRIVER_PATH")):
-            driver_kwargs["driver_executable_path"] = os.environ.get("CHROMEDRIVER_PATH")
-            print(f"🎯 Using system ChromeDriver for UC: {os.environ.get('CHROMEDRIVER_PATH')}")
+            print(f"🔧 Using Chrome binary: {chrome_bin}")
         
         driver = uc.Chrome(**driver_kwargs)
         

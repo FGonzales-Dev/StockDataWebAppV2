@@ -670,7 +670,10 @@ def home(request, data_param):
     return HttpResponse(finalRestV2, content_type='text/json')
 
 def health_check(request):
-    """Simple health check endpoint for Railway"""
+    """Health check endpoint with Chrome verification for Railway"""
+    import os
+    from time import time
+    
     # Basic health check response
     health_data = {
         'status': 'OK',
@@ -678,7 +681,56 @@ def health_check(request):
         'environment': 'production' if os.environ.get('RAILWAY_ENVIRONMENT') else 'development'
     }
     
-    # Return simple OK for Railway health checks
+    # Check if we should run Chrome test (optional via query parameter)
+    test_chrome = request.GET.get('test_chrome', 'false').lower() == 'true'
+    
+    if test_chrome:
+        # Test Chrome availability
+        try:
+            chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome-stable")
+            chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
+            
+            chrome_available = os.path.exists(chrome_bin)
+            chromedriver_available = os.path.exists(chromedriver_path)
+            
+            health_data['chrome'] = {
+                'chrome_binary': chrome_bin,
+                'chrome_available': chrome_available,
+                'chromedriver_path': chromedriver_path,
+                'chromedriver_available': chromedriver_available,
+                'ready': chrome_available and chromedriver_available
+            }
+            
+            # Quick Chrome test if both are available
+            if chrome_available and chromedriver_available:
+                try:
+                    from selenium import webdriver
+                    from selenium.webdriver.chrome.options import Options
+                    from selenium.webdriver.chrome.service import Service
+                    
+                    options = Options()
+                    options.add_argument("--headless")
+                    options.add_argument("--no-sandbox")
+                    options.add_argument("--disable-dev-shm-usage")
+                    options.binary_location = chrome_bin
+                    
+                    service = Service(executable_path=chromedriver_path)
+                    driver = webdriver.Chrome(service=service, options=options)
+                    driver.quit()
+                    
+                    health_data['chrome']['test'] = 'passed'
+                except Exception as e:
+                    health_data['chrome']['test'] = f'failed: {str(e)}'
+                    health_data['status'] = 'WARNING'
+            else:
+                health_data['status'] = 'WARNING'
+                health_data['chrome']['test'] = 'skipped - binaries not available'
+                
+        except Exception as e:
+            health_data['chrome'] = {'error': str(e)}
+            health_data['status'] = 'WARNING'
+    
+    # Return simple OK for Railway health checks (unless specifically requesting JSON)
     if request.GET.get('format') == 'json':
         return JsonResponse(health_data)
     else:

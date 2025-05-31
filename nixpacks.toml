@@ -1,11 +1,44 @@
 [phases.install]
-# Minimal Chrome installation
+# Install Chrome and ChromeDriver for Railway deployment
 cmds = [
-    "apt-get update && apt-get install -y wget gnupg ca-certificates",
-    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list",
-    "apt-get update && apt-get install -y google-chrome-stable && apt-get clean && rm -rf /var/lib/apt/lists/*"
+    # Update and install basic dependencies
+    "apt-get update && apt-get install -y wget gnupg ca-certificates unzip curl",
+    
+    # Install Chrome
+    "wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -",
+    "echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list",
+    "apt-get update && apt-get install -y google-chrome-stable",
+    
+    # Verify Chrome installation
+    "google-chrome --version || echo 'Chrome installation failed'",
+    
+    # Install ChromeDriver with better error handling
+    "CHROME_VERSION=$(google-chrome --version | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 | cut -d. -f1)",
+    "echo \"Detected Chrome major version: $CHROME_VERSION\"",
+    
+    # Try Chrome for Testing API first (more reliable)
+    "CHROMEDRIVER_VERSION=$(curl -s \"https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_VERSION\" 2>/dev/null || echo '')",
+    "if [ -n \"$CHROMEDRIVER_VERSION\" ]; then echo \"Using Chrome for Testing ChromeDriver: $CHROMEDRIVER_VERSION\"; wget -q \"https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip\" -O chromedriver.zip; else echo \"Chrome for Testing failed, trying legacy API\"; CHROMEDRIVER_VERSION=$(curl -s \"https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION\" 2>/dev/null); echo \"Using legacy ChromeDriver: $CHROMEDRIVER_VERSION\"; wget -q \"https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip\" -O chromedriver.zip; fi",
+    
+    # Extract ChromeDriver
+    "if [ -f chromedriver.zip ]; then unzip chromedriver.zip; if [ -d chromedriver-linux64 ]; then cp chromedriver-linux64/chromedriver /usr/local/bin/; else cp chromedriver /usr/local/bin/; fi; chmod +x /usr/local/bin/chromedriver; rm -f chromedriver.zip; rm -rf chromedriver-linux64; else echo 'ChromeDriver download failed'; fi",
+    
+    # Verify ChromeDriver installation
+    "/usr/local/bin/chromedriver --version || echo 'ChromeDriver installation failed'",
+    
+    # Install additional dependencies for headless Chrome
+    "apt-get install -y fonts-liberation libasound2 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1 libnss3",
+    
+    # Clean up
+    "apt-get clean && rm -rf /var/lib/apt/lists/*",
+    
+    # Final verification
+    "echo 'Installation completed:' && ls -la /usr/bin/google-chrome-stable /usr/local/bin/chromedriver"
 ]
 
 [variables]
-# Minimal environment variables
-CHROME_BIN = "/usr/bin/google-chrome-stable" 
+# Environment variables for Chrome and ChromeDriver
+CHROME_BIN = "/usr/bin/google-chrome-stable"
+CHROMEDRIVER_PATH = "/usr/local/bin/chromedriver"
+DISPLAY = ":99"
+RAILWAY_ENVIRONMENT = "true" 
