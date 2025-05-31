@@ -516,6 +516,38 @@ def create_stealth_driver():
         options.add_argument("--disable-accelerated-video-encode")
         options.add_argument("--disable-gpu-memory-buffer-video-frames")
         
+        # EXTREME: Additional Railway container optimization for heavy websites
+        options.add_argument("--disable-canvas-aa")  # Disable canvas anti-aliasing
+        options.add_argument("--disable-2d-canvas-clip-aa")  # Disable 2D canvas clip anti-aliasing
+        options.add_argument("--disable-gl-drawing-for-tests")  # Disable GL drawing
+        options.add_argument("--disable-threaded-animation")  # Disable threaded animation
+        options.add_argument("--disable-threaded-scrolling")  # Disable threaded scrolling
+        options.add_argument("--disable-checker-imaging")  # Disable checker imaging
+        options.add_argument("--disable-image-animation-resync")  # Disable image animation resync
+        options.add_argument("--disable-partial-raster")  # Disable partial raster
+        options.add_argument("--disable-skia-runtime-opts")  # Disable Skia runtime optimizations
+        options.add_argument("--disable-smooth-scrolling")  # Disable smooth scrolling
+        options.add_argument("--disable-composited-antialiasing")  # Disable composited antialiasing
+        options.add_argument("--force-color-profile=srgb")  # Force simple color profile
+        options.add_argument("--disable-reading-from-canvas")  # Disable reading from canvas
+        options.add_argument("--disable-webgl")  # Disable WebGL
+        options.add_argument("--disable-webgl2")  # Disable WebGL2
+        options.add_argument("--disable-3d-apis")  # Disable 3D APIs
+        options.add_argument("--disable-webrtc")  # Disable WebRTC
+        options.add_argument("--disable-webrtc-hw-decoding")  # Disable WebRTC hardware decoding
+        options.add_argument("--disable-webrtc-hw-encoding")  # Disable WebRTC hardware encoding
+        options.add_argument("--disable-webrtc-multiple-routes")  # Disable WebRTC multiple routes
+        options.add_argument("--disable-webrtc-hw-vp8-encoding")  # Disable WebRTC VP8 encoding
+        options.add_argument("--disable-speech-api")  # Disable speech API
+        options.add_argument("--disable-file-system")  # Disable file system
+        options.add_argument("--disable-database")  # Disable database
+        options.add_argument("--disable-local-storage")  # Disable local storage
+        options.add_argument("--disable-session-storage")  # Disable session storage
+        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        options.add_argument("--max-gum-fps=5")  # Limit frame rate
+        options.add_argument("--memory-pressure-thresholds=0.7,0.9")  # Set memory pressure thresholds
+        options.add_argument("--purge-memory-button")  # Enable memory purging
+        
         # Set binary location
         options.binary_location = chrome_bin
         print(f"🔧 Chrome binary: {chrome_bin}")
@@ -574,10 +606,21 @@ def create_stealth_driver():
         else:
             driver = uc.Chrome(options=options)
         
-        # Test the driver session to make sure it's working
+        # Validate session is working
         try:
-            driver.get("about:blank")  # Simple test
-            print("✅ SUCCESS: Undetected Chrome driver created and tested!")
+            driver.get("about:blank")
+            print("✅ Basic Chrome session validation passed")
+            
+            # ENHANCED: Stress test with a moderately complex page
+            print("🧪 Performing Chrome stress test...")
+            driver.get("https://example.com")
+            time.sleep(2)
+            
+            if not validate_driver_session(driver):
+                raise Exception("Session failed during stress test")
+            
+            print("✅ Chrome stress test passed - ready for Morningstar!")
+            cache.set('last_chrome_session_time', time.time(), 60)
             return driver
         except Exception as test_error:
             print(f"⚠️ Undetected Chrome driver created but failed session test: {test_error}")
@@ -683,22 +726,27 @@ def safe_create_stealth_driver():
                 # Validate session is working
                 try:
                     driver.get("about:blank")
-                    print("✅ Chrome session validated successfully")
+                    print("✅ Basic Chrome session validation passed")
+                    
+                    # ENHANCED: Stress test with a moderately complex page
+                    print("🧪 Performing Chrome stress test...")
+                    driver.get("https://example.com")
+                    time.sleep(2)
+                    
+                    if not validate_driver_session(driver):
+                        raise Exception("Session failed during stress test")
+                    
+                    print("✅ Chrome stress test passed - ready for Morningstar!")
                     cache.set('last_chrome_session_time', time.time(), 60)
                     return driver
-                except Exception as validation_error:
-                    print(f"⚠️ Session validation failed: {validation_error}")
+                except Exception as test_error:
+                    print(f"⚠️ Undetected Chrome driver created but failed session test: {test_error}")
                     try:
                         driver.quit()
                     except:
                         pass
-                    if attempt < max_retries - 1:
-                        print(f"🔄 Retrying session creation...")
-                        time.sleep(3)  # Wait before retry
-                        continue
-                    else:
-                        raise validation_error
-                        
+                    raise test_error
+                
             except Exception as e:
                 print(f"❌ Chrome session creation attempt {attempt + 1} failed: {e}")
                 if attempt < max_retries - 1:
@@ -778,8 +826,58 @@ def scraper(self,ticker_value,market_value,download_type):
             
             # Use robust navigation with retry logic
             navigation_url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials"
-            if not safe_navigate_with_retry(driver, navigation_url):
-                raise Exception("Failed to navigate to Morningstar after all retry attempts")
+            
+            # ENHANCED: Try navigation with session recreation on crash
+            navigation_success = False
+            navigation_attempts = 2  # Allow navigation-level retries
+            
+            for nav_attempt in range(navigation_attempts):
+                try:
+                    print(f"🌐 Navigation attempt {nav_attempt + 1}/{navigation_attempts}")
+                    
+                    if not safe_navigate_with_retry(driver, navigation_url):
+                        raise Exception("Navigation failed after all retry attempts")
+                    
+                    navigation_success = True
+                    break
+                    
+                except Exception as nav_error:
+                    print(f"❌ Navigation attempt {nav_attempt + 1} failed: {nav_error}")
+                    
+                    # Check if this is a Chrome crash that requires session recreation
+                    error_str = str(nav_error).lower()
+                    is_crash = any(keyword in error_str for keyword in [
+                        "chrome session crashed", "invalid session id", "session deleted", 
+                        "browser has closed", "disconnected", "renderer"
+                    ])
+                    
+                    if is_crash and nav_attempt < navigation_attempts - 1:
+                        print("💥 Chrome crashed during navigation - recreating session...")
+                        
+                        # Close the crashed session
+                        safe_close_driver(driver)
+                        driver = None
+                        
+                        # Wait before recreating
+                        time.sleep(5)
+                        
+                        # Recreate Chrome session
+                        print("🔄 Recreating Chrome session after crash...")
+                        driver = safe_create_stealth_driver()
+                        
+                        if not validate_driver_session(driver):
+                            raise Exception("Failed to recreate session after crash")
+                        
+                        print("✅ Chrome session recreated successfully")
+                        continue
+                    else:
+                        # Either not a crash or we've exhausted navigation attempts
+                        raise nav_error
+            
+            if not navigation_success:
+                raise Exception("Failed to navigate to Morningstar after all attempts")
+            
+            print("✅ Successfully navigated to Morningstar!")
             
             if download_type == "INCOME_STATEMENT":
                 print(f"Starting income statement scraping for {ticker_value}")
@@ -1521,13 +1619,18 @@ def scraper_operating_performance(ticker_value, market_value):
 def safe_navigate_with_retry(driver, url, max_retries=3):
     """
     Navigate to a URL with retry logic and resource management.
+    Enhanced with Chrome crash detection and recovery.
     """
     for attempt in range(max_retries):
         try:
             print(f"🌐 Navigation attempt {attempt + 1}/{max_retries} to: {url}")
             
+            # Validate session is alive before starting
+            if not validate_driver_session(driver):
+                raise Exception("Session is already dead before navigation")
+            
             # Set page load timeout to prevent hanging
-            driver.set_page_load_timeout(60)  # 60 seconds max
+            driver.set_page_load_timeout(45)  # Reduced from 60 to 45 seconds
             
             # Test simple navigation first if this is the first attempt
             if attempt == 0:
@@ -1541,37 +1644,92 @@ def safe_navigate_with_retry(driver, url, max_retries=3):
                 
                 # Test a simple external website to verify internet connectivity
                 print("🌐 Testing external connectivity...")
-                driver.get("https://httpbin.org/get")
-                time.sleep(2)
-                
-                if not validate_driver_session(driver):
-                    raise Exception("Session failed after connectivity test")
-                print("✅ External connectivity test passed")
+                try:
+                    driver.get("https://httpbin.org/get")
+                    time.sleep(2)
+                    
+                    if not validate_driver_session(driver):
+                        raise Exception("Session failed after connectivity test")
+                    print("✅ External connectivity test passed")
+                except Exception as e:
+                    print(f"⚠️ Connectivity test failed: {e}")
+                    # Don't fail completely, just log and continue
             
-            # Navigate to target URL
+            # ENHANCED: Pre-navigate memory cleanup
+            print("🧹 Pre-navigation cleanup...")
+            try:
+                # Clear any existing cookies/cache
+                driver.delete_all_cookies()
+                print("   ✅ Cookies cleared")
+            except Exception as e:
+                print(f"   ⚠️ Cookie clear failed: {e}")
+            
+            # Monitor memory before navigation
+            print("📊 Memory before navigation:")
+            get_memory_info()
+            
+            # Navigate to target URL with additional error handling
             print(f"🎯 Navigating to target URL...")
-            driver.get(url)
+            try:
+                driver.get(url)
+                print(f"🔗 Navigation request sent to: {url}")
+            except Exception as nav_exception:
+                print(f"❌ Navigation request failed: {nav_exception}")
+                
+                # Check if it's a session crash
+                if "invalid session id" in str(nav_exception).lower() or "session deleted" in str(nav_exception).lower():
+                    print("💥 Chrome session crashed during navigation!")
+                    raise Exception(f"Chrome crash detected: {nav_exception}")
+                else:
+                    raise nav_exception
             
             # Validate navigation completed
+            print("🔍 Validating navigation result...")
             if not validate_driver_session(driver):
                 raise Exception("Session failed after navigation")
             
-            # Wait for page to stabilize
-            time.sleep(3)
+            # Check if we actually reached the target URL
+            current_url = driver.current_url
+            print(f"📍 Current URL: {current_url}")
             
-            print(f"✅ Successfully navigated to: {driver.current_url}")
+            # Wait for page to stabilize with periodic session checks
+            for i in range(3):  # 3 checks over 6 seconds
+                time.sleep(2)
+                if not validate_driver_session(driver):
+                    raise Exception(f"Session failed during page stabilization (check {i+1})")
+                print(f"   ✅ Session stable check {i+1}/3")
+            
+            # Monitor memory after navigation
+            print("📊 Memory after navigation:")
+            get_memory_info()
+            
+            print(f"✅ Successfully navigated to: {current_url}")
             return True
             
         except Exception as nav_error:
             print(f"❌ Navigation attempt {attempt + 1} failed: {nav_error}")
             
-            # Check if session is still alive
+            # Enhanced error analysis
+            error_str = str(nav_error).lower()
+            is_session_crash = any(keyword in error_str for keyword in [
+                "invalid session id", "session deleted", "chrome crash", 
+                "browser has closed", "disconnected", "renderer"
+            ])
+            
+            if is_session_crash:
+                print("💥 Chrome session crash detected!")
+                print("   This indicates Chrome ran out of memory or crashed")
+                print("   Session is no longer usable - caller should recreate driver")
+                raise Exception(f"Chrome session crashed and must be recreated: {nav_error}")
+            
+            # For non-crash errors, check if session is still alive
             if not validate_driver_session(driver):
+                print("💀 Session died but not from a recognized crash pattern")
                 raise Exception(f"Chrome session died during navigation: {nav_error}")
             
             if attempt < max_retries - 1:
-                print(f"🔄 Retrying navigation in 3 seconds...")
-                time.sleep(3)
+                print(f"🔄 Retrying navigation in 5 seconds...")
+                time.sleep(5)
             else:
                 raise Exception(f"All {max_retries} navigation attempts failed: {nav_error}")
     
