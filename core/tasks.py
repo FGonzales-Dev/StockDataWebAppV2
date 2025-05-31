@@ -69,6 +69,8 @@ def get_chrome_for_testing_driver():
     import platform
     import subprocess
     
+    print("🔍 Starting Chrome for Testing driver download process...")
+    
     try:
         # Detect Chrome installation based on environment
         chrome_candidates = []
@@ -76,9 +78,12 @@ def get_chrome_for_testing_driver():
         if os.environ.get("CHROME_BIN"):
             # Production environment (Railway)
             chrome_candidates.append(os.environ.get("CHROME_BIN"))
+            print(f"💼 Production environment detected, Chrome binary: {os.environ.get('CHROME_BIN')}")
         
         # Add platform-specific Chrome paths
         system = platform.system().lower()
+        print(f"🖥️ Detected platform: {system}")
+        
         if system == "darwin":  # macOS
             chrome_candidates.extend([
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -108,88 +113,151 @@ def get_chrome_for_testing_driver():
                 "chrome"
             ])
         
+        print(f"🔍 Searching for Chrome in {len(chrome_candidates)} locations...")
+        
         # Find working Chrome executable
         chrome_bin = None
-        for candidate in chrome_candidates:
+        for i, candidate in enumerate(chrome_candidates):
             try:
+                print(f"   Trying {i+1}/{len(chrome_candidates)}: {candidate}")
                 # Test if this Chrome path works
                 result = subprocess.run([candidate, "--version"], 
                                       capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
                     chrome_bin = candidate
                     print(f"✅ Found Chrome at: {chrome_bin}")
+                    print(f"   Version output: {result.stdout.strip()}")
                     break
-            except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+                else:
+                    print(f"   ❌ Failed with return code: {result.returncode}")
+            except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as e:
+                print(f"   ❌ Error: {type(e).__name__}: {e}")
                 continue
         
         if not chrome_bin:
-            raise Exception("No Chrome installation found. Please install Google Chrome or Chromium.")
+            error_msg = f"No Chrome installation found. Tried {len(chrome_candidates)} locations."
+            print(f"❌ {error_msg}")
+            raise Exception(error_msg)
         
         # Get Chrome version
+        print("🔍 Getting Chrome version...")
         result = subprocess.run([chrome_bin, "--version"], capture_output=True, text=True)
         chrome_version = result.stdout.strip().split()[-1]
-        print(f"🔍 Detected Chrome version: {chrome_version}")
+        print(f"✅ Detected Chrome version: {chrome_version}")
         
         # Determine platform for download
         machine = platform.machine().lower()
+        print(f"🔍 Machine architecture: {machine}")
         
         if system == "linux":
             if "arm" in machine or "aarch64" in machine:
                 platform_name = "linux64"  # No ARM builds available, use x64
+                print("⚠️ ARM detected, using linux64 (x64 emulation)")
             else:
                 platform_name = "linux64"
+                print("✅ Using linux64 platform")
         elif system == "darwin":
             if "arm" in machine or machine == "arm64":
                 platform_name = "mac-arm64"
+                print("✅ Using mac-arm64 platform")
             else:
                 platform_name = "mac-x64"
+                print("✅ Using mac-x64 platform")
         elif system == "windows":
             platform_name = "win64" if "64" in machine else "win32"
+            print(f"✅ Using {platform_name} platform")
         else:
             platform_name = "linux64"  # Default fallback
+            print(f"⚠️ Unknown system {system}, defaulting to linux64")
         
         # Download URL using Chrome for Testing API
         url = f"https://storage.googleapis.com/chrome-for-testing-public/{chrome_version}/{platform_name}/chromedriver-{platform_name}.zip"
-        print(f"📥 Downloading ChromeDriver from: {url}")
+        print(f"📥 Download URL: {url}")
         
         # Download ChromeDriver
-        response = requests.get(url, timeout=30)
-        if response.status_code != 200:
-            raise Exception(f"Failed to download ChromeDriver: HTTP {response.status_code}")
+        print("📥 Downloading ChromeDriver...")
+        try:
+            response = requests.get(url, timeout=30)
+            print(f"📡 HTTP Response: {response.status_code}")
+            
+            if response.status_code != 200:
+                error_msg = f"Failed to download ChromeDriver: HTTP {response.status_code}"
+                print(f"❌ {error_msg}")
+                print(f"   Response text: {response.text[:200]}...")
+                raise Exception(error_msg)
+            
+            print(f"✅ Download successful, content length: {len(response.content)} bytes")
+            
+        except requests.RequestException as e:
+            error_msg = f"Network error downloading ChromeDriver: {e}"
+            print(f"❌ {error_msg}")
+            raise Exception(error_msg)
         
         # Extract to temporary directory
-        with tempfile.TemporaryDirectory() as temp_dir:
-            zip_path = os.path.join(temp_dir, "chromedriver.zip")
-            with open(zip_path, "wb") as f:
-                f.write(response.content)
-            
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(temp_dir)
-            
-            # Find the chromedriver executable
-            chromedriver_name = "chromedriver.exe" if system == "windows" else "chromedriver"
-            
-            # Look for chromedriver in extracted directories
-            for root, dirs, files in os.walk(temp_dir):
-                if chromedriver_name in files:
-                    src_path = os.path.join(root, chromedriver_name)
+        print("📦 Extracting ChromeDriver...")
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                zip_path = os.path.join(temp_dir, "chromedriver.zip")
+                print(f"   Temporary directory: {temp_dir}")
+                
+                with open(zip_path, "wb") as f:
+                    f.write(response.content)
+                print(f"   Zip file written: {zip_path}")
+                
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(temp_dir)
+                    print(f"   Archive extracted, contents: {os.listdir(temp_dir)}")
+                
+                # Find the chromedriver executable
+                chromedriver_name = "chromedriver.exe" if system == "windows" else "chromedriver"
+                print(f"   Looking for executable: {chromedriver_name}")
+                
+                # Look for chromedriver in extracted directories
+                found_driver = False
+                for root, dirs, files in os.walk(temp_dir):
+                    print(f"   Checking directory: {root}")
+                    print(f"     Files: {files}")
                     
-                    # Copy to a permanent location
-                    dest_dir = BASE_DIR / "drivers"
-                    dest_dir.mkdir(exist_ok=True)
-                    dest_path = dest_dir / chromedriver_name
+                    if chromedriver_name in files:
+                        src_path = os.path.join(root, chromedriver_name)
+                        print(f"   ✅ Found ChromeDriver at: {src_path}")
+                        
+                        # Copy to a permanent location
+                        dest_dir = BASE_DIR / "drivers"
+                        dest_dir.mkdir(exist_ok=True)
+                        dest_path = dest_dir / chromedriver_name
+                        
+                        import shutil
+                        shutil.copy2(src_path, dest_path)
+                        os.chmod(dest_path, 0o755)
+                        
+                        # Verify the copied file
+                        if os.path.exists(dest_path):
+                            print(f"✅ ChromeDriver installed to: {dest_path}")
+                            print(f"   File size: {os.path.getsize(dest_path)} bytes")
+                            print(f"   Permissions: {oct(os.stat(dest_path).st_mode)[-3:]}")
+                            return str(dest_path)
+                        else:
+                            print(f"❌ Failed to copy ChromeDriver to {dest_path}")
+                            
+                        found_driver = True
+                        break
+                
+                if not found_driver:
+                    error_msg = "ChromeDriver executable not found in downloaded archive"
+                    print(f"❌ {error_msg}")
+                    # Print full directory structure for debugging
+                    for root, dirs, files in os.walk(temp_dir):
+                        print(f"   {root}: {files}")
+                    raise Exception(error_msg)
                     
-                    import shutil
-                    shutil.copy2(src_path, dest_path)
-                    os.chmod(dest_path, 0o755)
-                    
-                    print(f"✅ ChromeDriver installed to: {dest_path}")
-                    return str(dest_path)
-        
-        raise Exception("ChromeDriver executable not found in downloaded archive")
+        except Exception as e:
+            error_msg = f"Error extracting ChromeDriver: {e}"
+            print(f"❌ {error_msg}")
+            raise Exception(error_msg)
         
     except Exception as e:
-        print(f"⚠️ Chrome for Testing download failed: {e}")
+        print(f"❌ Chrome for Testing download failed: {e}")
         return None
 
 
@@ -248,23 +316,40 @@ def get_chrome_driver(chrome_options=None):
     
     # Priority 1: Use Chrome for Testing API (most reliable for exact compatibility)
     try:
+        print("🎯 Attempting Chrome for Testing API...")
         driver_path = get_chrome_for_testing_driver()
         if driver_path and os.path.exists(driver_path):
-            print(f"🎯 Using Chrome for Testing ChromeDriver: {driver_path}")
+            print(f"✅ Using Chrome for Testing ChromeDriver: {driver_path}")
             return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
+        else:
+            print("⚠️ Chrome for Testing API returned no valid driver path")
     except Exception as cft_error:
-        print(f"⚠️ Chrome for Testing failed: {cft_error}")
+        print(f"❌ Chrome for Testing failed: {cft_error}")
     
-    # Priority 2: Use WebDriverManager (fallback for local development)
+    # Priority 2: Use Selenium 4's automatic ChromeDriver management (NEW!)
     try:
+        print("🔧 Attempting Selenium 4 automatic ChromeDriver management...")
+        from selenium.webdriver.chrome.service import Service
+        
+        # Let Selenium 4 automatically download and manage ChromeDriver
+        service = Service()  # No executable_path - let Selenium handle it
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        print("✅ Selenium 4 automatic ChromeDriver management successful!")
+        return driver
+    except Exception as selenium_auto_error:
+        print(f"⚠️ Selenium 4 auto-management failed: {selenium_auto_error}")
+    
+    # Priority 3: Use WebDriverManager (fallback for local development)
+    try:
+        print("📦 Attempting WebDriverManager...")
         from webdriver_manager.chrome import ChromeDriverManager
         driver_path = ChromeDriverManager().install()
-        print(f"📦 Using WebDriverManager ChromeDriver: {driver_path}")
+        print(f"✅ Using WebDriverManager ChromeDriver: {driver_path}")
         return webdriver.Chrome(executable_path=driver_path, options=chrome_options)
     except Exception as wdm_error:
         print(f"⚠️ WebDriverManager failed: {wdm_error}")
         
-        # Priority 3: Try system-installed ChromeDriver (from nixpacks) with error logging
+        # Priority 4: Try system-installed ChromeDriver (from nixpacks) with error logging
         if os.environ.get("CHROMEDRIVER_PATH") and os.path.exists(os.environ.get("CHROMEDRIVER_PATH")):
             try:
                 print(f"🔄 Trying system ChromeDriver: {os.environ.get('CHROMEDRIVER_PATH')}")
@@ -273,7 +358,7 @@ def get_chrome_driver(chrome_options=None):
                 import subprocess
                 result = subprocess.run([os.environ.get("CHROMEDRIVER_PATH"), "--version"], 
                                      capture_output=True, text=True, timeout=10)
-                print(f"ChromeDriver version: {result.stdout}")
+                print(f"System ChromeDriver version: {result.stdout}")
                 
                 return webdriver.Chrome(
                     executable_path=os.environ.get("CHROMEDRIVER_PATH"), 
@@ -282,7 +367,7 @@ def get_chrome_driver(chrome_options=None):
             except Exception as system_error:
                 print(f"⚠️ System ChromeDriver failed: {system_error}")
         
-        # Priority 4: Try local development ChromeDriver
+        # Priority 5: Try local development ChromeDriver
         if os.path.exists(CHROME_DRIVER_PATH):
             try:
                 print("🏠 Trying local development ChromeDriver")
@@ -293,7 +378,7 @@ def get_chrome_driver(chrome_options=None):
             except Exception as local_error:
                 print(f"⚠️ Local ChromeDriver failed: {local_error}")
         
-        # Priority 5: Use Chrome's built-in DevTools (emergency fallback)
+        # Priority 6: Use Chrome's built-in DevTools (emergency fallback)
         try:
             print("🆘 Attempting Chrome with remote debugging (emergency fallback)")
             chrome_options.add_argument("--remote-debugging-port=9222")
@@ -304,7 +389,15 @@ def get_chrome_driver(chrome_options=None):
             
         except Exception as emergency_error:
             print(f"❌ All ChromeDriver methods failed. Last error: {emergency_error}")
-            raise Exception(f"Could not create Chrome driver. CfT: Chrome for Testing failed, WDM: {wdm_error}, Emergency: {emergency_error}")
+            
+            # Comprehensive error report
+            print("\n🔍 COMPREHENSIVE ERROR REPORT:")
+            print(f"   Chrome for Testing: Failed")
+            print(f"   Selenium 4 Auto: {selenium_auto_error}")
+            print(f"   WebDriverManager: {wdm_error}")
+            print(f"   Emergency fallback: {emergency_error}")
+            
+            raise Exception(f"Could not create Chrome driver after trying all methods. Selenium Auto: {selenium_auto_error}, WDM: {wdm_error}, Emergency: {emergency_error}")
 
 def format_dict(d):
     vals = list(d.values())
