@@ -88,6 +88,9 @@ COPY . .
 # Create selenium directory
 RUN mkdir -p /app/selenium
 
+# Create temporary directory for SQLite database (writable in Railway)
+RUN mkdir -p /tmp && chmod 777 /tmp
+
 # Collect static files
 RUN python manage.py collectstatic --noinput
 

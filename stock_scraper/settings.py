@@ -84,12 +84,23 @@ WSGI_APPLICATION = 'stock_scraper.wsgi.application'
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 if IS_PRODUCTION:
     # Production database (Railway will provide DATABASE_URL)
-    DATABASES = {
-        'default': dj_database_url.config(
-            default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
-            conn_max_age=600
-        )
-    }
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        # Use provided database (PostgreSQL, MySQL, etc.)
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=600
+            )
+        }
+    else:
+        # Fallback to SQLite for Railway deployment without external database
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': '/tmp/db.sqlite3',  # Use /tmp for writable storage in Railway
+            }
+        }
 else:
     # Local development database
     DATABASES = {
