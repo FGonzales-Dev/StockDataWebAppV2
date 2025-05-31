@@ -204,6 +204,30 @@
         padding: 1rem 2rem;
       }
     }
+
+    /* Error Message Styles */
+    .error-message {
+      background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+      color: white;
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      font-weight: 500;
+      box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
+      animation: shake 0.5s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .error-icon {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
   </style>
 </head>
 
@@ -221,6 +245,14 @@
       <h1 class="title">Get Stock Data</h1>
       <p class="subtitle">Enter your stock information below</p>
     </div>
+
+    <!-- Error Message Display -->
+    {% if error %}
+    <div class="error-message">
+      <i class="fas fa-exclamation-triangle error-icon"></i>
+      {{ error }}
+    </div>
+    {% endif %}
     
     <form name="myForm" method="POST" action="{% url 'stockData' %}" onsubmit="return validateForm()">
       {% csrf_token %}
@@ -228,21 +260,21 @@
         <div class="row">
           <div class="col-md-12">
             <label for="ticker"></label>
-            <input type="text" id="ticker" placeholder="Stock Ticker" name="ticker"  required="required" />
+            <input type="text" id="ticker" placeholder="Stock Ticker" name="ticker" value="{{ ticker|default:'' }}" required="required" />
 
-            <input type="text" id="market" placeholder="Stock Market" name="market"  required="required" />
+            <input type="text" id="market" placeholder="Stock Market" name="market" value="{{ market|default:'' }}" required="required" />
 
             <select name="download_type" id="select-type">
-              <option value="ALL">ALL</option>
-              <option value="BALANCE_SHEET">BALANCE SHEET</option>
-              <option value="INCOME_STATEMENT">INCOME STATEMENT</option>
-              <option value="CASH_FLOW">CASH FLOW</option>
-              <option value="VALUATION_CASH_FLOW">VALUATION - CASH FLOW</option>
-              <option value="VALUATION_GROWTH">VALUATION - GROWTH</option>
-              <option value="VALUATION_FINANCIAL_HEALTH">VALUATION - FINANCIAL HEALTH</option>
-              <option value="VALUATION_OPERATING_EFFICIENCY">VALUATION - OPERATING AND EFFICIENCY</option>
-              <option value="DIVIDENDS">DIVIDENDS</option>
-              <option value="OPERATING_PERFORMANCE">OPERATING PERFORMANCE</option>
+              <option value="ALL" {% if download_type == "ALL" %}selected{% endif %}>ALL</option>
+              <option value="BALANCE_SHEET" {% if download_type == "BALANCE_SHEET" %}selected{% endif %}>BALANCE SHEET</option>
+              <option value="INCOME_STATEMENT" {% if download_type == "INCOME_STATEMENT" %}selected{% endif %}>INCOME STATEMENT</option>
+              <option value="CASH_FLOW" {% if download_type == "CASH_FLOW" %}selected{% endif %}>CASH FLOW</option>
+              <option value="VALUATION_CASH_FLOW" {% if download_type == "VALUATION_CASH_FLOW" %}selected{% endif %}>VALUATION - CASH FLOW</option>
+              <option value="VALUATION_GROWTH" {% if download_type == "VALUATION_GROWTH" %}selected{% endif %}>VALUATION - GROWTH</option>
+              <option value="VALUATION_FINANCIAL_HEALTH" {% if download_type == "VALUATION_FINANCIAL_HEALTH" %}selected{% endif %}>VALUATION - FINANCIAL HEALTH</option>
+              <option value="VALUATION_OPERATING_EFFICIENCY" {% if download_type == "VALUATION_OPERATING_EFFICIENCY" %}selected{% endif %}>VALUATION - OPERATING AND EFFICIENCY</option>
+              <option value="DIVIDENDS" {% if download_type == "DIVIDENDS" %}selected{% endif %}>DIVIDENDS</option>
+              <option value="OPERATING_PERFORMANCE" {% if download_type == "OPERATING_PERFORMANCE" %}selected{% endif %}>OPERATING PERFORMANCE</option>
             </select>
           </div>
         </div>

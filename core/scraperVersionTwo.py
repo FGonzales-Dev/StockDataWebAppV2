@@ -146,26 +146,38 @@ def scrape(request):
     market_value =  request.POST.get("market", "")
     download_type = request.POST.get("download_type", "")
     task_id = request.POST.get("task_id", "")
+    
     if 'get_data' in request.POST:
-        if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
-            task = scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type == "VALUATION_CASH_FLOW" or download_type == "VALUATION_GROWTH" or download_type == "VALUATION_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
-            task = scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type =="DIVIDENDS":
-            task = scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
-            dividends_task_id = task.id
-            print(dividends_task_id)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type == "OPERATING_PERFORMANCE":
-            task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type == "ALL":
-            task = all_scraper.delay(ticker_value=ticker_value, market_value=market_value)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        else:
-            return render(request, "../templates/stockData.html")
+        try:
+            if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
+                task = scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
+                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+            elif download_type == "VALUATION_CASH_FLOW" or download_type == "VALUATION_GROWTH" or download_type == "VALUATION_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
+                task = scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
+                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+            elif download_type =="DIVIDENDS":
+                task = scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
+                dividends_task_id = task.id
+                print(dividends_task_id)
+                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+            elif download_type == "OPERATING_PERFORMANCE":
+                task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
+                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+            elif download_type == "ALL":
+                task = all_scraper.delay(ticker_value=ticker_value, market_value=market_value)
+                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+            else:
+                return render(request, "../templates/stockData.html")
+        except Exception as e:
+            # Handle Chrome session errors gracefully
+            print(f"⚠️ Chrome session error in scraper: {e}")
+            error_message = "Chrome automation is temporarily unavailable. Please try again in a moment."
+            return render(request, "../templates/stockData.html", {
+                "error": error_message,
+                "ticker": ticker_value,
+                "market": market_value,
+                "download_type": download_type
+            })
     elif 'download' in request.POST:
         if download_type == "INCOME_STATEMENT": 
             income_statement_data = database.child('income_statement').child('income_statement').get().val()

@@ -26,6 +26,10 @@ import os
 from multiprocessing.pool import ThreadPool
 from functools import partial
 
+import time
+import threading
+from django.core.cache import cache
+
 # Import scraper configuration
 try:
     from scraper_config import *
@@ -57,6 +61,9 @@ config = {
 firebase = pyrebase.initialize_app(config)
 storage = firebase.storage()
 database =firebase.database()
+
+# Global Chrome session lock to prevent concurrent sessions
+chrome_session_lock = threading.Lock()
 
 def get_chrome_for_testing_driver():
     """
@@ -607,6 +614,53 @@ def create_stealth_driver():
             print(f"❌ Fallback Chrome driver also failed: {fallback_error}")
             raise fallback_error
 
+def safe_create_stealth_driver():
+    """
+    Create Chrome driver with global session management to prevent conflicts.
+    """
+    # Use a global lock to prevent multiple Chrome sessions from being created simultaneously
+    with chrome_session_lock:
+        # Add delay to prevent rapid session creation/destruction
+        time.sleep(2)
+        
+        # Check if a session was recently created
+        last_session_time = cache.get('last_chrome_session_time', 0)
+        current_time = time.time()
+        
+        # Ensure at least 5 seconds between Chrome sessions
+        if current_time - last_session_time < 5:
+            wait_time = 5 - (current_time - last_session_time)
+            print(f"🕐 Waiting {wait_time:.1f}s before creating new Chrome session...")
+            time.sleep(wait_time)
+        
+        print("🚀 Creating new Chrome session...")
+        driver = create_stealth_driver()
+        cache.set('last_chrome_session_time', time.time(), 60)
+        print("✅ Chrome session created successfully")
+        return driver
+
+def safe_close_driver(driver):
+    """
+    Safely close Chrome driver with proper cleanup.
+    """
+    if driver:
+        try:
+            # Close all windows first
+            for handle in driver.window_handles:
+                driver.switch_to.window(handle)
+                driver.close()
+        except:
+            pass
+        
+        try:
+            # Quit the driver
+            driver.quit()
+            print("🔄 Chrome session closed successfully")
+        except Exception as e:
+            print(f"⚠️ Warning: Error closing Chrome session: {e}")
+        
+        # Add delay after closing to prevent rapid reopening
+        time.sleep(1)
 
 @shared_task(bind=True)
 def scraper(self,ticker_value,market_value,download_type):
@@ -618,7 +672,7 @@ def scraper(self,ticker_value,market_value,download_type):
     driver = None
     try:
         # Create Chrome driver with fallback mechanism
-        driver = create_stealth_driver()
+        driver = safe_create_stealth_driver()
         driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
         if download_type == "INCOME_STATEMENT":
             print(f"Starting income statement scraping for {ticker_value}")
@@ -921,12 +975,7 @@ def scraper(self,ticker_value,market_value,download_type):
             sleep(10)
             return 'DONE'
     finally:
-        if driver:
-            try:
-                driver.quit()
-                print("🔄 Driver closed successfully")
-            except Exception as e:
-                print(f"Warning: Error closing driver: {e}")
+        safe_close_driver(driver)
 
 @shared_task(bind=True)
 def scraper_dividends(self, ticker_value, market_value):
@@ -938,7 +987,7 @@ def scraper_dividends(self, ticker_value, market_value):
     driver_dividends = None
     try:
         # Create Chrome driver with fallback mechanism (same as scraper function)
-        driver_dividends = create_stealth_driver()
+        driver_dividends = safe_create_stealth_driver()
         
         print(f"Starting dividends scraping for {ticker_value}")
         driver_dividends.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
@@ -1024,12 +1073,7 @@ def scraper_dividends(self, ticker_value, market_value):
         database.child("dividends").set({"dividends": x})
         return 'ERROR'
     finally:
-        if driver_dividends:
-            try:
-                driver_dividends.quit()
-                print("🔄 Driver closed successfully")
-            except Exception as e:
-                print(f"Warning: Error closing driver: {e}")
+        safe_close_driver(driver_dividends)
 
 @shared_task()
 def scraper_valuation(ticker_value,market_value,download_type):
@@ -1041,7 +1085,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
     valuation_driver = None
     try:
         # Create Chrome driver with fallback mechanism (same as scraper_dividends)
-        valuation_driver = create_stealth_driver()
+        valuation_driver = safe_create_stealth_driver()
         
         print(f"Starting valuation scraping for {ticker_value}, type: {download_type}")
         valuation_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
@@ -1316,12 +1360,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
             database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x})
         return 'ERROR'
     finally:
-        if valuation_driver:
-            try:
-                valuation_driver.quit()
-                print("🔄 Driver closed successfully")
-            except Exception as e:
-                print(f"Warning: Error closing driver: {e}")
+        safe_close_driver(valuation_driver)
 
 @shared_task(bind=True)
 def all_scraper(self,ticker_value,market_value):
