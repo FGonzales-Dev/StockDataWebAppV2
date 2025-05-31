@@ -27,10 +27,10 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     && apt-get update \
     && apt-get install -y google-chrome-stable
 
-# Install Chrome dependencies for Ubuntu 24.04
+# Install Chrome dependencies (Debian/Ubuntu compatible packages)
 RUN apt-get install -y \
     fonts-liberation \
-    libasound2t64 \
+    libasound2 \
     libatk-bridge2.0-0 \
     libdrm2 \
     libxcomposite1 \
