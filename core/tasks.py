@@ -114,61 +114,114 @@ def format_dict(d):
 def create_stealth_driver():
     options = uc.ChromeOptions()
     
+    # Detect environment
+    IS_FLY = os.environ.get('FLY_ENVIRONMENT') or os.environ.get('FLY_APP_NAME')
+    IS_RAILWAY = os.environ.get('RAILWAY_ENVIRONMENT')
+    IS_PRODUCTION = IS_FLY or IS_RAILWAY
+    
+    # Container-specific Chrome options for production deployment
+    if IS_PRODUCTION:
+        print(f"🚀 Production environment detected: {'Fly.io' if IS_FLY else 'Railway' if IS_RAILWAY else 'Unknown'}")
+        # Essential container flags
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-renderer-backgrounding")
+        options.add_argument("--disable-features=TranslateUI")
+        options.add_argument("--disable-ipc-flooding-protection")
+        options.add_argument("--headless=new")  # Modern headless mode
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-plugins")
+        options.add_argument("--disable-images")
+        options.add_argument("--disable-javascript")
+        
+        # Memory optimization for containers
+        if IS_FLY:
+            options.add_argument("--memory-pressure-off")
+            options.add_argument("--max_old_space_size=1024")  # 1GB for Fly.io
+        else:
+            options.add_argument("--max_old_space_size=512")   # 512MB for Railway
+        
+        # Container-specific settings
+        options.add_argument("--single-process")
+        options.add_argument("--no-zygote")
+        options.add_argument("--remote-debugging-port=9222")
+        
+        # Set virtual display
+        options.add_argument("--display=:99")
+        
+        print("🔧 Applied production Chrome options for container deployment")
+    else:
+        print("💻 Development environment - using standard options")
+        # Standard options for development
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+    
     # Set window size to common screen resolution
     options.add_argument("--window-size=1920,1080")
 
     # Set a random realistic user-agent
     user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
-        "Mozilla/5.0 (X11; Linux x86_64)..."
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     ]
     options.add_argument(f"--user-agent={random.choice(user_agents)}")
 
     # Anti-bot arguments
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-gpu")
     options.add_argument("--disable-infobars")
-    options.add_argument("--disable-extensions")
 
     # Optional: disable images to speed up
     prefs = {
         "profile.managed_default_content_settings.images": 2,
-        "download.default_directory": BASE_DIR + DOWNLOAD_DIRECTORY,  # Or your dynamic dir
+        "download.default_directory": BASE_DIR + DOWNLOAD_DIRECTORY,
     }
     options.add_experimental_option("prefs", prefs)
 
-    # Run headless if SHOW_BROWSER is False
-    if not SHOW_BROWSER:
-        options.headless = False  # ✅ this is the correct way for UC
+    # Run headless in production
+    if IS_PRODUCTION:
+        options.headless = True
+    else:
+        options.headless = not SHOW_BROWSER
 
     # Launch driver
-    driver = uc.Chrome(options=options)
-
-    # Optional: Stealth tweaks inside browser
-    driver.execute_cdp_cmd(
-        "Page.addScriptToEvaluateOnNewDocument",
-        {
-            "source": """
-                Object.defineProperty(navigator, 'webdriver', {
-                  get: () => undefined
-                });
-                window.navigator.chrome = {
-                  runtime: {},
-                };
-                Object.defineProperty(navigator, 'plugins', {
-                  get: () => [1, 2, 3],
-                });
-                Object.defineProperty(navigator, 'languages', {
-                  get: () => ['en-US', 'en'],
-                });
-            """
-        },
-    )
-
-    return driver
+    try:
+        print("🚀 Creating Chrome driver...")
+        driver = uc.Chrome(options=options)
+        print("✅ Chrome driver created successfully!")
+        
+        # Optional: Stealth tweaks inside browser (only if not in production to avoid JS errors)
+        if not IS_PRODUCTION:
+            driver.execute_cdp_cmd(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {
+                    "source": """
+                        Object.defineProperty(navigator, 'webdriver', {
+                          get: () => undefined
+                        });
+                        window.navigator.chrome = {
+                          runtime: {},
+                        };
+                        Object.defineProperty(navigator, 'plugins', {
+                          get: () => [1, 2, 3],
+                        });
+                        Object.defineProperty(navigator, 'languages', {
+                          get: () => ['en-US', 'en'],
+                        });
+                    """
+                },
+            )
+        
+        return driver
+        
+    except Exception as e:
+        print(f"❌ Error creating Chrome driver: {e}")
+        raise e
 
 
 @shared_task(bind=True)
