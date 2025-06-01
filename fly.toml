@@ -39,4 +39,4 @@ primary_region = "sjc"  # San Jose (close to stock markets)
 
 [processes]
   web = "gunicorn --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120 --max-requests 100 stock_scraper.wsgi:application"
-  worker = "python manage.py celeryd -E --loglevel=info --concurrency=1" 
+  worker = "celery -A stock_scraper worker --loglevel=info --concurrency=1" 

@@ -151,12 +151,26 @@ STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 django_heroku.settings(locals())
 
-# For Local
-CELERY_BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'django-db'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+# Celery Configuration
+USE_CELERY = True if IS_PRODUCTION else False
 
-# CELERY_BROKER_URL = os.environ['REDIS_URL']
-# CELERY_BACKEND_URL = 'redis://:p1e842a929016d5b23eb852b0d462dc69169c1535f156dc5ade1296118d56b93c@ec2-34-195-183-221.compute-1.amazonaws.com:15900'
+if USE_CELERY:
+    # Production - use Redis
+    CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+    CELERY_RESULT_BACKEND = 'django-db'
+    CELERY_ACCEPT_CONTENT = ['json']
+    CELERY_TASK_SERIALIZER = 'json'
+    CELERY_RESULT_SERIALIZER = 'json'
+    CELERY_TIMEZONE = 'UTC'
+    # Additional settings for reliability
+    CELERY_TASK_TRACK_STARTED = True
+    CELERY_TASK_TIME_LIMIT = 300  # 5 minutes max per task
+    CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+else:
+    # Development - run synchronously
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+    CELERY_RESULT_BACKEND = 'django-db'
+    CELERY_ACCEPT_CONTENT = ['json']
+    CELERY_TASK_SERIALIZER = 'json'
 
