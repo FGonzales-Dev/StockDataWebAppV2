@@ -119,6 +119,12 @@ def create_stealth_driver():
     IS_RAILWAY = os.environ.get('RAILWAY_ENVIRONMENT')
     IS_PRODUCTION = IS_FLY or IS_RAILWAY
     
+    # Ensure download directory exists
+    download_path = BASE_DIR + DOWNLOAD_DIRECTORY
+    if not os.path.exists(download_path):
+        os.makedirs(download_path, exist_ok=True)
+        print(f"[DEBUG] Created download directory: {download_path}")
+    
     # Container-specific Chrome options for production deployment
     if IS_PRODUCTION:
         print(f"🚀 Production environment detected: {'Fly.io' if IS_FLY else 'Railway' if IS_RAILWAY else 'Unknown'}")
@@ -179,13 +185,27 @@ def create_stealth_driver():
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--disable-infobars")
 
-    # Download preferences (but keep images and JavaScript enabled for proper scraping)
+    # Download preferences - CRITICAL for file downloads
     prefs = {
-        "download.default_directory": BASE_DIR + DOWNLOAD_DIRECTORY,
+        "download.default_directory": download_path,
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True,
+        "safebrowsing.enabled": True,
         "profile.default_content_setting_values.notifications": 2,
-        "profile.default_content_settings.popups": 0
+        "profile.default_content_settings.popups": 0,
+        "profile.managed_default_content_settings.images": 1  # Allow images
     }
+    
+    # Additional prefs for production containers
+    if IS_PRODUCTION:
+        prefs.update({
+            "plugins.always_open_pdf_externally": True,
+            "download.open_pdf_in_system_reader": False,
+            "profile.default_content_settings.multiple_automatic_downloads": 1,
+        })
+    
     options.add_experimental_option("prefs", prefs)
+    print(f"[DEBUG] Chrome download directory set to: {download_path}")
 
     # Run headless in production
     if IS_PRODUCTION:
@@ -239,6 +259,36 @@ def create_stealth_driver():
 
 @shared_task(bind=True)
 def scraper(self,ticker_value,market_value,download_type):
+    # Production debugging
+    IS_FLY = os.environ.get('FLY_ENVIRONMENT') or os.environ.get('FLY_APP_NAME')
+    IS_PRODUCTION = IS_FLY or os.environ.get('RAILWAY_ENVIRONMENT')
+    
+    print(f"[DEBUG] Environment - IS_FLY: {IS_FLY}, IS_PRODUCTION: {IS_PRODUCTION}")
+    print(f"[DEBUG] BASE_DIR: {BASE_DIR}")
+    print(f"[DEBUG] DOWNLOAD_DIRECTORY: {DOWNLOAD_DIRECTORY}")
+    
+    download_path = BASE_DIR + DOWNLOAD_DIRECTORY
+    print(f"[DEBUG] Full download path: {download_path}")
+    print(f"[DEBUG] Download path exists: {os.path.exists(download_path)}")
+    
+    # Create download directory if it doesn't exist
+    if not os.path.exists(download_path):
+        try:
+            os.makedirs(download_path, exist_ok=True)
+            print(f"[DEBUG] Created download directory: {download_path}")
+        except Exception as e:
+            print(f"[ERROR] Failed to create download directory: {e}")
+    
+    # Check directory permissions
+    try:
+        import stat
+        if os.path.exists(download_path):
+            dir_stat = os.stat(download_path)
+            print(f"[DEBUG] Directory permissions: {stat.filemode(dir_stat.st_mode)}")
+            print(f"[DEBUG] Directory is writable: {os.access(download_path, os.W_OK)}")
+    except Exception as e:
+        print(f"[DEBUG] Error checking permissions: {e}")
+    
     # Create Chrome driver with automatic configuration
     # driver = get_chrome_driver()
     
@@ -332,18 +382,66 @@ def scraper(self,ticker_value,market_value,download_type):
             if export_clicked:
                 sleep(10)  # Wait for download to complete
                 print("Waiting for download to complete...")
+                
+                # Check if files were actually downloaded
+                if os.path.exists(download_path):
+                    files_after = os.listdir(download_path)
+                    print(f"[DEBUG] Files in download directory after export: {files_after}")
+                else:
+                    print(f"[ERROR] Download directory doesn't exist after export: {download_path}")
             else:
                 sleep(5)   # Short wait even if export failed
                 print("No export performed, continuing...")
+                print(f"[WARNING] Export button was not found or clicked for {download_type}")
 
             try:
-                excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Income Statement_Annual_As Originally Reported.xls")
-                data1 = excel_data_df.to_json()
-                print("Successfully read income statement Excel file")
-                print(data1)
-                database.child("income_statement").set({"income_statement": data1 })
+                expected_file = BASE_DIR + DOWNLOAD_DIRECTORY + "/Income Statement_Annual_As Originally Reported.xls"
+                print(f"[DEBUG] Looking for income statement file: {expected_file}")
+                
+                # Wait a bit more and check multiple times for file to appear
+                max_wait_attempts = 6  # 30 seconds total
+                file_found = False
+                
+                for attempt in range(max_wait_attempts):
+                    if os.path.exists(expected_file):
+                        file_found = True
+                        print(f"[DEBUG] File found after {attempt * 5} seconds")
+                        break
+                    else:
+                        print(f"[DEBUG] File not found, waiting... (attempt {attempt + 1}/{max_wait_attempts})")
+                        sleep(5)
+                
+                if not file_found:
+                    # List all files in download directory for debugging
+                    download_dir = BASE_DIR + DOWNLOAD_DIRECTORY
+                    if os.path.exists(download_dir):
+                        all_files = os.listdir(download_dir)
+                        print(f"[DEBUG] All files in download directory: {all_files}")
+                        
+                        # Look for any Excel files with similar names
+                        excel_files = [f for f in all_files if f.endswith(('.xls', '.xlsx')) and 'income' in f.lower()]
+                        if excel_files:
+                            expected_file = os.path.join(download_dir, excel_files[0])
+                            print(f"[DEBUG] Using alternative Excel file: {expected_file}")
+                            file_found = True
+                    else:
+                        print(f"[ERROR] Download directory does not exist: {download_dir}")
+                
+                if file_found:
+                    excel_data_df = pd.read_excel(expected_file)
+                    data1 = excel_data_df.to_json()
+                    print("Successfully read income statement Excel file")
+                    print(f"[DEBUG] Data preview: {str(data1)[:200]}...")
+                    database.child("income_statement").set({"income_statement": data1 })
+                else:
+                    raise FileNotFoundError(f"Income statement file not found: {expected_file}")
+                    
             except Exception as e:
                 print(f"Error reading income statement Excel file: {e}")
+                print(f"[DEBUG] Exception type: {type(e).__name__}")
+                print(f"[DEBUG] Current working directory: {os.getcwd()}")
+                
+                # Set fallback data
                 x =  '{"income_statement":{"none":"no data"}}'
                 database.child("income_statement").set({"income_statement": x })
             sleep(10)
@@ -432,9 +530,17 @@ def scraper(self,ticker_value,market_value,download_type):
             if export_clicked:
                 sleep(10)  # Wait for download to complete
                 print("Waiting for download to complete...")
+                
+                # Check if files were actually downloaded
+                if os.path.exists(download_path):
+                    files_after = os.listdir(download_path)
+                    print(f"[DEBUG] Files in download directory after export: {files_after}")
+                else:
+                    print(f"[ERROR] Download directory doesn't exist after export: {download_path}")
             else:
                 sleep(5)   # Short wait even if export failed
                 print("No export performed, continuing...")
+                print(f"[WARNING] Export button was not found or clicked for {download_type}")
                 
             try:
                 excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Balance Sheet_Annual_As Originally Reported.xls")
@@ -532,9 +638,17 @@ def scraper(self,ticker_value,market_value,download_type):
             if export_clicked:
                 sleep(10)  # Wait for download to complete
                 print("Waiting for download to complete...")
+                
+                # Check if files were actually downloaded
+                if os.path.exists(download_path):
+                    files_after = os.listdir(download_path)
+                    print(f"[DEBUG] Files in download directory after export: {files_after}")
+                else:
+                    print(f"[ERROR] Download directory doesn't exist after export: {download_path}")
             else:
                 sleep(5)   # Short wait even if export failed
                 print("No export performed, continuing...")
+                print(f"[WARNING] Export button was not found or clicked for {download_type}")
                 
             try:
                 excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Cash Flow_Annual_As Originally Reported.xls")
@@ -1042,43 +1156,55 @@ def all_scraper(self,ticker_value,market_value):
     WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
     sleep(10)
     try:
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Income Statement_Annual_As Originally Reported.xls")
-        data1 = excel_data_df.to_json()
-        print(data1)
-        database.child("income_statement").set({"income_statement": data1 })
-    except:
+        expected_file = BASE_DIR + DOWNLOAD_DIRECTORY + "/Income Statement_Annual_As Originally Reported.xls"
+        print(f"[DEBUG] Looking for income statement file: {expected_file}")
+        
+        # Wait a bit more and check multiple times for file to appear
+        max_wait_attempts = 6  # 30 seconds total
+        file_found = False
+        
+        for attempt in range(max_wait_attempts):
+            if os.path.exists(expected_file):
+                file_found = True
+                print(f"[DEBUG] File found after {attempt * 5} seconds")
+                break
+            else:
+                print(f"[DEBUG] File not found, waiting... (attempt {attempt + 1}/{max_wait_attempts})")
+                sleep(5)
+        
+        if not file_found:
+            # List all files in download directory for debugging
+            download_dir = BASE_DIR + DOWNLOAD_DIRECTORY
+            if os.path.exists(download_dir):
+                all_files = os.listdir(download_dir)
+                print(f"[DEBUG] All files in download directory: {all_files}")
+                
+                # Look for any Excel files with similar names
+                excel_files = [f for f in all_files if f.endswith(('.xls', '.xlsx')) and 'income' in f.lower()]
+                if excel_files:
+                    expected_file = os.path.join(download_dir, excel_files[0])
+                    print(f"[DEBUG] Using alternative Excel file: {expected_file}")
+                    file_found = True
+            else:
+                print(f"[ERROR] Download directory does not exist: {download_dir}")
+        
+        if file_found:
+            excel_data_df = pd.read_excel(expected_file)
+            data1 = excel_data_df.to_json()
+            print("Successfully read income statement Excel file")
+            print(f"[DEBUG] Data preview: {str(data1)[:200]}...")
+            database.child("income_statement").set({"income_statement": data1 })
+        else:
+            raise FileNotFoundError(f"Income statement file not found: {expected_file}")
+            
+    except Exception as e:
+        print(f"Error reading income statement Excel file: {e}")
+        print(f"[DEBUG] Exception type: {type(e).__name__}")
+        print(f"[DEBUG] Current working directory: {os.getcwd()}")
+        
+        # Set fallback data
         x =  '{"income_statement":{"none":"no data"}}'
         database.child("income_statement").set({"income_statement": x })
-    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
-    sleep(5)
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-    sleep(5)
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-    sleep(10)
-    try:
-            excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Balance Sheet_Annual_As Originally Reported.xls")
-            data1 = excel_data_df.to_json()
-            print(data1)
-            database.child("balance_sheet").set({"balance_sheet": data1 })
-    except:
-        x =  '{"balance_sheet":{"none":"no data"}}'
-        database.child("balance_sheet").set({"balance_sheet": x })
-    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-    sleep(5)
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-    sleep(5)
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-    sleep(10)
-    try:
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/Cash Flow_Annual_As Originally Reported.xls")
-        data1 = excel_data_df.to_json()
-        print(data1)
-        database.child("cash_flow").set({"cash_flow": data1 })
-    except:
-        x =  '{"cash_flow":{"none":"no data"}}'
-        database.child("cash_flow").set({"cash_flow": x })
     sleep(10)
     valuation_financial_health_driver.quit() 
     return 'DONE'    
