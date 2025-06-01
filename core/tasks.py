@@ -270,11 +270,10 @@ def get_chrome_for_testing_driver():
 
 def get_chrome_driver(chrome_options=None):
     """
-    SIMPLIFIED ChromeDriver creation - ONLY uses reliable methods.
-    Completely avoids system ChromeDriver to prevent version mismatches.
-    Enhanced for Railway deployment.
+    Create ChromeDriver with stable configuration for Railway deployment.
+    Uses reliable methods and stable Chrome flags.
     """
-    print("🚀 SIMPLIFIED ChromeDriver creation starting...")
+    print("🚀 Creating stable ChromeDriver...")
     
     # Check if running on Railway
     is_railway = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("CHROME_BIN")
@@ -288,21 +287,23 @@ def get_chrome_driver(chrome_options=None):
         prefs = {'download.default_directory': str(BASE_DIR / "selenium")}
         chrome_options.add_experimental_option('prefs', prefs)
         
-        # Basic options
+        # Core stability flags
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-infobars")
         chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument("--disable-dev-shm-usage")
         
-        # Railway specific flags
+        # Railway specific flags (stable only)
         if is_railway:
             chrome_options.add_argument("--headless")  # Force headless on Railway
             chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("--disable-software-rasterizer")
-            chrome_options.add_argument("--single-process")
-            chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--disable-gpu-sandbox")
             chrome_options.add_argument("--remote-debugging-port=9222")
+            
+            # Conservative memory management
+            chrome_options.add_argument("--memory-pressure-off")
+            chrome_options.add_argument("--max_old_space_size=512")
         
         # Window size and user agent
         chrome_options.add_argument(f"--window-size={BROWSER_WIDTH},{BROWSER_HEIGHT}")
@@ -409,11 +410,10 @@ def format_dict(d):
 # Testing: Adding options to undetected chrome driver
 def create_stealth_driver():
     """
-    Create a stealth Chrome driver using undetected-chromedriver.
-    Falls back to regular Chrome driver if UC fails.
-    Enhanced for Railway deployment with fixed options.
+    Create a stable Chrome driver optimized for Railway deployment.
+    Removes aggressive flags that cause crashes and uses proven-stable configuration.
     """
-    print("🥷 Creating stealth Chrome driver...")
+    print("🥷 Creating stable Chrome driver for Railway...")
     
     # Check if running on Railway
     is_railway = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("CHROME_BIN")
@@ -446,194 +446,105 @@ def create_stealth_driver():
                     print(f"✅ Found ChromeDriver alternative: {chromedriver_path}")
                     break
     
-    # Undetected Chrome options - FIXED to remove incompatible options
+    # STABLE Chrome options - only essential flags for Railway
     options = uc.ChromeOptions()
     
-    # Basic stealth arguments (removed problematic excludeSwitches)
+    # Core stability flags (REQUIRED for Railway containers)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-plugins")
-    options.add_argument("--disable-images")
-    options.add_argument("--disable-javascript")
-    options.add_argument("--disable-notifications")
-    options.add_argument("--mute-audio")
-    options.add_argument("--no-first-run")
-    options.add_argument("--no-default-browser-check")
-    options.add_argument("--disable-default-apps")
-    options.add_argument("--disable-popup-blocking")
-    options.add_argument("--disable-web-security")
-    options.add_argument("--disable-features=VizDisplayCompositor")
-    options.add_argument("--disable-backgrounding-occluded-windows")
-    options.add_argument("--disable-renderer-backgrounding")
-    options.add_argument("--disable-field-trial-config")
-    options.add_argument("--disable-back-forward-cache")
-    options.add_argument("--disable-hang-monitor")
-    options.add_argument("--disable-prompt-on-repost")
-    options.add_argument("--disable-client-side-phishing-detection")
-    options.add_argument("--disable-component-update")
-    options.add_argument("--disable-domain-reliability")
+    options.add_argument("--headless")  # Force headless on Railway
     
-    # Railway/Production specific flags
+    # Memory optimization (CONSERVATIVE approach)
     if is_railway:
-        print("🚂 Adding Railway-specific Chrome options...")
-        options.add_argument("--headless")  # Force headless on Railway
-        options.add_argument("--single-process")
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--disable-ipc-flooding-protection")
-        options.add_argument("--memory-pressure-off")
-        options.add_argument("--max_old_space_size=4096")
+        print("🚂 Adding Railway-optimized Chrome options...")
+        
+        # Essential Railway flags only
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-gpu-sandbox")
+        options.add_argument("--disable-software-rasterizer")
         options.add_argument("--remote-debugging-port=9222")
-        options.add_argument("--disable-setuid-sandbox")
-        options.add_argument("--disable-seccomp-filter-sandbox")
         
-        # EXTREME: Railway Hobby Plan optimization (512MB-1GB RAM limit)
+        # Conservative memory management
         options.add_argument("--memory-pressure-off")
-        options.add_argument("--max_old_space_size=256")  # Ultra-low memory limit for hobby plan
+        options.add_argument("--max_old_space_size=512")  # Conservative limit
         options.add_argument("--disable-background-timer-throttling")
         options.add_argument("--disable-renderer-backgrounding")
         options.add_argument("--disable-backgrounding-occluded-windows")
-        options.add_argument("--disable-background-networking")
-        options.add_argument("--disable-features=TranslateUI,VizDisplayCompositor,AudioServiceOutOfProcess")
-        options.add_argument("--aggressive-cache-discard")
-        options.add_argument("--disable-sync")
-        options.add_argument("--disable-default-apps")
-        options.add_argument("--disable-session-crashed-bubble")
-        options.add_argument("--disable-infobars")
-        options.add_argument("--disable-component-update")
-        options.add_argument("--no-pings")
+        
+        # Disable unnecessary features (safe removals)
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-plugins")
+        options.add_argument("--disable-images")  # For faster loading
+        options.add_argument("--disable-notifications")
+        options.add_argument("--mute-audio")
         options.add_argument("--no-first-run")
-        options.add_argument("--no-service-autorun")
-        options.add_argument("--password-store=basic")
-        options.add_argument("--use-mock-keychain")
-        options.add_argument("--disable-accelerated-2d-canvas")
-        options.add_argument("--disable-accelerated-jpeg-decoding")
-        options.add_argument("--disable-accelerated-mjpeg-decode")
-        options.add_argument("--disable-accelerated-video-decode")
-        options.add_argument("--disable-accelerated-video-encode")
-        options.add_argument("--disable-gpu-memory-buffer-video-frames")
+        options.add_argument("--disable-default-apps")
+        options.add_argument("--disable-sync")
+        options.add_argument("--disable-translate")
         
-        # EXTREME: Additional Railway container optimization for heavy websites
-        options.add_argument("--disable-canvas-aa")  # Disable canvas anti-aliasing
-        options.add_argument("--disable-2d-canvas-clip-aa")  # Disable 2D canvas clip anti-aliasing
-        options.add_argument("--disable-gl-drawing-for-tests")  # Disable GL drawing
-        options.add_argument("--disable-threaded-animation")  # Disable threaded animation
-        options.add_argument("--disable-threaded-scrolling")  # Disable threaded scrolling
-        options.add_argument("--disable-checker-imaging")  # Disable checker imaging
-        options.add_argument("--disable-image-animation-resync")  # Disable image animation resync
-        options.add_argument("--disable-partial-raster")  # Disable partial raster
-        options.add_argument("--disable-skia-runtime-opts")  # Disable Skia runtime optimizations
-        options.add_argument("--disable-smooth-scrolling")  # Disable smooth scrolling
-        options.add_argument("--disable-composited-antialiasing")  # Disable composited antialiasing
-        options.add_argument("--force-color-profile=srgb")  # Force simple color profile
-        options.add_argument("--disable-reading-from-canvas")  # Disable reading from canvas
-        options.add_argument("--disable-webgl")  # Disable WebGL
-        options.add_argument("--disable-webgl2")  # Disable WebGL2
-        options.add_argument("--disable-3d-apis")  # Disable 3D APIs
-        options.add_argument("--disable-webrtc")  # Disable WebRTC
-        options.add_argument("--disable-webrtc-hw-decoding")  # Disable WebRTC hardware decoding
-        options.add_argument("--disable-webrtc-hw-encoding")  # Disable WebRTC hardware encoding
-        options.add_argument("--disable-webrtc-multiple-routes")  # Disable WebRTC multiple routes
-        options.add_argument("--disable-webrtc-hw-vp8-encoding")  # Disable WebRTC VP8 encoding
-        options.add_argument("--disable-speech-api")  # Disable speech API
-        options.add_argument("--disable-file-system")  # Disable file system
-        options.add_argument("--disable-database")  # Disable database
-        options.add_argument("--disable-local-storage")  # Disable local storage
-        options.add_argument("--disable-session-storage")  # Disable session storage
-        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        options.add_argument("--max-gum-fps=5")  # Limit frame rate
-        options.add_argument("--memory-pressure-thresholds=0.5,0.7")  # Very aggressive memory thresholds
-        options.add_argument("--purge-memory-button")  # Enable memory purging
-        
-        # HOBBY PLAN SPECIFIC: Ultra-minimal resource usage
-        options.add_argument("--process-per-site")  # Limit processes
-        options.add_argument("--no-zygote")  # Disable zygote process
-        options.add_argument("--disable-features=VizDisplayCompositor,AudioServiceOutOfProcess,MediaSessionService")
-        options.add_argument("--disable-background-mode")  # Disable background mode
-        options.add_argument("--disable-extensions-file-access-check")
-        options.add_argument("--disable-extensions-http-throttling")
-        options.add_argument("--disable-ipc-flooding-protection")
-        options.add_argument("--force-gpu-mem-available-mb=64")  # Minimal GPU memory
+        # Performance optimizations (proven stable)
+        options.add_argument("--disable-features=VizDisplayCompositor,TranslateUI")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-web-security")  # For scraping
+        options.add_argument("--disable-infobars")
         
         # Set binary location
         options.binary_location = chrome_bin
         print(f"🔧 Chrome binary: {chrome_bin}")
-
-    # FIXED: Advanced stealth preferences - removed incompatible excludeSwitches
+    
+    # Download directory preferences
     prefs = {
-        "profile.managed_default_content_settings.images": 2,  # Don't load images for speed
         "download.default_directory": str(BASE_DIR / "selenium"),
-        # Disable password manager
-        "credentials_enable_service": False,
+        "profile.managed_default_content_settings.images": 2,  # Block images for speed
+        "profile.default_content_setting_values.notifications": 2,  # Block notifications
+        "credentials_enable_service": False,  # Disable password manager
         "profile.password_manager_enabled": False,
-        # Disable notifications
-        "profile.default_content_setting_values.notifications": 2,
-        # Disable location sharing
-        "profile.default_content_setting_values.geolocation": 2,
-        # Disable media stream
-        "profile.default_content_setting_values.media_stream": 2,
-        # Stealth mode preferences
-        "profile.managed_default_content_settings.geolocation": 2,
-        "profile.managed_default_content_settings.plugins": 2,
-        "profile.managed_default_content_settings.popups": 2,
-        "profile.managed_default_content_settings.media_stream": 2,
     }
     
     options.add_experimental_option("prefs", prefs)
-    # REMOVED: These lines that cause the error
-    # options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    # options.add_experimental_option('useAutomationExtension', False)
     
-    # User agent for stealth
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ]
-    options.add_argument(f"--user-agent={random.choice(user_agents)}")
+    # Stealth user agent (realistic)
+    user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    options.add_argument(f"--user-agent={user_agent}")
     
     # Set window size
     options.add_argument(f"--window-size={BROWSER_WIDTH},{BROWSER_HEIGHT}")
     
-    # Headless mode (force on Railway)
-    if not SHOW_BROWSER or is_railway:
-        options.add_argument("--headless")
-        print("🥷 Running stealth driver in HEADLESS mode")
-    else:
-        print("👁️ Running stealth driver in VISIBLE mode")
+    print("🥷 Running stable driver in HEADLESS mode")
     
-    # Try to launch undetected Chrome driver first
+    # Try to launch undetected Chrome driver with stable config
     try:
-        print("🚀 Attempting to create undetected Chrome driver...")
+        print("🚀 Attempting to create stable undetected Chrome driver...")
         
         # Handle Railway Chromium binary location for UC
-        if os.environ.get("CHROME_BIN"):
-            print(f"🏗️ Setting Chrome binary location to: {os.environ.get('CHROME_BIN')}")
-            driver = uc.Chrome(options=options, browser_executable_path=os.environ.get("CHROME_BIN"))
+        if is_railway and chrome_bin:
+            print(f"🏗️ Setting Chrome binary location to: {chrome_bin}")
+            driver = uc.Chrome(options=options, browser_executable_path=chrome_bin)
         else:
             driver = uc.Chrome(options=options)
         
-        # Validate session is working
+        # Enhanced session validation with better error handling
         try:
+            print("✅ Basic Chrome session validation...")
             driver.get("about:blank")
-            print("✅ Basic Chrome session validation passed")
             
-            # ENHANCED: Stress test with a moderately complex page
-            print("🧪 Performing Chrome stress test...")
-            driver.get("https://example.com")
-            time.sleep(2)
+            # Test with a simple, fast page
+            print("🧪 Performing lightweight Chrome test...")
+            driver.execute_script("return document.readyState")
+            
+            # Memory check after initialization
+            memory_info = get_memory_info()
+            print(f"📊 Memory after Chrome init: RSS={memory_info['memory_rss']:.1f}MB")
             
             if not validate_driver_session(driver):
-                raise Exception("Session failed during stress test")
+                raise Exception("Session validation failed")
             
-            print("✅ Chrome stress test passed - ready for Morningstar!")
+            print("✅ Stable Chrome driver ready for scraping!")
             cache.set('last_chrome_session_time', time.time(), 60)
             return driver
+            
         except Exception as test_error:
-            print(f"⚠️ Undetected Chrome driver created but failed session test: {test_error}")
+            print(f"⚠️ Chrome driver created but failed validation: {test_error}")
             try:
                 driver.quit()
             except:
@@ -645,31 +556,30 @@ def create_stealth_driver():
         print("🔄 Falling back to regular Chrome driver...")
         
         try:
-            # Convert UC options to regular ChromeOptions
+            # Convert UC options to regular ChromeOptions for fallback
             chrome_options = webdriver.ChromeOptions()
             for arg in options.arguments:
                 chrome_options.add_argument(arg)
             
-            # Add the experimental options (but skip the problematic ones)
+            # Add the experimental options
             for key, value in options.experimental_options.items():
-                if key not in ['excludeSwitches', 'useAutomationExtension']:  # Skip problematic options
-                    chrome_options.add_experimental_option(key, value)
+                chrome_options.add_experimental_option(key, value)
             
             # Set binary location for regular Chrome
             if is_railway and chrome_bin:
                 chrome_options.binary_location = chrome_bin
-                print(f"🔧 Setting binary location for regular Chrome: {chrome_bin}")
+                print(f"🔧 Setting binary location for fallback Chrome: {chrome_bin}")
             
             # Use our improved get_chrome_driver function
             fallback_driver = get_chrome_driver(chrome_options)
             
             # Test the fallback driver session
             try:
-                fallback_driver.get("about:blank")  # Simple test
-                print("✅ Fallback Chrome driver created and tested successfully")
+                fallback_driver.get("about:blank")
+                print("✅ Fallback Chrome driver created and validated successfully")
                 return fallback_driver
             except Exception as test_error:
-                print(f"⚠️ Fallback Chrome driver created but failed session test: {test_error}")
+                print(f"⚠️ Fallback Chrome driver failed validation: {test_error}")
                 try:
                     fallback_driver.quit()
                 except:
@@ -677,7 +587,7 @@ def create_stealth_driver():
                 raise test_error
             
         except Exception as fallback_error:
-            print(f"❌ Fallback Chrome driver also failed: {fallback_error}")
+            print(f"❌ Both Chrome drivers failed: {fallback_error}")
             raise fallback_error
 
 def get_memory_info():
