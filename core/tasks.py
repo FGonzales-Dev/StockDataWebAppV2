@@ -130,28 +130,31 @@ def create_stealth_driver():
         options.add_argument("--disable-background-timer-throttling")
         options.add_argument("--disable-backgrounding-occluded-windows")
         options.add_argument("--disable-renderer-backgrounding")
-        options.add_argument("--disable-features=TranslateUI")
-        options.add_argument("--disable-ipc-flooding-protection")
+        options.add_argument("--disable-features=TranslateUI,VizDisplayCompositor")
         options.add_argument("--headless=new")  # Modern headless mode
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-plugins")
-        options.add_argument("--disable-images")
-        options.add_argument("--disable-javascript")
         
-        # Memory optimization for containers
+        # Memory and stability optimization for containers  
+        options.add_argument("--memory-pressure-off")
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--disable-default-apps")
+        options.add_argument("--disable-sync")
+        options.add_argument("--disable-translate")
+        options.add_argument("--hide-scrollbars")
+        options.add_argument("--mute-audio")
+        options.add_argument("--no-first-run")
+        options.add_argument("--disable-notifications")
+        options.add_argument("--disable-popup-blocking")
+        
+        # Resource limits
         if IS_FLY:
-            options.add_argument("--memory-pressure-off")
             options.add_argument("--max_old_space_size=1024")  # 1GB for Fly.io
         else:
             options.add_argument("--max_old_space_size=512")   # 512MB for Railway
         
-        # Container-specific settings
-        options.add_argument("--single-process")
-        options.add_argument("--no-zygote")
-        options.add_argument("--remote-debugging-port=9222")
-        
-        # Set virtual display
-        options.add_argument("--display=:99")
+        # Shared memory size
+        options.add_argument("--shm-size=1gb")
         
         print("🔧 Applied production Chrome options for container deployment")
     else:
@@ -176,10 +179,11 @@ def create_stealth_driver():
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--disable-infobars")
 
-    # Optional: disable images to speed up
+    # Download preferences (but keep images and JavaScript enabled for proper scraping)
     prefs = {
-        "profile.managed_default_content_settings.images": 2,
         "download.default_directory": BASE_DIR + DOWNLOAD_DIRECTORY,
+        "profile.default_content_setting_values.notifications": 2,
+        "profile.default_content_settings.popups": 0
     }
     options.add_experimental_option("prefs", prefs)
 
@@ -189,39 +193,48 @@ def create_stealth_driver():
     else:
         options.headless = not SHOW_BROWSER
 
-    # Launch driver
-    try:
-        print("🚀 Creating Chrome driver...")
-        driver = uc.Chrome(options=options)
-        print("✅ Chrome driver created successfully!")
-        
-        # Optional: Stealth tweaks inside browser (only if not in production to avoid JS errors)
-        if not IS_PRODUCTION:
-            driver.execute_cdp_cmd(
-                "Page.addScriptToEvaluateOnNewDocument",
-                {
-                    "source": """
-                        Object.defineProperty(navigator, 'webdriver', {
-                          get: () => undefined
-                        });
-                        window.navigator.chrome = {
-                          runtime: {},
-                        };
-                        Object.defineProperty(navigator, 'plugins', {
-                          get: () => [1, 2, 3],
-                        });
-                        Object.defineProperty(navigator, 'languages', {
-                          get: () => ['en-US', 'en'],
-                        });
-                    """
-                },
-            )
-        
-        return driver
-        
-    except Exception as e:
-        print(f"❌ Error creating Chrome driver: {e}")
-        raise e
+    # Launch driver with retry logic
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            print(f"🚀 Creating Chrome driver (attempt {attempt + 1}/{max_retries})...")
+            driver = uc.Chrome(options=options)
+            print("✅ Chrome driver created successfully!")
+            
+            # Set page load timeout
+            driver.set_page_load_timeout(60)
+            
+            # Optional: Stealth tweaks inside browser (only if not in production to avoid JS errors)
+            if not IS_PRODUCTION:
+                driver.execute_cdp_cmd(
+                    "Page.addScriptToEvaluateOnNewDocument",
+                    {
+                        "source": """
+                            Object.defineProperty(navigator, 'webdriver', {
+                              get: () => undefined
+                            });
+                            window.navigator.chrome = {
+                              runtime: {},
+                            };
+                            Object.defineProperty(navigator, 'plugins', {
+                              get: () => [1, 2, 3],
+                            });
+                            Object.defineProperty(navigator, 'languages', {
+                              get: () => ['en-US', 'en'],
+                            });
+                        """
+                    },
+                )
+            
+            return driver
+            
+        except Exception as e:
+            print(f"❌ Error creating Chrome driver (attempt {attempt + 1}): {e}")
+            if attempt == max_retries - 1:
+                raise e
+            else:
+                print(f"🔄 Retrying in 2 seconds...")
+                sleep(2)
 
 
 @shared_task(bind=True)

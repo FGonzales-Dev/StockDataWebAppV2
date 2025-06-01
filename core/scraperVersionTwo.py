@@ -77,7 +77,14 @@ def get_task_info(request):
     task_id = request.GET.get('task_id', None)
     if task_id is not None:
         try:
-            task = AsyncResult(task_id)
+            # Initialize Celery app for production
+            from stock_scraper.celery import app as celery_app
+            task = AsyncResult(task_id, app=celery_app)
+            
+            print(f"[DEBUG] Task ID: {task_id}")
+            print(f"[DEBUG] Task state: {task.state}")
+            print(f"[DEBUG] Task result: {task.result}")
+            
             data = {
                 'state': task.state,
                 'result': task.result,
@@ -97,8 +104,10 @@ def get_task_info(request):
             elif task.state == 'STARTED':
                 data['result'] = 'Task is being processed'
                 
+            print(f"[DEBUG] Returning data: {data}")
             return JsonResponse(data)
         except Exception as e:
+            print(f"[ERROR] Exception in get_task_info: {str(e)}")
             return JsonResponse({
                 'state': 'ERROR',
                 'result': f'Error retrieving task status: {str(e)}'

@@ -155,9 +155,9 @@ django_heroku.settings(locals())
 USE_CELERY = True if IS_PRODUCTION else False
 
 if USE_CELERY:
-    # Production - use Redis
+    # Production - use Redis for both broker and result backend
     CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-    CELERY_RESULT_BACKEND = 'django-db'
+    CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379')
     CELERY_ACCEPT_CONTENT = ['json']
     CELERY_TASK_SERIALIZER = 'json'
     CELERY_RESULT_SERIALIZER = 'json'
@@ -166,6 +166,9 @@ if USE_CELERY:
     CELERY_TASK_TRACK_STARTED = True
     CELERY_TASK_TIME_LIMIT = 300  # 5 minutes max per task
     CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+    # Result backend settings
+    CELERY_RESULT_EXPIRES = 3600  # Results expire after 1 hour
+    CELERY_TASK_RESULT_EXPIRES = 3600
 else:
     # Development - run synchronously
     CELERY_TASK_ALWAYS_EAGER = True
