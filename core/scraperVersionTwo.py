@@ -149,36 +149,116 @@ def scrape(request):
     
     if 'get_data' in request.POST:
         try:
+            print(f"🎯 CLEAN SCRAPER: Processing {download_type} for {ticker_value} ({market_value})")
+            
             if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
-                task = scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
-                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+                # Since Celery is disabled, task runs synchronously and returns immediately
+                result = scraper(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
+                
+                if result == 'DONE':
+                    print("✅ Scraping completed successfully!")
+                    return render(request, "../templates/stockDataFinished.html", {
+                        "download_type": download_type,
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "status": "success"
+                    })
+                else:
+                    print("❌ Scraping failed")
+                    return render(request, "../templates/stockData.html", {
+                        "error": "Scraping failed. Please try again.",
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "download_type": download_type
+                    })
+                    
             elif download_type == "VALUATION_CASH_FLOW" or download_type == "VALUATION_GROWTH" or download_type == "VALUATION_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
-                task = scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
-                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+                result = scraper_valuation(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
+                
+                if result == 'DONE':
+                    return render(request, "../templates/stockDataFinished.html", {
+                        "download_type": download_type,
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "status": "success"
+                    })
+                else:
+                    return render(request, "../templates/stockData.html", {
+                        "error": "Valuation scraping failed. Please try again.",
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "download_type": download_type
+                    })
+                    
             elif download_type =="DIVIDENDS":
-                task = scraper_dividends.delay(ticker_value=ticker_value, market_value=market_value)
-                dividends_task_id = task.id
-                print(dividends_task_id)
-                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+                result = scraper_dividends(ticker_value=ticker_value, market_value=market_value)
+                
+                if result == 'DONE':
+                    return render(request, "../templates/stockDataFinished.html", {
+                        "download_type": download_type,
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "status": "success"
+                    })
+                else:
+                    return render(request, "../templates/stockData.html", {
+                        "error": "Dividends scraping failed. Please try again.",
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "download_type": download_type
+                    })
+                    
             elif download_type == "OPERATING_PERFORMANCE":
-                task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
-                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+                result = scraper_operating_performance(ticker_value=ticker_value, market_value=market_value)
+                
+                if result == 'DONE':
+                    return render(request, "../templates/stockDataFinished.html", {
+                        "download_type": download_type,
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "status": "success"
+                    })
+                else:
+                    return render(request, "../templates/stockData.html", {
+                        "error": "Operating performance scraping failed. Please try again.",
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "download_type": download_type
+                    })
+                    
             elif download_type == "ALL":
-                task = all_scraper.delay(ticker_value=ticker_value, market_value=market_value)
-                return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+                result = all_scraper(ticker_value=ticker_value, market_value=market_value)
+                
+                if result == 'DONE':
+                    return render(request, "../templates/stockDataFinished.html", {
+                        "download_type": download_type,
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "status": "success"
+                    })
+                else:
+                    return render(request, "../templates/stockData.html", {
+                        "error": "Complete data scraping failed. Please try again.",
+                        "ticker": ticker_value,
+                        "market": market_value,
+                        "download_type": download_type
+                    })
             else:
                 return render(request, "../templates/stockData.html")
+                
         except Exception as e:
-            # Handle Chrome session errors gracefully
-            print(f"⚠️ Chrome session error in scraper: {e}")
-            error_message = "Chrome automation is temporarily unavailable. Please try again in a moment."
+            # Handle any errors gracefully
+            print(f"⚠️ Error in scraper view: {e}")
+            error_message = "An error occurred during scraping. Please try again."
             return render(request, "../templates/stockData.html", {
                 "error": error_message,
                 "ticker": ticker_value,
                 "market": market_value,
                 "download_type": download_type
             })
-    elif 'download' in request.POST:
+
+    # Handle other requests (download, etc.)
+    if request.GET.get("download") == "yes":
         if download_type == "INCOME_STATEMENT": 
             income_statement_data = database.child('income_statement').child('income_statement').get().val()
             income_statement_data = json.loads(income_statement_data)

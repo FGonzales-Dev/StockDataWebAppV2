@@ -752,16 +752,17 @@ def validate_driver_session(driver):
 @shared_task(bind=True)
 def scraper(self,ticker_value,market_value,download_type):
     """
-    RAILWAY HOBBY PLAN OPTIMIZED: Ultra-lightweight scraper with aggressive resource management.
+    CLEAN MORNINGSTAR-ONLY SCRAPER - No Yahoo Finance junk!
+    Simple, lightweight scraper optimized for Fly.io.
     """
-    print(f"🎯 HOBBY PLAN: Starting minimal scraper for {download_type} - {ticker_value} ({market_value})")
+    print(f"🎯 Starting clean Morningstar scraper for {download_type} - {ticker_value} ({market_value})")
     
-    # HOBBY PLAN: Try lightweight fallback FIRST
-    print("🔄 HOBBY PLAN: Attempting lightweight scraper first...")
+    # Try lightweight Morningstar scraping first
+    print("🔄 Attempting lightweight Morningstar scraping...")
     fallback_data = scrape_with_requests_fallback(ticker_value, market_value, download_type)
     
     if fallback_data:
-        print("✅ HOBBY PLAN: Lightweight scraping succeeded!")
+        print("✅ Lightweight Morningstar scraping succeeded!")
         if download_type == "INCOME_STATEMENT":
             database.child("income_statement").set({"income_statement": fallback_data})
         elif download_type == "BALANCE_SHEET":
@@ -770,120 +771,59 @@ def scraper(self,ticker_value,market_value,download_type):
             database.child("cash_flow").set({"cash_flow": fallback_data})
         return 'DONE'
     
-    print("⚠️ HOBBY PLAN: Lightweight scraping failed, trying minimal Chrome...")
+    print("⚠️ Lightweight scraping failed, trying Chrome with Morningstar...")
     
-    max_retries = 1  # HOBBY PLAN: Reduce retries to save resources
-    
-    for task_attempt in range(max_retries):
-        driver = None
-        try:
-            print(f"📝 HOBBY PLAN: Task attempt {task_attempt + 1}/{max_retries}")
-            
-            # HOBBY PLAN: Create ultra-minimal Chrome driver
-            driver = create_hobby_plan_driver()
-            
-            if not validate_driver_session(driver):
-                raise Exception("Initial session validation failed")
-            
-            # HOBBY PLAN: Direct navigation without retries
-            navigation_url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials"
-            print(f"🌐 HOBBY PLAN: Direct navigation to {navigation_url}")
-            
-            driver.set_page_load_timeout(30)  # Shorter timeout
-            driver.get(navigation_url)
-            
-            # Quick validation
-            if not validate_driver_session(driver):
-                raise Exception("Session failed after navigation")
-            
-            print("✅ HOBBY PLAN: Navigation successful!")
-            
-            if download_type == "BALANCE_SHEET":
-                print(f"📊 HOBBY PLAN: Quick balance sheet scraping...")
-                
-                # ULTRA-MINIMAL: Skip detailed view, just export what's available
-                try:
-                    # Click Balance Sheet if not already selected
-                    from selenium.webdriver.support.ui import WebDriverWait
-                    from selenium.webdriver.support import expected_conditions as EC
-                    from selenium.webdriver.common.by import By
-                    
-                    # Quick click without detailed waiting
-                    try:
-                        balance_sheet_btn = driver.find_element(By.XPATH, "//button[contains(., 'Balance Sheet')]")
-                        balance_sheet_btn.click()
-                        time.sleep(2)
-                    except:
-                        print("⚠️ HOBBY PLAN: Balance sheet already selected or not found")
-                    
-                    # Try immediate export
-                    try:
-                        export_btn = driver.find_element(By.XPATH, "//button[contains(., 'Export') or @aria-label='Export']")
-                        export_btn.click()
-                        time.sleep(5)  # Shorter wait
-                        print("✅ HOBBY PLAN: Export triggered")
-                    except:
-                        print("⚠️ HOBBY PLAN: Export button not found, trying table scraping")
-                        
-                        # Fallback: Try to get table data directly
-                        try:
-                            import pandas as pd
-                            tables = driver.find_elements(By.TAG_NAME, "table")
-                            if tables:
-                                table_html = tables[0].get_attribute("outerHTML")
-                                df = pd.read_html(table_html)[0]
-                                data1 = df.to_json()
-                                database.child("balance_sheet").set({"balance_sheet": data1})
-                                print("✅ HOBBY PLAN: Table data scraped successfully")
-                                safe_close_driver(driver)
-                                return 'DONE'
-                        except Exception as table_error:
-                            print(f"⚠️ HOBBY PLAN: Table scraping failed: {table_error}")
-                    
-                    # Try to read downloaded file
-                    try:
-                        import pandas as pd
-                        excel_file = BASE_DIR / "selenium" / "Balance Sheet_Annual_As Originally Reported.xls"
-                        if excel_file.exists():
-                            excel_data_df = pd.read_excel(excel_file)
-                            data1 = excel_data_df.to_json()
-                            database.child("balance_sheet").set({"balance_sheet": data1})
-                            print("✅ HOBBY PLAN: Excel file processed")
-                        else:
-                            print("⚠️ HOBBY PLAN: Excel file not found")
-                            raise Exception("No data file found")
-                    except Exception as excel_error:
-                        print(f"⚠️ HOBBY PLAN: Excel processing failed: {excel_error}")
-                        raise excel_error
-                        
-                except Exception as scraping_error:
-                    print(f"❌ HOBBY PLAN: Balance sheet scraping failed: {scraping_error}")
-                    x = '{"balance_sheet":{"none":"no data"}}'
-                    database.child("balance_sheet").set({"balance_sheet": x})
-                
-            # HOBBY PLAN: Immediate cleanup and return
-            safe_close_driver(driver)
-            return 'DONE'
-                
-        except Exception as session_error:
-            print(f"❌ HOBBY PLAN: Session error: {session_error}")
-            safe_close_driver(driver)
-            
-            # HOBBY PLAN: No retries, immediate fallback
-            print("❌ HOBBY PLAN: Setting fallback data immediately")
-            if download_type == "INCOME_STATEMENT":
-                x = '{"income_statement":{"none":"no data"}}'
-                database.child("income_statement").set({"income_statement": x})
-            elif download_type == "BALANCE_SHEET":
-                x = '{"balance_sheet":{"none":"no data"}}'
-                database.child("balance_sheet").set({"balance_sheet": x})
-            elif download_type == "CASH_FLOW":
-                x = '{"cash_flow":{"none":"no data"}}'
-                database.child("cash_flow").set({"cash_flow": x})
-            return 'ERROR'
+    # If lightweight fails, try Chrome with Morningstar only
+    driver = None
+    try:
+        driver = safe_create_stealth_driver()
+        morningstar_url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}"
         
-        finally:
-            safe_close_driver(driver)
+        print(f"🌐 Navigating to Morningstar: {morningstar_url}")
+        success = safe_navigate_with_retry(driver, morningstar_url, max_retries=2)
+        
+        if success:
+            # Extract tables from the page
+            try:
+                import pandas as pd
+                tables = pd.read_html(driver.page_source)
+                if tables and len(tables) > 0:
+                    data1 = tables[0].to_json()
+                    print("✅ Successfully extracted data from Morningstar with Chrome")
+                    
+                    if download_type == "INCOME_STATEMENT":
+                        database.child("income_statement").set({"income_statement": data1})
+                    elif download_type == "BALANCE_SHEET":
+                        database.child("balance_sheet").set({"balance_sheet": data1})
+                    elif download_type == "CASH_FLOW":
+                        database.child("cash_flow").set({"cash_flow": data1})
+                    
+                    return 'DONE'
+                else:
+                    print("No tables found with Chrome")
+            except Exception as table_error:
+                print(f"Error extracting tables: {table_error}")
+        
+        # If we get here, Chrome scraping failed
+        print("❌ Chrome scraping failed, setting fallback data")
+        
+    except Exception as session_error:
+        print(f"❌ Chrome session error: {session_error}")
+        
+    finally:
+        safe_close_driver(driver)
+    
+    # Set fallback data if everything fails
+    print("❌ All scraping methods failed, setting fallback data")
+    if download_type == "INCOME_STATEMENT":
+        x = '{"income_statement":{"none":"no data"}}'
+        database.child("income_statement").set({"income_statement": x})
+    elif download_type == "BALANCE_SHEET":
+        x = '{"balance_sheet":{"none":"no data"}}'
+        database.child("balance_sheet").set({"balance_sheet": x})
+    elif download_type == "CASH_FLOW":
+        x = '{"cash_flow":{"none":"no data"}}'
+        database.child("cash_flow").set({"cash_flow": x})
     
     return 'ERROR'
 
@@ -1645,89 +1585,70 @@ def safe_navigate_with_retry(driver, url, max_retries=3):
 
 def scrape_with_requests_fallback(ticker_value, market_value, download_type):
     """
-    Lightweight fallback scraping method using requests instead of Chrome.
-    Used when Chrome crashes on heavy websites like Morningstar.
-    Optimized for Railway Hobby Plan constraints.
+    CLEAN MORNINGSTAR-ONLY scraper - No Yahoo Finance junk!
+    Lightweight scraping using only Morningstar.com
     """
     print("🔄 Attempting lightweight scraping fallback for Hobby Plan...")
     
+    import requests
+    from bs4 import BeautifulSoup
+    import json
+    
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    })
+    
+    # ONLY MORNINGSTAR - No Yahoo Finance garbage!
+    morningstar_url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}"
+    
     try:
-        import requests
-        from bs4 import BeautifulSoup
+        print(f"🔍 Trying Morningstar URL: {morningstar_url}")
+        response = session.get(morningstar_url, timeout=15)
         
-        # Use a simple requests session with minimal headers for hobby plan
-        session = requests.Session()
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'keep-alive',
-        })
-        
-        # Try simpler, lighter endpoints first for hobby plan
-        urls_to_try = [
-            # Try Yahoo Finance first (lighter than Morningstar)
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=financialData",
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=incomeStatementHistory",
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=balanceSheetHistory", 
-            f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker_value}?modules=cashflowStatementHistory",
-            # Yahoo Finance web scraping (lighter)
-            f"https://finance.yahoo.com/quote/{ticker_value}/financials",
-            f"https://finance.yahoo.com/quote/{ticker_value}/balance-sheet",
-            f"https://finance.yahoo.com/quote/{ticker_value}/cash-flow",
-            # Last resort: Morningstar simple pages
-            f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}",
-        ]
-        
-        for url in urls_to_try:
-            try:
-                print(f"🔍 Trying fallback URL: {url}")
-                response = session.get(url, timeout=15)  # Shorter timeout for hobby plan
+        if response.status_code == 200:
+            # Parse HTML and extract tables
+            soup = BeautifulSoup(response.content, 'html.parser')
+            tables = soup.find_all('table')
+            
+            if tables:
+                print(f"✅ Found {len(tables)} tables in HTML from {morningstar_url}")
                 
-                if response.status_code == 200:
-                    # Try to parse JSON data if available
-                    if 'application/json' in response.headers.get('content-type', ''):
-                        data = response.json()
-                        print(f"✅ Got JSON data from {url}")
+                # Convert tables to JSON
+                all_table_data = []
+                for i, table in enumerate(tables[:10]):  # Limit to first 10 tables
+                    try:
+                        # Extract table data
+                        rows = []
+                        for row in table.find_all('tr'):
+                            cols = [cell.get_text(strip=True) for cell in row.find_all(['td', 'th'])]
+                            if cols:  # Only add non-empty rows
+                                rows.append(cols)
                         
-                        # Extract relevant financial data from Yahoo Finance API response
-                        if 'quoteSummary' in data and data['quoteSummary']['result']:
-                            result = data['quoteSummary']['result'][0]
-                            
-                            # Convert to simplified format
-                            simplified_data = {}
-                            for module_name, module_data in result.items():
-                                if isinstance(module_data, dict):
-                                    simplified_data[module_name] = module_data
-                            
-                            return json.dumps(simplified_data)
-                        else:
-                            return json.dumps(data)
-                    
-                    # Try to parse HTML and extract tables (for web pages)
-                    soup = BeautifulSoup(response.content, 'html.parser')
-                    tables = soup.find_all('table')
-                    
-                    if tables:
-                        print(f"✅ Found {len(tables)} tables in HTML from {url}")
-                        try:
-                            # Convert first table to JSON
-                            import pandas as pd
-                            df = pd.read_html(str(tables[0]))[0]
-                            return df.to_json()
-                        except Exception as table_error:
-                            print(f"⚠️ Could not parse table: {table_error}")
-                            # Return basic data structure
-                            return json.dumps({"source": url, "data": "table_found_but_unparseable"})
-                        
-            except Exception as e:
-                print(f"⚠️ Fallback URL {url} failed: {e}")
-                continue
-        
-        print("❌ All fallback URLs failed")
-        return None
-        
+                        if rows:
+                            all_table_data.append({
+                                f'table_{i+1}': rows
+                            })
+                    except Exception as e:
+                        print(f"Error processing table {i+1}: {e}")
+                        continue
+                
+                if all_table_data:
+                    return json.dumps(all_table_data)
+                else:
+                    print("No valid table data found")
+                    return None
+            else:
+                print("No tables found in HTML")
+                return None
+        else:
+            print(f"HTTP error: {response.status_code}")
+            return None
+            
     except Exception as e:
-        print(f"❌ Requests fallback failed: {e}")
+        print(f"❌ Error accessing Morningstar: {e}")
         return None
+    
+    print("❌ All Morningstar attempts failed")
+    return None
 

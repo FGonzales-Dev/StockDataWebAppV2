@@ -167,7 +167,7 @@ STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Celery Configuration
-USE_CELERY = os.environ.get('USE_CELERY', 'False').lower() == 'true'  # Default to False for easier local dev
+USE_CELERY = os.environ.get('USE_CELERY', 'False').lower() == 'true'  # Disabled for simpler deployment
 
 if USE_CELERY:
     if IS_PRODUCTION:
@@ -181,7 +181,7 @@ if USE_CELERY:
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_TIMEZONE = 'UTC'
 else:
-    # Disable Celery for deployment testing - tasks run synchronously
+    # Tasks run synchronously - simpler for deployment
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
@@ -238,10 +238,12 @@ if IS_PRODUCTION:
     # Optimize database connections
     if 'default' in DATABASES:
         DATABASES['default']['CONN_MAX_AGE'] = 600
-        DATABASES['default']['OPTIONS'] = {
-            'MAX_CONNS': 20,
-            'connect_timeout': 10,
-        }
+        # Only add these options for PostgreSQL/MySQL, not SQLite
+        if DATABASES['default']['ENGINE'] != 'django.db.backends.sqlite3':
+            DATABASES['default']['OPTIONS'] = {
+                'MAX_CONNS': 20,
+                'connect_timeout': 10,
+            }
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

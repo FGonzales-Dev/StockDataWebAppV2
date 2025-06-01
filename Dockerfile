@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     # Chrome dependencies for Ubuntu/Debian
     fonts-liberation \
-    libasound2t64 \
+    libasound2 \
     libatk-bridge2.0-0 \
     libdrm2 \
     libxcomposite1 \
@@ -46,10 +46,17 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ChromeDriver with version matching Chrome
-RUN CHROME_VERSION=$(google-chrome --version | cut -d' ' -f3 | cut -d'.' -f1-3) \
-    && echo "Chrome version: $CHROME_VERSION" \
-    && wget -q "https://storage.googleapis.com/chrome-for-testing-public/$CHROME_VERSION/linux64/chromedriver-linux64.zip" -O chromedriver.zip \
+# Install ChromeDriver with improved version handling
+RUN CHROME_VERSION=$(google-chrome --version | cut -d' ' -f3) \
+    && echo "Full Chrome version: $CHROME_VERSION" \
+    && CHROME_MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d'.' -f1) \
+    && echo "Chrome major version: $CHROME_MAJOR_VERSION" \
+    # Try specific version first, fallback to LATEST_RELEASE if not found
+    && (wget -q "https://storage.googleapis.com/chrome-for-testing-public/$CHROME_VERSION/linux64/chromedriver-linux64.zip" -O chromedriver.zip \
+        || (echo "Specific version not found, trying latest for major version..." \
+            && LATEST_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_MAJOR_VERSION" || echo "120.0.6099.109") \
+            && echo "Using latest version: $LATEST_VERSION" \
+            && wget -q "https://storage.googleapis.com/chrome-for-testing-public/$LATEST_VERSION/linux64/chromedriver-linux64.zip" -O chromedriver.zip)) \
     && unzip -q chromedriver.zip \
     && cp chromedriver-linux64/chromedriver /usr/local/bin/ \
     && chmod +x /usr/local/bin/chromedriver \

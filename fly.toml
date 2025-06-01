@@ -26,6 +26,7 @@ primary_region = "sjc"  # San Jose (close to stock markets)
   auto_stop_machines = false  # Keep running for background tasks
   auto_start_machines = true
   min_machines_running = 1
+  processes = ["web"]  # Only web process handles HTTP
   
   [http_service.concurrency]
     type = "requests"
@@ -38,33 +39,4 @@ primary_region = "sjc"  # San Jose (close to stock markets)
 
 [processes]
   web = "gunicorn --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120 --max-requests 100 stock_scraper.wsgi:application"
-  worker = "python manage.py celeryd -E --loglevel=info --concurrency=1"
-
-[[services]]
-  internal_port = 8000
-  protocol = "tcp"
-  
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
-    
-  [services.concurrency]
-    type = "requests"
-    hard_limit = 25
-    soft_limit = 20
-    
-  [[services.tcp_checks]]
-    interval = "15s"
-    timeout = "2s"
-    grace_period = "10s"
-    
-  [[services.http_checks]]
-    interval = "30s"
-    timeout = "5s"
-    grace_period = "10s"
-    method = "get"
-    path = "/health/" 
+  worker = "python manage.py celeryd -E --loglevel=info --concurrency=1" 
