@@ -1,0 +1,42 @@
+# Fly.io configuration for Stock Data Web App
+app = "stockdata-scraper"
+primary_region = "sjc"  # San Jose (close to stock markets)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Django settings
+  DJANGO_SETTINGS_MODULE = "stock_scraper.settings"
+  PYTHONUNBUFFERED = "1"
+  
+  # Chrome optimization for Fly.io
+  CHROME_BIN = "/usr/bin/google-chrome-stable"
+  CHROMEDRIVER_PATH = "/usr/local/bin/chromedriver"
+  
+  # Memory optimization
+  MALLOC_ARENA_MAX = "2"
+  
+  # Fly.io environment detection
+  FLY_ENVIRONMENT = "true"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false  # Keep running for background tasks
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["web"]  # Only web process handles HTTP
+  
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 25    # Conservative for 2GB RAM
+    soft_limit = 20
+
+[[vm]]
+  size = "shared-cpu-2x"  # 2GB RAM, $3.88/month
+  memory = "2gb"
+
+[processes]
+  web = "gunicorn --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120 --max-requests 100 stock_scraper.wsgi:application"
+  worker = "python manage.py celeryd -E --loglevel=info --concurrency=1" 

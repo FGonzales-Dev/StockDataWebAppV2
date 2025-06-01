@@ -17,17 +17,34 @@ import django_heroku
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Environment detection
+IS_FLY = os.environ.get('FLY_ENVIRONMENT') or os.environ.get('FLY_APP_NAME')
+IS_PRODUCTION = IS_FLY or os.environ.get('RAILWAY_ENVIRONMENT')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = not IS_PRODUCTION
 
-ALLOWED_HOSTS = ['0.0.0.0','ancient-dawn-83050.herokuapp.com','127.0.0.1']
+# Updated ALLOWED_HOSTS for Fly.io deployment
+ALLOWED_HOSTS = [
+    '0.0.0.0',
+    '127.0.0.1',
+    'localhost',
+    'ancient-dawn-83050.herokuapp.com',  # Legacy Heroku
+    'stockdata-scraper.fly.dev',  # Fly.io domain
+    '.fly.dev',  # All Fly.io subdomains
+]
+
+# CSRF trusted origins for Fly.io
+CSRF_TRUSTED_ORIGINS = [
+    'https://stockdata-scraper.fly.dev',
+    'https://*.fly.dev',
+]
 
 CRISPY_TEMPLATE_PACK="bootstrap4"
 # Application definition
