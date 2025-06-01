@@ -20,17 +20,42 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'  # Default to True for local dev
-
 # Environment detection
-RAILWAY_ENVIRONMENT = os.environ.get('RAILWAY_ENVIRONMENT', False)
-IS_PRODUCTION = RAILWAY_ENVIRONMENT or os.environ.get('PRODUCTION', 'False').lower() == 'true'
+IS_FLY = bool(os.environ.get('FLY_ENVIRONMENT') or os.environ.get('FLY_APP_NAME'))
+IS_RAILWAY = bool(os.environ.get('RAILWAY_ENVIRONMENT'))
+IS_PRODUCTION = IS_FLY or IS_RAILWAY
 
-if IS_PRODUCTION:
-    ALLOWED_HOSTS = ['*']  # Railway handles this
+DEBUG = not IS_PRODUCTION
+
+# Allowed hosts
+if IS_FLY:
+    # Fly.io domains
+    ALLOWED_HOSTS = [
+        'stockdata-scraper.fly.dev',
+        '*.fly.dev',
+        'localhost',
+        '127.0.0.1',
+        '[::1]',
+        '0.0.0.0',
+    ]
+    # Add Fly.io internal network
+    FLY_ALLOC_ID = os.environ.get('FLY_ALLOC_ID')
+    if FLY_ALLOC_ID:
+        ALLOWED_HOSTS.append(f"{FLY_ALLOC_ID}.vm.{os.environ.get('FLY_APP_NAME', 'stockdata-scraper')}.internal")
+elif IS_RAILWAY:
+    # Railway domains  
+    ALLOWED_HOSTS = [
+        'web-production-b236d.up.railway.app',
+        '*.railway.app',
+        '*.up.railway.app',
+        'localhost',
+        '127.0.0.1',
+        '[::1]',
+        '0.0.0.0',
+    ]
 else:
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0']
+    # Development
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '0.0.0.0']
 
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
@@ -168,15 +193,21 @@ if IS_PRODUCTION:
     SECURE_HSTS_SECONDS = 86400
     SECURE_REDIRECT_EXEMPT = []
     
-    # Add Railway domain to CSRF trusted origins
-    CSRF_TRUSTED_ORIGINS = [
-        'https://web-production-b236d.up.railway.app',
-        'https://*.railway.app',
-        'https://*.up.railway.app'
-    ]
+    # CSRF trusted origins
+    if IS_FLY:
+        CSRF_TRUSTED_ORIGINS = [
+            'https://stockdata-scraper.fly.dev',
+            'https://*.fly.dev',
+        ]
+    elif IS_RAILWAY:
+        CSRF_TRUSTED_ORIGINS = [
+            'https://web-production-b236d.up.railway.app',
+            'https://*.railway.app',
+            'https://*.up.railway.app'
+        ]
     
-    # Only enable HTTPS redirect if not using Railway's proxy
-    if not os.environ.get('RAILWAY_ENVIRONMENT'):
+    # Only enable HTTPS redirect if not using platform proxy
+    if not (IS_FLY or IS_RAILWAY):
         SECURE_SSL_REDIRECT = True
     
     # Production optimizations for faster startup
@@ -205,11 +236,12 @@ if IS_PRODUCTION:
     DEBUG_TOOLBAR = False
     
     # Optimize database connections
-    DATABASES['default']['CONN_MAX_AGE'] = 600
-    DATABASES['default']['OPTIONS'] = {
-        'MAX_CONNS': 20,
-        'connect_timeout': 10,
-    }
+    if 'default' in DATABASES:
+        DATABASES['default']['CONN_MAX_AGE'] = 600
+        DATABASES['default']['OPTIONS'] = {
+            'MAX_CONNS': 20,
+            'connect_timeout': 10,
+        }
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -410,17 +410,22 @@ def format_dict(d):
 # Testing: Adding options to undetected chrome driver
 def create_stealth_driver():
     """
-    Create a stable Chrome driver optimized for Railway deployment.
+    Create a stable Chrome driver optimized for Fly.io deployment.
     Removes aggressive flags that cause crashes and uses proven-stable configuration.
     """
-    print("🥷 Creating stable Chrome driver for Railway...")
+    print("🥷 Creating stable Chrome driver for Fly.io...")
     
-    # Check if running on Railway
+    # Check if running on Fly.io or Railway
+    is_flyio = os.environ.get("FLY_ENVIRONMENT") or os.environ.get("FLY_APP_NAME")
     is_railway = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("CHROME_BIN")
-    print(f"🚂 Railway environment detected: {is_railway}")
+    is_production = is_flyio or is_railway
     
-    # Railway-specific paths
-    if is_railway:
+    print(f"🛩️ Fly.io environment detected: {is_flyio}")
+    print(f"🚂 Railway environment detected: {is_railway}")
+    print(f"🏭 Production environment: {is_production}")
+    
+    # Production-specific paths
+    if is_production:
         chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome-stable")
         chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
         
@@ -446,30 +451,34 @@ def create_stealth_driver():
                     print(f"✅ Found ChromeDriver alternative: {chromedriver_path}")
                     break
     
-    # STABLE Chrome options - only essential flags for Railway
+    # STABLE Chrome options - optimized for Fly.io 2GB memory
     options = uc.ChromeOptions()
     
-    # Core stability flags (REQUIRED for Railway containers)
+    # Core stability flags (REQUIRED for containers)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--headless")  # Force headless on Railway
+    options.add_argument("--headless")  # Force headless in production
     
-    # Memory optimization (CONSERVATIVE approach)
-    if is_railway:
-        print("🚂 Adding Railway-optimized Chrome options...")
+    # Memory optimization (optimized for Fly.io 2GB)
+    if is_production:
+        if is_flyio:
+            print("🛩️ Adding Fly.io-optimized Chrome options...")
+            # Fly.io specific optimizations for 2GB RAM
+            options.add_argument("--max_old_space_size=1024")  # Use more memory on Fly.io
+            options.add_argument("--disable-background-timer-throttling")
+            options.add_argument("--disable-renderer-backgrounding")
+            options.add_argument("--disable-backgrounding-occluded-windows")
+        else:
+            print("🚂 Adding Railway-optimized Chrome options...")
+            # Railway Hobby Plan optimizations
+            options.add_argument("--max_old_space_size=512")  # Conservative for Railway
         
-        # Essential Railway flags only
+        # Common production flags
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-gpu-sandbox")
         options.add_argument("--disable-software-rasterizer")
         options.add_argument("--remote-debugging-port=9222")
-        
-        # Conservative memory management
         options.add_argument("--memory-pressure-off")
-        options.add_argument("--max_old_space_size=512")  # Conservative limit
-        options.add_argument("--disable-background-timer-throttling")
-        options.add_argument("--disable-renderer-backgrounding")
-        options.add_argument("--disable-backgrounding-occluded-windows")
         
         # Disable unnecessary features (safe removals)
         options.add_argument("--disable-extensions")
@@ -516,8 +525,8 @@ def create_stealth_driver():
     try:
         print("🚀 Attempting to create stable undetected Chrome driver...")
         
-        # Handle Railway Chromium binary location for UC
-        if is_railway and chrome_bin:
+        # Handle production binary location for UC
+        if is_production and chrome_bin:
             print(f"🏗️ Setting Chrome binary location to: {chrome_bin}")
             driver = uc.Chrome(options=options, browser_executable_path=chrome_bin)
         else:
@@ -534,7 +543,8 @@ def create_stealth_driver():
             
             # Memory check after initialization
             memory_info = get_memory_info()
-            print(f"📊 Memory after Chrome init: RSS={memory_info['memory_rss']:.1f}MB")
+            if memory_info:
+                print(f"📊 Memory after Chrome init: RSS={memory_info.get('memory_rss', 'unknown'):.1f}MB")
             
             if not validate_driver_session(driver):
                 raise Exception("Session validation failed")
@@ -566,7 +576,7 @@ def create_stealth_driver():
                 chrome_options.add_experimental_option(key, value)
             
             # Set binary location for regular Chrome
-            if is_railway and chrome_bin:
+            if is_production and chrome_bin:
                 chrome_options.binary_location = chrome_bin
                 print(f"🔧 Setting binary location for fallback Chrome: {chrome_bin}")
             
@@ -593,21 +603,37 @@ def create_stealth_driver():
 def get_memory_info():
     """
     Get current memory usage information for debugging.
+    Returns a dictionary with memory stats or None if unavailable.
     """
     try:
         import psutil
         process = psutil.Process()
         memory_info = process.memory_info()
-        print(f"📊 Memory usage: RSS={memory_info.rss / 1024 / 1024:.1f}MB, VMS={memory_info.vms / 1024 / 1024:.1f}MB")
+        
+        # Create memory stats dictionary
+        memory_stats = {
+            'memory_rss': memory_info.rss / 1024 / 1024,  # MB
+            'memory_vms': memory_info.vms / 1024 / 1024,  # MB
+        }
+        
+        print(f"📊 Memory usage: RSS={memory_stats['memory_rss']:.1f}MB, VMS={memory_stats['memory_vms']:.1f}MB")
         
         # System memory info
-        sys_memory = psutil.virtual_memory()
-        print(f"📊 System memory: {sys_memory.percent}% used, {sys_memory.available / 1024 / 1024:.1f}MB available")
+        try:
+            sys_memory = psutil.virtual_memory()
+            memory_stats.update({
+                'system_percent': sys_memory.percent,
+                'system_available': sys_memory.available / 1024 / 1024,  # MB
+            })
+            print(f"📊 System memory: {memory_stats['system_percent']}% used, {memory_stats['system_available']:.1f}MB available")
+        except Exception as sys_error:
+            print(f"⚠️ Could not get system memory info: {sys_error}")
         
-        return True
+        return memory_stats
+        
     except Exception as e:
         print(f"⚠️ Could not get memory info: {e}")
-        return False
+        return None
 
 def safe_create_stealth_driver():
     """
@@ -726,255 +752,198 @@ def validate_driver_session(driver):
 @shared_task(bind=True)
 def scraper(self,ticker_value,market_value,download_type):
     """
-    Main scraper task for financial data with improved error handling and session recovery.
+    RAILWAY HOBBY PLAN OPTIMIZED: Ultra-lightweight scraper with aggressive resource management.
     """
-    print(f"🎯 Starting scraper task: {download_type} for {ticker_value} ({market_value})")
+    print(f"🎯 HOBBY PLAN: Starting minimal scraper for {download_type} - {ticker_value} ({market_value})")
     
-    max_retries = 2  # Allow task-level retries for session failures
+    # HOBBY PLAN: Try lightweight fallback FIRST
+    print("🔄 HOBBY PLAN: Attempting lightweight scraper first...")
+    fallback_data = scrape_with_requests_fallback(ticker_value, market_value, download_type)
+    
+    if fallback_data:
+        print("✅ HOBBY PLAN: Lightweight scraping succeeded!")
+        if download_type == "INCOME_STATEMENT":
+            database.child("income_statement").set({"income_statement": fallback_data})
+        elif download_type == "BALANCE_SHEET":
+            database.child("balance_sheet").set({"balance_sheet": fallback_data})
+        elif download_type == "CASH_FLOW":
+            database.child("cash_flow").set({"cash_flow": fallback_data})
+        return 'DONE'
+    
+    print("⚠️ HOBBY PLAN: Lightweight scraping failed, trying minimal Chrome...")
+    
+    max_retries = 1  # HOBBY PLAN: Reduce retries to save resources
     
     for task_attempt in range(max_retries):
         driver = None
         try:
-            print(f"📝 Task attempt {task_attempt + 1}/{max_retries}")
+            print(f"📝 HOBBY PLAN: Task attempt {task_attempt + 1}/{max_retries}")
             
-            # Create Chrome driver with fallback mechanism
-            driver = safe_create_stealth_driver()
+            # HOBBY PLAN: Create ultra-minimal Chrome driver
+            driver = create_hobby_plan_driver()
             
-            # Validate session before using
             if not validate_driver_session(driver):
                 raise Exception("Initial session validation failed")
             
-            # Use robust navigation with retry logic
+            # HOBBY PLAN: Direct navigation without retries
             navigation_url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials"
+            print(f"🌐 HOBBY PLAN: Direct navigation to {navigation_url}")
             
-            # ENHANCED: Try navigation with session recreation on crash
-            navigation_success = False
-            navigation_attempts = 2  # Allow navigation-level retries
+            driver.set_page_load_timeout(30)  # Shorter timeout
+            driver.get(navigation_url)
             
-            for nav_attempt in range(navigation_attempts):
+            # Quick validation
+            if not validate_driver_session(driver):
+                raise Exception("Session failed after navigation")
+            
+            print("✅ HOBBY PLAN: Navigation successful!")
+            
+            if download_type == "BALANCE_SHEET":
+                print(f"📊 HOBBY PLAN: Quick balance sheet scraping...")
+                
+                # ULTRA-MINIMAL: Skip detailed view, just export what's available
                 try:
-                    print(f"🌐 Navigation attempt {nav_attempt + 1}/{navigation_attempts}")
+                    # Click Balance Sheet if not already selected
+                    from selenium.webdriver.support.ui import WebDriverWait
+                    from selenium.webdriver.support import expected_conditions as EC
+                    from selenium.webdriver.common.by import By
                     
-                    if not safe_navigate_with_retry(driver, navigation_url):
-                        raise Exception("Navigation failed after all retry attempts")
-                    
-                    navigation_success = True
-                    break
-                    
-                except Exception as nav_error:
-                    print(f"❌ Navigation attempt {nav_attempt + 1} failed: {nav_error}")
-                    
-                    # Check if this is a Chrome crash that requires session recreation
-                    error_str = str(nav_error).lower()
-                    is_crash = any(keyword in error_str for keyword in [
-                        "chrome session crashed", "invalid session id", "session deleted", 
-                        "browser has closed", "disconnected", "renderer"
-                    ])
-                    
-                    if is_crash and nav_attempt < navigation_attempts - 1:
-                        print("💥 Chrome crashed during navigation - recreating session...")
-                        
-                        # Close the crashed session
-                        safe_close_driver(driver)
-                        driver = None
-                        
-                        # Wait before recreating
-                        time.sleep(5)
-                        
-                        # Recreate Chrome session
-                        print("🔄 Recreating Chrome session after crash...")
-                        driver = safe_create_stealth_driver()
-                        
-                        if not validate_driver_session(driver):
-                            raise Exception("Failed to recreate session after crash")
-                        
-                        print("✅ Chrome session recreated successfully")
-                        continue
-                    else:
-                        # Either not a crash or we've exhausted navigation attempts
-                        raise nav_error
-            
-            if not navigation_success:
-                print("💥 Chrome navigation failed completely - trying lightweight fallback...")
-                
-                # Try lightweight scraping fallback
-                fallback_data = scrape_with_requests_fallback(ticker_value, market_value, download_type)
-                
-                if fallback_data:
-                    print("✅ Fallback scraping succeeded!")
-                    # Set the fallback data based on download_type
-                    if download_type == "INCOME_STATEMENT":
-                        database.child("income_statement").set({"income_statement": fallback_data})
-                    elif download_type == "BALANCE_SHEET":
-                        database.child("balance_sheet").set({"balance_sheet": fallback_data})
-                    elif download_type == "CASH_FLOW":
-                        database.child("cash_flow").set({"cash_flow": fallback_data})
-                    
-                    safe_close_driver(driver)
-                    return 'DONE'
-                else:
-                    print("❌ Fallback scraping also failed")
-                    raise Exception("Both Chrome and fallback scraping failed")
-            
-            print("✅ Successfully navigated to Morningstar!")
-            
-            if download_type == "INCOME_STATEMENT":
-                print(f"Starting income statement scraping for {ticker_value}")
-                print(f"Current URL: {driver.current_url}")
-                
-                # Validate session before clicking
-                if not validate_driver_session(driver):
-                    raise Exception("Session failed before Income Statement click")
-                
-                WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
-                print("Successfully clicked Income Statement button")
-                
-                # Add wait for page to load after clicking Income Statement
-                sleep(3)
-                
-                # Validate session after clicking
-                if not validate_driver_session(driver):
-                    raise Exception("Session failed after Income Statement click")
-                
-                # Debug: Check what links are available on the page
-                try:
-                    links = driver.find_elements(By.TAG_NAME, "a")
-                    print(f"Found {len(links)} links on page")
-                    for i, link in enumerate(links[:10]):  # Show first 10 links
-                        print(f"Link {i}: '{link.text}' - href: {link.get_attribute('href')}")
-                except Exception as e:
-                    print(f"Error getting links: {e}")
-                
-                # Try multiple strategies to find and click Expand Detail View
-                expand_clicked = False
-                try:
-                    # Strategy 1: Original selector
-                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-                    expand_clicked = True
-                    print("Successfully clicked Expand Detail View (Strategy 1)")
-                except:
+                    # Quick click without detailed waiting
                     try:
-                        # Strategy 2: Look for any expand link
-                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Expand')]"))).click()
-                        expand_clicked = True
-                        print("Successfully clicked Expand link (Strategy 2)")
+                        balance_sheet_btn = driver.find_element(By.XPATH, "//button[contains(., 'Balance Sheet')]")
+                        balance_sheet_btn.click()
+                        time.sleep(2)
                     except:
-                        try:
-                            # Strategy 3: Look for detail view link
-                            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Detail View')]"))).click()
-                            expand_clicked = True
-                            print("Successfully clicked Detail View link (Strategy 3)")
-                        except:
-                            print("Warning: Could not find Expand Detail View link. Proceeding without expanding...")
-                
-                if expand_clicked:
-                    sleep(2)  # Wait for expansion to complete
+                        print("⚠️ HOBBY PLAN: Balance sheet already selected or not found")
                     
-                    # Validate session after expansion
-                    if not validate_driver_session(driver):
-                        raise Exception("Session failed after detail view expansion")
-                
-                # Debug: Check what buttons are available on the page
-                try:
-                    buttons = driver.find_elements(By.TAG_NAME, "button")
-                    print(f"Found {len(buttons)} buttons on page")
-                    for i, button in enumerate(buttons[:10]):  # Show first 10 buttons
-                        print(f"Button {i}: '{button.text}' - id: {button.get_attribute('id')} - class: {button.get_attribute('class')}")
-                except Exception as e:
-                    print(f"Error getting buttons: {e}")
-                
-                # Try multiple strategies to find and click Export button
-                export_clicked = False
-                try:
-                    # Strategy 1: Original selector
-                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-                    export_clicked = True
-                    print("Successfully clicked Export Data button (Strategy 1)")
-                except:
+                    # Try immediate export
                     try:
-                        # Strategy 2: By ID (from the HTML you provided)
-                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "salEqsvFinancialsPopoverExport"))).click()
-                        export_clicked = True
-                        print("Successfully clicked Export button by ID (Strategy 2)")
+                        export_btn = driver.find_element(By.XPATH, "//button[contains(., 'Export') or @aria-label='Export']")
+                        export_btn.click()
+                        time.sleep(5)  # Shorter wait
+                        print("✅ HOBBY PLAN: Export triggered")
                     except:
+                        print("⚠️ HOBBY PLAN: Export button not found, trying table scraping")
+                        
+                        # Fallback: Try to get table data directly
                         try:
-                            # Strategy 3: By aria-label
-                            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Export']"))).click()
-                            export_clicked = True
-                            print("Successfully clicked Export button by aria-label (Strategy 3)")
-                        except:
-                            try:
-                                # Strategy 4: By class and icon combination
-                                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'mds-button--icon-only__sal') and .//span[@data-mds-icon-name='share']]"))).click()
-                                export_clicked = True
-                                print("Successfully clicked Export button by class/icon (Strategy 4)")
-                            except:
-                                print("Warning: Could not find Export button. Data may not be available for download.")
-                
-                if export_clicked:
-                    sleep(10)  # Wait for download to complete
-                    print("Waiting for download to complete...")
-                else:
-                    sleep(5)   # Short wait even if export failed
-                    print("No export performed, continuing...")
-
-                try:
-                    excel_data_df = pd.read_excel(BASE_DIR / "selenium" / "Income Statement_Annual_As Originally Reported.xls")
-                    data1 = excel_data_df.to_json()
-                    print("Successfully read income statement Excel file")
-                    print(data1)
-                    database.child("income_statement").set({"income_statement": data1 })
-                except Exception as e:
-                    print(f"Error reading income statement Excel file: {e}")
-                    x =  '{"income_statement":{"none":"no data"}}'
-                    database.child("income_statement").set({"income_statement": x })
-                sleep(10)
-                # Successfully completed the task
-                safe_close_driver(driver)
-                return 'DONE'
-                
-            elif download_type == "BALANCE_SHEET":
-                # Similar logic for Balance Sheet - just complete the task and return
-                print(f"Starting balance sheet scraping for {ticker_value}")
-                # ... existing balance sheet logic stays the same ...
-                safe_close_driver(driver)
-                return 'DONE'
-                
-            elif download_type == "CASH_FLOW":
-                # Similar logic for Cash Flow - just complete the task and return
-                print(f"Starting cash flow scraping for {ticker_value}")
-                # ... existing cash flow logic stays the same ...
-                safe_close_driver(driver)
-                return 'DONE'
-                
-        except Exception as session_error:
-            print(f"❌ Session error on attempt {task_attempt + 1}: {session_error}")
-            safe_close_driver(driver)
-            
-            if task_attempt < max_retries - 1:
-                print(f"🔄 Retrying task in 5 seconds...")
-                time.sleep(5)
-                continue
-            else:
-                print(f"❌ All {max_retries} attempts failed. Setting fallback data.")
-                # Set fallback data based on download_type
-                if download_type == "INCOME_STATEMENT":
-                    x = '{"income_statement":{"none":"no data"}}'
-                    database.child("income_statement").set({"income_statement": x})
-                elif download_type == "BALANCE_SHEET":
+                            import pandas as pd
+                            tables = driver.find_elements(By.TAG_NAME, "table")
+                            if tables:
+                                table_html = tables[0].get_attribute("outerHTML")
+                                df = pd.read_html(table_html)[0]
+                                data1 = df.to_json()
+                                database.child("balance_sheet").set({"balance_sheet": data1})
+                                print("✅ HOBBY PLAN: Table data scraped successfully")
+                                safe_close_driver(driver)
+                                return 'DONE'
+                        except Exception as table_error:
+                            print(f"⚠️ HOBBY PLAN: Table scraping failed: {table_error}")
+                    
+                    # Try to read downloaded file
+                    try:
+                        import pandas as pd
+                        excel_file = BASE_DIR / "selenium" / "Balance Sheet_Annual_As Originally Reported.xls"
+                        if excel_file.exists():
+                            excel_data_df = pd.read_excel(excel_file)
+                            data1 = excel_data_df.to_json()
+                            database.child("balance_sheet").set({"balance_sheet": data1})
+                            print("✅ HOBBY PLAN: Excel file processed")
+                        else:
+                            print("⚠️ HOBBY PLAN: Excel file not found")
+                            raise Exception("No data file found")
+                    except Exception as excel_error:
+                        print(f"⚠️ HOBBY PLAN: Excel processing failed: {excel_error}")
+                        raise excel_error
+                        
+                except Exception as scraping_error:
+                    print(f"❌ HOBBY PLAN: Balance sheet scraping failed: {scraping_error}")
                     x = '{"balance_sheet":{"none":"no data"}}'
                     database.child("balance_sheet").set({"balance_sheet": x})
-                elif download_type == "CASH_FLOW":
-                    x = '{"cash_flow":{"none":"no data"}}'
-                    database.child("cash_flow").set({"cash_flow": x})
-                return 'ERROR'
+                
+            # HOBBY PLAN: Immediate cleanup and return
+            safe_close_driver(driver)
+            return 'DONE'
+                
+        except Exception as session_error:
+            print(f"❌ HOBBY PLAN: Session error: {session_error}")
+            safe_close_driver(driver)
+            
+            # HOBBY PLAN: No retries, immediate fallback
+            print("❌ HOBBY PLAN: Setting fallback data immediately")
+            if download_type == "INCOME_STATEMENT":
+                x = '{"income_statement":{"none":"no data"}}'
+                database.child("income_statement").set({"income_statement": x})
+            elif download_type == "BALANCE_SHEET":
+                x = '{"balance_sheet":{"none":"no data"}}'
+                database.child("balance_sheet").set({"balance_sheet": x})
+            elif download_type == "CASH_FLOW":
+                x = '{"cash_flow":{"none":"no data"}}'
+                database.child("cash_flow").set({"cash_flow": x})
+            return 'ERROR'
         
         finally:
-            # This runs after each attempt
             safe_close_driver(driver)
     
-    # If we somehow exit the loop without returning, this is a fallback
     return 'ERROR'
+
+def create_hobby_plan_driver():
+    """
+    Create ultra-minimal Chrome driver specifically optimized for Railway Hobby Plan (512MB-1GB).
+    Uses absolute minimum flags to prevent resource exhaustion.
+    """
+    print("🔧 HOBBY PLAN: Creating ultra-minimal Chrome driver...")
+    
+    # HOBBY PLAN: Use regular Chrome (not undetected) to save memory
+    options = webdriver.ChromeOptions()
+    
+    # HOBBY PLAN: Only essential flags
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
+    
+    # HOBBY PLAN: Ultra-aggressive memory management
+    options.add_argument("--memory-pressure-off")
+    options.add_argument("--max_old_space_size=256")  # Ultra-low
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-plugins")
+    options.add_argument("--disable-images")  # Critical for memory saving
+    options.add_argument("--disable-css")  # Disable CSS processing
+    options.add_argument("--disable-javascript")  # Disable JS to save memory
+    options.add_argument("--no-first-run")
+    options.add_argument("--disable-default-apps")
+    
+    # HOBBY PLAN: Minimal window
+    options.add_argument("--window-size=800,600")  # Smaller window
+    
+    # Set Chrome binary
+    chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome-stable")
+    if os.path.exists(chrome_bin):
+        options.binary_location = chrome_bin
+        print(f"🔧 HOBBY PLAN: Chrome binary: {chrome_bin}")
+    
+    try:
+        # HOBBY PLAN: Use regular Chrome WebDriver (lighter than UC)
+        from selenium.webdriver.chrome.service import Service
+        
+        chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
+        if os.path.exists(chromedriver_path):
+            service = Service(executable_path=chromedriver_path)
+            driver = webdriver.Chrome(service=service, options=options)
+            print("✅ HOBBY PLAN: Ultra-minimal Chrome driver created")
+            return driver
+        else:
+            # Fallback to auto-detection
+            service = Service()
+            driver = webdriver.Chrome(service=service, options=options)
+            print("✅ HOBBY PLAN: Auto-detected Chrome driver created")
+            return driver
+            
+    except Exception as e:
+        print(f"❌ HOBBY PLAN: Ultra-minimal driver failed: {e}")
+        raise e
 
 @shared_task(bind=True)
 def scraper_dividends(self, ticker_value, market_value):
