@@ -233,16 +233,16 @@
             <input type="text" id="market" placeholder="Stock Market" name="market"  required="required" />
 
             <select name="download_type" id="select-type">
-              <option value="ALL">ALL</option>
+              {% comment %} <option value="ALL">ALL</option> {% endcomment %}
               <option value="BALANCE_SHEET">BALANCE SHEET</option>
               <option value="INCOME_STATEMENT">INCOME STATEMENT</option>
               <option value="CASH_FLOW">CASH FLOW</option>
-              <option value="VALUATION_CASH_FLOW">VALUATION - CASH FLOW</option>
-              <option value="VALUATION_GROWTH">VALUATION - GROWTH</option>
-              <option value="VALUATION_FINANCIAL_HEALTH">VALUATION - FINANCIAL HEALTH</option>
-              <option value="VALUATION_OPERATING_EFFICIENCY">VALUATION - OPERATING AND EFFICIENCY</option>
+              {% comment %} <option value="VALUATION_CASH_FLOW">VALUATION - CASH FLOW</option> {% endcomment %}
+              {% comment %} <option value="VALUATION_GROWTH">VALUATION - GROWTH</option> {% endcomment %}
+              {% comment %} <option value="VALUATION_FINANCIAL_HEALTH">VALUATION - FINANCIAL HEALTH</option> {% endcomment %}
+              {% comment %} <option value="VALUATION_OPERATING_EFFICIENCY">VALUATION - OPERATING AND EFFICIENCY</option> {% endcomment %}
               <option value="DIVIDENDS">DIVIDENDS</option>
-              <option value="OPERATING_PERFORMANCE">OPERATING PERFORMANCE</option>
+              {% comment %} <option value="OPERATING_PERFORMANCE">OPERATING PERFORMANCE</option> {% endcomment %}
             </select>
           </div>
         </div>
