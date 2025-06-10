@@ -1039,175 +1039,424 @@ def scraper_valuation(ticker_value,market_value,download_type):
         valuation_driver.quit()
 
 @shared_task(bind=True)
-def all_scraper(self,ticker_value,market_value):
-    CHROME_DRIVER_PATH = BASE_DIR+"/chromedriver"
-    prefs = {'download.default_directory' :  BASE_DIR + "/selenium"}
-    chromeOptions = webdriver.ChromeOptions()
-    chromeOptions.add_experimental_option('prefs', prefs)
-    chromeOptions.add_argument("--disable-infobars")
-    chromeOptions.add_argument("--start-maximized")
-    chromeOptions.add_argument("--disable-extensions")
-    chromeOptions.add_argument("--window-size=1920,1080")
-    chromeOptions.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
-    chromeOptions.add_argument('--no-sandbox')   
-    chromeOptions.add_argument("--disable-dev-shm-usage")
+def all_scraper(self, ticker_value, market_value):
+    """
+    Comprehensive scraper that collects all data types:
+    - Balance Sheet, Income Statement, Cash Flow
+    - Dividends
+    - Valuation: Cash Flow, Growth, Financial Health
+    """
+    print(f"Starting comprehensive scraping for {ticker_value} on {market_value}")
     
-    # Create Chrome driver with automatic environment detection
-    valuation_financial_health_driver = get_chrome_driver(chromeOptions)
-    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/valuation")
+    # Initialize progress tracking
+    progress_recorder = ProgressRecorder(self)
+    total_steps = 7
+    current_step = 0
     
-    # Debug: Save page source and screenshot for troubleshooting
+    # Helper function to update progress
+    def update_progress(step_name):
+        nonlocal current_step
+        current_step += 1
+        progress_recorder.set_progress(current_step, total_steps, description=f"Processing {step_name}")
+        print(f"Step {current_step}/{total_steps}: {step_name}")
+    
+    # Clear download directory first
+    download_path = BASE_DIR + DOWNLOAD_DIRECTORY
+    if os.path.exists(download_path):
+        try:
+            import shutil
+            for filename in os.listdir(download_path):
+                file_path = os.path.join(download_path, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    print(f"Failed to delete {file_path}. Reason: {e}")
+        except Exception as e:
+            print(f"Error clearing download directory: {e}")
+    
+    # Track results
+    results = {
+        'balance_sheet': False,
+        'income_statement': False, 
+        'cash_flow': False,
+        'dividends': False,
+        'valuation_cash_flow': False,
+        'valuation_growth': False,
+        'valuation_financial_health': False
+    }
+    
     try:
-        print(f"Page title: {valuation_financial_health_driver.title}")
-        print(f"Current URL: {valuation_financial_health_driver.current_url}")
-        
-        # Save page source for debugging
-        with open(f"debug_page_source_{ticker_value}.html", "w", encoding="utf-8") as f:
-            f.write(valuation_financial_health_driver.page_source)
-        
-        # Take screenshot for debugging
-        valuation_financial_health_driver.save_screenshot(f"debug_screenshot_{ticker_value}.png")
-        
-        WebDriverWait(valuation_financial_health_driver, 30).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Financial Health')]"))).click()
-    except Exception as e:
-        print(f"Error finding Financial Health button: {e}")
-        print("Available buttons on page:")
-        buttons = valuation_financial_health_driver.find_elements(By.TAG_NAME, "button")
-        for i, button in enumerate(buttons[:10]):  # Show first 10 buttons
-            print(f"Button {i}: '{button.text}' - visible: {button.is_displayed()}")
-        raise e
-    try:
-        WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-        sleep(10)
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/financialHealth.xls")
-        data1 = excel_data_df.to_json()
-        print(data1)
-        database.child("valuation_financial_health").set({"valuation_financial_health": data1 })
-    except:
-         x =  '{"valuation_financial_health":{"none":"no data"}}'
-         database.child("valuation_financial_health").set({"valuation_financial_health": x })
-    sleep(10)
-    WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Operating and Efficiency')]"))).click()
-    try:
-        WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-        sleep(10)
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/operatingAndEfficiency.xls")
-        data1 = excel_data_df.to_json()
-        print(data1)
-        database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": data1 })
-    except:
-        x =  '{"valuation_operating_efficiency":{"none":"no data"}}'
-        database.child("valuation_operating_efficiency").set({"valuation_operating_efficiency": x })
-    sleep(10)
-    WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
-    try:
-        WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-        sleep(10)
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/cashFlow.xls")
-        data1 = excel_data_df.to_json()
-        print(data1)
-        database.child("valuation_cash_flow").set({"valuation_cash_flow": data1 })
-    except:
-        x =  '{"valuation_cash_flow":{"none":"no data"}}'
-        database.child("valuation_cash_flow").set({"valuation_cash_flow": x })
-    sleep(10)    
-    WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Growth')]"))).click()
-    try:
-        WebDriverWait(valuation_financial_health_driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-        sleep(10)
-        excel_data_df = pd.read_excel(BASE_DIR + "/selenium/growthTable.xls")
-        data1 = excel_data_df.to_json()
-        print(data1)
-        database.child("valuation_growth").set({"valuation_growth": data1 })
-    except:
-        x =  '{"valuation_growth":{"none":"no data"}}'
-        database.child("valuation_growth").set({"valuation_growth": x })
-
-    sleep(10)
-    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/performance")
-    try:
-        data = WebDriverWait(valuation_financial_health_driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)    
-        data1 = df[0].to_json()
-        print(data1)
-        database.child("operating_performance").set({"operating_performance": data1 })
-    except:
-         x =  '{"operating_performance":{"none":"no data"}}'
-         database.child("operating_performance").set({"operating_performance": x })
-
-    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
-    try:
-        data = WebDriverWait(valuation_financial_health_driver, 50).until(EC.visibility_of_element_located((By.XPATH, "//div[@class='mds-table__scroller__sal']"))).get_attribute("outerHTML")
-        df  = pd.read_html(data)   
-        data1 = df[0].to_json()
-        print(data1)
-        database.child("dividends").set({"dividends": data1 })
-    except:
-        x =  '{"dividends":{"none":"no data"}}'
-        database.child("dividends").set({"dividends": x })
-    sleep(10)
-    valuation_financial_health_driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
-    sleep(10)
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
-    sleep(5)
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
-    sleep(5)
-    WebDriverWait(valuation_financial_health_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export Data')]"))).click()
-    sleep(10)
-    try:
-        expected_file = BASE_DIR + DOWNLOAD_DIRECTORY + "/Income Statement_Annual_As Originally Reported.xls"
-        print(f"[DEBUG] Looking for income statement file: {expected_file}")
-        
-        # Wait a bit more and check multiple times for file to appear
-        max_wait_attempts = 6  # 30 seconds total
-        file_found = False
-        
-        for attempt in range(max_wait_attempts):
-            if os.path.exists(expected_file):
-                file_found = True
-                print(f"[DEBUG] File found after {attempt * 5} seconds")
-                break
-            else:
-                print(f"[DEBUG] File not found, waiting... (attempt {attempt + 1}/{max_wait_attempts})")
-                sleep(5)
-        
-        if not file_found:
-            # List all files in download directory for debugging
-            download_dir = BASE_DIR + DOWNLOAD_DIRECTORY
-            if os.path.exists(download_dir):
-                all_files = os.listdir(download_dir)
-                print(f"[DEBUG] All files in download directory: {all_files}")
-                
-                # Look for any Excel files with similar names
-                excel_files = [f for f in all_files if f.endswith(('.xls', '.xlsx')) and 'income' in f.lower()]
-                if excel_files:
-                    expected_file = os.path.join(download_dir, excel_files[0])
-                    print(f"[DEBUG] Using alternative Excel file: {expected_file}")
-                    file_found = True
-            else:
-                print(f"[ERROR] Download directory does not exist: {download_dir}")
-        
-        if file_found:
-            excel_data_df = pd.read_excel(expected_file)
-            data1 = excel_data_df.to_json()
-            print("Successfully read income statement Excel file")
-            print(f"[DEBUG] Data preview: {str(data1)[:200]}...")
-            database.child("income_statement").set({"income_statement": data1 })
-        else:
-            raise FileNotFoundError(f"Income statement file not found: {expected_file}")
+        # 1. Scrape Balance Sheet
+        update_progress("Balance Sheet")
+        try:
+            driver = create_stealth_driver()
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
             
-    except Exception as e:
-        print(f"Error reading income statement Excel file: {e}")
-        print(f"[DEBUG] Exception type: {type(e).__name__}")
-        print(f"[DEBUG] Current working directory: {os.getcwd()}")
+            WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Balance Sheet')]"))).click()
+            sleep(3)
+            
+            # Try to expand detail view
+            try:
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                sleep(2)
+            except:
+                print("Could not expand detail view for Balance Sheet")
+            
+            # Export data
+            export_clicked = False
+            for strategy in ["//button[contains(., 'Export Data')]", "//button[@id='salEqsvFinancialsPopoverExport']", "//button[@aria-label='Export']"]:
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                    export_clicked = True
+                    break
+                except:
+                    continue
+            
+            if export_clicked:
+                sleep(10)
+                try:
+                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Balance Sheet_Annual_As Originally Reported.xls")
+                    data1 = excel_data_df.to_json()
+                    database.child("balance_sheet").set({"balance_sheet": data1})
+                    results['balance_sheet'] = True
+                    print("✅ Balance Sheet scraped successfully")
+                except Exception as e:
+                    print(f"❌ Error reading Balance Sheet file: {e}")
+                    database.child("balance_sheet").set({"balance_sheet": '{"balance_sheet":{"none":"no data"}}'})
+            else:
+                database.child("balance_sheet").set({"balance_sheet": '{"balance_sheet":{"none":"no data"}}'})
+            
+            driver.quit()
+        except Exception as e:
+            print(f"❌ Error scraping Balance Sheet: {e}")
+            database.child("balance_sheet").set({"balance_sheet": '{"balance_sheet":{"none":"no data"}}'})
         
-        # Set fallback data
-        x =  '{"income_statement":{"none":"no data"}}'
-        database.child("income_statement").set({"income_statement": x })
-    sleep(10)
-    valuation_financial_health_driver.quit() 
-    return 'DONE'    
+        # 2. Scrape Income Statement
+        update_progress("Income Statement")
+        try:
+            driver = create_stealth_driver()
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+            
+            WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Income Statement')]"))).click()
+            sleep(3)
+            
+            # Try to expand detail view
+            try:
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                sleep(2)
+            except:
+                print("Could not expand detail view for Income Statement")
+            
+            # Export data
+            export_clicked = False
+            for strategy in ["//button[contains(., 'Export Data')]", "//button[@id='salEqsvFinancialsPopoverExport']", "//button[@aria-label='Export']"]:
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                    export_clicked = True
+                    break
+                except:
+                    continue
+            
+            if export_clicked:
+                sleep(10)
+                try:
+                    expected_file = BASE_DIR + DOWNLOAD_DIRECTORY + "/Income Statement_Annual_As Originally Reported.xls"
+                    if not os.path.exists(expected_file):
+                        # Look for alternative files
+                        download_dir = BASE_DIR + DOWNLOAD_DIRECTORY
+                        if os.path.exists(download_dir):
+                            excel_files = [f for f in os.listdir(download_dir) if f.endswith(('.xls', '.xlsx')) and 'income' in f.lower()]
+                            if excel_files:
+                                expected_file = os.path.join(download_dir, excel_files[0])
+                    
+                    excel_data_df = pd.read_excel(expected_file)
+                    data1 = excel_data_df.to_json()
+                    database.child("income_statement").set({"income_statement": data1})
+                    results['income_statement'] = True
+                    print("✅ Income Statement scraped successfully")
+                except Exception as e:
+                    print(f"❌ Error reading Income Statement file: {e}")
+                    database.child("income_statement").set({"income_statement": '{"income_statement":{"none":"no data"}}'})
+            else:
+                database.child("income_statement").set({"income_statement": '{"income_statement":{"none":"no data"}}'})
+            
+            driver.quit()
+        except Exception as e:
+            print(f"❌ Error scraping Income Statement: {e}")
+            database.child("income_statement").set({"income_statement": '{"income_statement":{"none":"no data"}}'})
+        
+        # 3. Scrape Cash Flow
+        update_progress("Cash Flow")
+        try:
+            driver = create_stealth_driver()
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/financials")
+            
+            WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Cash Flow')]"))).click()
+            sleep(3)
+            
+            # Try to expand detail view
+            try:
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Expand Detail View')]"))).click()
+                sleep(2)
+            except:
+                print("Could not expand detail view for Cash Flow")
+            
+            # Export data
+            export_clicked = False
+            for strategy in ["//button[contains(., 'Export Data')]", "//button[@id='salEqsvFinancialsPopoverExport']", "//button[@aria-label='Export']"]:
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                    export_clicked = True
+                    break
+                except:
+                    continue
+            
+            if export_clicked:
+                sleep(10)
+                try:
+                    excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/Cash Flow_Annual_As Originally Reported.xls")
+                    data1 = excel_data_df.to_json()
+                    database.child("cash_flow").set({"cash_flow": data1})
+                    results['cash_flow'] = True
+                    print("✅ Cash Flow scraped successfully")
+                except Exception as e:
+                    print(f"❌ Error reading Cash Flow file: {e}")
+                    database.child("cash_flow").set({"cash_flow": '{"cash_flow":{"none":"no data"}}'})
+            else:
+                database.child("cash_flow").set({"cash_flow": '{"cash_flow":{"none":"no data"}}'})
+            
+            driver.quit()
+        except Exception as e:
+            print(f"❌ Error scraping Cash Flow: {e}")
+            database.child("cash_flow").set({"cash_flow": '{"cash_flow":{"none":"no data"}}'})
+        
+        # 4. Scrape Dividends
+        update_progress("Dividends")
+        try:
+            driver = create_stealth_driver()
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends")
+            
+            data_found = False
+            for strategy in ["//div[@class='mds-table__scroller__sal']", "//div[contains(@class, 'table__scroller')]", "//table"]:
+                try:
+                    data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.XPATH, strategy))).get_attribute("outerHTML")
+                    df = pd.read_html(data)
+                    if df and len(df) > 0:
+                        data1 = df[0].to_json()
+                        database.child("dividends").set({"dividends": data1})
+                        results['dividends'] = True
+                        data_found = True
+                        print("✅ Dividends scraped successfully")
+                        break
+                except:
+                    continue
+            
+            if not data_found:
+                database.child("dividends").set({"dividends": '{"dividends":{"none":"no data"}}'})
+                print("❌ Could not scrape Dividends data")
+            
+            driver.quit()
+        except Exception as e:
+            print(f"❌ Error scraping Dividends: {e}")
+            database.child("dividends").set({"dividends": '{"dividends":{"none":"no data"}}'})
+        
+        # 5. Scrape Valuation Cash Flow
+        update_progress("Valuation Cash Flow")
+        try:
+            driver = create_stealth_driver()
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
+            sleep(3)
+            
+            # Click Cash Flow tab
+            tab_clicked = False
+            for strategy in ["//button[@id='keyMetricscashFlow']", "//button[@data='cashFlow']", "//button[contains(., 'Cash Flow')]"]:
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                    tab_clicked = True
+                    break
+                except:
+                    continue
+            
+            if tab_clicked:
+                sleep(3)
+                # Set to 10 years if possible
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '5 Years')]"))).click()
+                    sleep(2)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[contains(., '10 Years')]"))).click()
+                    sleep(3)
+                except:
+                    print("Could not set time period to 10 years for Cash Flow valuation")
+                
+                # Export data
+                export_clicked = False
+                for strategy in ["//button[@id='salKeyStatsPopoverExport']", "//button[@aria-label='Export']", "//div[@class='export']//button"]:
+                    try:
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                        export_clicked = True
+                        break
+                    except:
+                        continue
+                
+                if export_clicked:
+                    sleep(10)
+                    try:
+                        excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/cashFlow.xls")
+                        data1 = excel_data_df.to_json()
+                        database.child("valuation_cash_flow").set({"valuation_cash_flow": data1})
+                        results['valuation_cash_flow'] = True
+                        print("✅ Valuation Cash Flow scraped successfully")
+                    except Exception as e:
+                        print(f"❌ Error reading Valuation Cash Flow file: {e}")
+                        database.child("valuation_cash_flow").set({"valuation_cash_flow": '{"valuation_cash_flow":{"none":"no data"}}'})
+                else:
+                    database.child("valuation_cash_flow").set({"valuation_cash_flow": '{"valuation_cash_flow":{"none":"no data"}}'})
+            else:
+                database.child("valuation_cash_flow").set({"valuation_cash_flow": '{"valuation_cash_flow":{"none":"no data"}}'})
+            
+            driver.quit()
+        except Exception as e:
+            print(f"❌ Error scraping Valuation Cash Flow: {e}")
+            database.child("valuation_cash_flow").set({"valuation_cash_flow": '{"valuation_cash_flow":{"none":"no data"}}'})
+        
+        # 6. Scrape Valuation Growth
+        update_progress("Valuation Growth")
+        try:
+            driver = create_stealth_driver()
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
+            sleep(3)
+            
+            # Click Growth tab
+            tab_clicked = False
+            for strategy in ["//button[@id='keyMetricsgrowthTable']", "//button[@data='growthTable']", "//button[text()='Growth' or contains(., 'Growth') and not(contains(., 'Growth Rate'))]"]:
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                    tab_clicked = True
+                    break
+                except:
+                    continue
+            
+            if tab_clicked:
+                sleep(3)
+                # Set to 10 years if possible
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '5 Years')]"))).click()
+                    sleep(2)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[contains(., '10 Years')]"))).click()
+                    sleep(3)
+                except:
+                    print("Could not set time period to 10 years for Growth valuation")
+                
+                # Export data
+                export_clicked = False
+                for strategy in ["//button[@id='salKeyStatsPopoverExport']", "//button[@aria-label='Export']", "//div[@class='export']//button"]:
+                    try:
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                        export_clicked = True
+                        break
+                    except:
+                        continue
+                
+                if export_clicked:
+                    sleep(10)
+                    try:
+                        excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/growthTable.xls")
+                        data1 = excel_data_df.to_json()
+                        database.child("valuation_growth").set({"valuation_growth": data1})
+                        results['valuation_growth'] = True
+                        print("✅ Valuation Growth scraped successfully")
+                    except Exception as e:
+                        print(f"❌ Error reading Valuation Growth file: {e}")
+                        database.child("valuation_growth").set({"valuation_growth": '{"valuation_growth":{"none":"no data"}}'})
+                else:
+                    database.child("valuation_growth").set({"valuation_growth": '{"valuation_growth":{"none":"no data"}}'})
+            else:
+                database.child("valuation_growth").set({"valuation_growth": '{"valuation_growth":{"none":"no data"}}'})
+            
+            driver.quit()
+        except Exception as e:
+            print(f"❌ Error scraping Valuation Growth: {e}")
+            database.child("valuation_growth").set({"valuation_growth": '{"valuation_growth":{"none":"no data"}}'})
+        
+        # 7. Scrape Valuation Financial Health
+        update_progress("Valuation Financial Health")
+        try:
+            driver = create_stealth_driver()
+            driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
+            sleep(3)
+            
+            # Click Financial Health tab
+            tab_clicked = False
+            for strategy in ["//button[@id='keyMetricsfinancialHealth']", "//button[@data='financialHealth']", "//button[contains(., 'Financial Health')]"]:
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                    tab_clicked = True
+                    break
+                except:
+                    continue
+            
+            if tab_clicked:
+                sleep(3)
+                # Set to 10 years if possible
+                try:
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '5 Years')]"))).click()
+                    sleep(2)
+                    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[contains(., '10 Years')]"))).click()
+                    sleep(3)
+                except:
+                    print("Could not set time period to 10 years for Financial Health valuation")
+                
+                # Export data
+                export_clicked = False
+                for strategy in ["//button[@id='salKeyStatsPopoverExport']", "//button[@aria-label='Export']", "//div[@class='export']//button"]:
+                    try:
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, strategy))).click()
+                        export_clicked = True
+                        break
+                    except:
+                        continue
+                
+                if export_clicked:
+                    sleep(10)
+                    try:
+                        excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/financialHealth.xls")
+                        data1 = excel_data_df.to_json()
+                        database.child("valuation_financial_health").set({"valuation_financial_health": data1})
+                        results['valuation_financial_health'] = True
+                        print("✅ Valuation Financial Health scraped successfully")
+                    except Exception as e:
+                        print(f"❌ Error reading Valuation Financial Health file: {e}")
+                        database.child("valuation_financial_health").set({"valuation_financial_health": '{"valuation_financial_health":{"none":"no data"}}'})
+                else:
+                    database.child("valuation_financial_health").set({"valuation_financial_health": '{"valuation_financial_health":{"none":"no data"}}'})
+            else:
+                database.child("valuation_financial_health").set({"valuation_financial_health": '{"valuation_financial_health":{"none":"no data"}}'})
+            
+            driver.quit()
+        except Exception as e:
+            print(f"❌ Error scraping Valuation Financial Health: {e}")
+            database.child("valuation_financial_health").set({"valuation_financial_health": '{"valuation_financial_health":{"none":"no data"}}'})
+        
+        # Summary
+        successful_scrapes = sum(results.values())
+        total_scrapes = len(results)
+        print(f"\n📊 Scraping Summary for {ticker_value}:")
+        print(f"✅ Successful: {successful_scrapes}/{total_scrapes}")
+        print(f"❌ Failed: {total_scrapes - successful_scrapes}/{total_scrapes}")
+        for data_type, success in results.items():
+            status = "✅" if success else "❌"
+            print(f"  {status} {data_type.replace('_', ' ').title()}")
+        
+        progress_recorder.set_progress(total_steps, total_steps, description="All data scraped successfully!")
+        return 'DONE'
+        
+    except Exception as e:
+        print(f"❌ Fatal error in all_scraper: {e}")
+        progress_recorder.set_progress(current_step, total_steps, description=f"Error: {str(e)}")
+        return 'ERROR'    
 
 
 

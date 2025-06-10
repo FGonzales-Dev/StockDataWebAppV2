@@ -167,9 +167,9 @@ def scrape(request):
             dividends_task_id = task.id
             print(dividends_task_id)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type == "OPERATING_PERFORMANCE":
-            task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
-            return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
+        # elif download_type == "OPERATING_PERFORMANCE":
+        #     task = scraper_operating_performance.delay(ticker_value=ticker_value, market_value=market_value)
+        #     return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type == "ALL":
             task = all_scraper.delay(ticker_value=ticker_value, market_value=market_value)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
@@ -258,87 +258,143 @@ def scrape(request):
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
         elif download_type == "ALL":
-            #INCOME STATEMENT
-            income_statement_data = database.child('income_statement').child('income_statement').get().val()
-            income_statement_data = json.loads(income_statement_data)
-            new_dict = remove_whitespaces(income_statement_data)  
-            df1 = pd.DataFrame(new_dict).to_excel("income_statement.xlsx", index=False)
-            df1 = pd.read_excel('income_statement.xlsx')
-            #BALANCE SHEET
-            balance_sheet_data = database.child('balance_sheet').child('balance_sheet').get().val()
-            balance_sheet_data = json.loads(balance_sheet_data)
-            new_dict = remove_whitespaces(balance_sheet_data)  
-            df2 = pd.DataFrame(new_dict).to_excel("balance_sheet.xlsx", index=False)
-            df2 = pd.read_excel('balance_sheet.xlsx')
-            #CASH FLOW
-            cash_flow_data = database.child('cash_flow').child('cash_flow').get().val()
-            cash_flow_data = json.loads(cash_flow_data)
-            new_dict = remove_whitespaces(cash_flow_data)  
-            df3 = pd.DataFrame(new_dict).to_excel("cash_flow.xlsx", index=False)
-            df3 = pd.read_excel('cash_flow.xlsx')
-          
-
-            #DIVIDENDS
-            dividends_data = database.child('dividends').child('dividends').get().val()
-            dividends_data = json.loads(dividends_data)
-            print(dividends_data)
-            df4 = pd.DataFrame(dividends_data).to_excel("dividends_data.xlsx", index=False)
-            df4 = pd.read_excel('dividends_data.xlsx')
-
-            #VALUATION CASH FLOW
-            valuation_cash_flow_data = database.child('valuation_cash_flow').child('valuation_cash_flow').get().val()
-            valuation_cash_flow_data = json.loads(valuation_cash_flow_data)
-            print(valuation_cash_flow_data)
-            d5 = pd.DataFrame(valuation_cash_flow_data).to_excel("valuation_cash_flow.xlsx", index=False)
-            df5 = pd.read_excel('valuation_cash_flow.xlsx')
-
-            #VALUATION GROWTH
-            valuation_growth_data = database.child('valuation_growth').child('valuation_growth').get().val()
-            valuation_growth_data = json.loads(valuation_growth_data)
-            print(valuation_growth_data)
-            df6 = pd.DataFrame(valuation_growth_data).to_excel("valuation_growth.xlsx", index=False)
-            df6 = pd.read_excel('valuation_growth.xlsx')
-
-            #VALUATION FINANCIAL HEALTH
-            valuation_financial_health_data = database.child('valuation_financial_health').child('valuation_financial_health').get().val()
-            valuation_financial_health_data = json.loads(valuation_financial_health_data)
-            print(valuation_financial_health_data)
-            df7 = pd.DataFrame(valuation_financial_health_data).to_excel("valuation_financial_health.xlsx", index=False)
-            df7 = pd.read_excel('valuation_financial_health.xlsx')
-
-            #VALUATION OPERATING EFFICIENCY
-            valuation_operating_efficiency_data = database.child('valuation_operating_efficiency').child('valuation_operating_efficiency').get().val()
-            valuation_operating_efficiency_data = json.loads(valuation_operating_efficiency_data)
-            print(valuation_operating_efficiency_data)
-            df8 = pd.DataFrame(valuation_operating_efficiency_data).to_excel("valuation_operating_efficiency.xlsx", index=False)
-            df8 = pd.read_excel('valuation_operating_efficiency.xlsx')
-
-
-           
-           # OPERATING PERFORMANCE
-            operating_performance_data = database.child('operating_performance').child('operating_performance').get().val()
-            operating_performance_data = json.loads(operating_performance_data)
-            print(operating_performance_data)
-            df9 = pd.DataFrame(operating_performance_data).to_excel("operating_performance.xlsx", index=False)
-            df9 = pd.read_excel('operating_performance.xlsx')
-
-            #ALL excel sheet generator        
-            writer = pd.ExcelWriter("all.xls", engine = 'xlsxwriter')
-            df1.to_excel(writer, sheet_name = 'Income Statement', index=False)
-            df2.to_excel(writer, sheet_name = 'Balance Sheet', index=False)
-            df3.to_excel(writer, sheet_name = 'Cash Flow', index=False)
-            df4.to_excel(writer, sheet_name = 'Dividends', index=False)
-            df5.to_excel(writer, sheet_name = 'Valuation Cash Flow', index=False)
-            df6.to_excel(writer, sheet_name = 'Valuation Growth', index=False)
-            df7.to_excel(writer, sheet_name = 'Valuation Financial Health', index=False)
-            df8.to_excel(writer, sheet_name = 'Valuation Operating Efficiency', index=False)
-            df9.to_excel(writer,sheet_name="Operating Performance", index=False)
-            writer.save()
-            writer.close()
+            # Create comprehensive Excel file with all scraped data
+            dataframes = {}
             
-            with open("all.xls", 'rb') as file:
-                    response = HttpResponse(file, content_type='application/vnd.ms-excel')
-                    response['Content-Disposition'] = 'attachment; filename=stockData.xls'   
+            try:
+                # INCOME STATEMENT
+                try:
+                    income_statement_data = database.child('income_statement').child('income_statement').get().val()
+                    if income_statement_data and income_statement_data != '{"income_statement":{"none":"no data"}}':
+                        income_statement_data = json.loads(income_statement_data)
+                        new_dict = remove_whitespaces(income_statement_data)  
+                        df1 = pd.DataFrame(new_dict)
+                        dataframes['Income Statement'] = df1
+                        print("✅ Income Statement data loaded for ALL export")
+                    else:
+                        print("❌ No Income Statement data available")
+                except Exception as e:
+                    print(f"❌ Error loading Income Statement: {e}")
+                
+                # BALANCE SHEET
+                try:
+                    balance_sheet_data = database.child('balance_sheet').child('balance_sheet').get().val()
+                    if balance_sheet_data and balance_sheet_data != '{"balance_sheet":{"none":"no data"}}':
+                        balance_sheet_data = json.loads(balance_sheet_data)
+                        new_dict = remove_whitespaces(balance_sheet_data)  
+                        df2 = pd.DataFrame(new_dict)
+                        dataframes['Balance Sheet'] = df2
+                        print("✅ Balance Sheet data loaded for ALL export")
+                    else:
+                        print("❌ No Balance Sheet data available")
+                except Exception as e:
+                    print(f"❌ Error loading Balance Sheet: {e}")
+                
+                # CASH FLOW
+                try:
+                    cash_flow_data = database.child('cash_flow').child('cash_flow').get().val()
+                    if cash_flow_data and cash_flow_data != '{"cash_flow":{"none":"no data"}}':
+                        cash_flow_data = json.loads(cash_flow_data)
+                        new_dict = remove_whitespaces(cash_flow_data)  
+                        df3 = pd.DataFrame(new_dict)
+                        dataframes['Cash Flow'] = df3
+                        print("✅ Cash Flow data loaded for ALL export")
+                    else:
+                        print("❌ No Cash Flow data available")
+                except Exception as e:
+                    print(f"❌ Error loading Cash Flow: {e}")
+                
+                # DIVIDENDS
+                try:
+                    dividends_data = database.child('dividends').child('dividends').get().val()
+                    if dividends_data and dividends_data != '{"dividends":{"none":"no data"}}':
+                        dividends_data = json.loads(dividends_data)
+                        df4 = pd.DataFrame(dividends_data)
+                        dataframes['Dividends'] = df4
+                        print("✅ Dividends data loaded for ALL export")
+                    else:
+                        print("❌ No Dividends data available")
+                except Exception as e:
+                    print(f"❌ Error loading Dividends: {e}")
+
+                # VALUATION CASH FLOW
+                try:
+                    valuation_cash_flow_data = database.child('valuation_cash_flow').child('valuation_cash_flow').get().val()
+                    if valuation_cash_flow_data and valuation_cash_flow_data != '{"valuation_cash_flow":{"none":"no data"}}':
+                        valuation_cash_flow_data = json.loads(valuation_cash_flow_data)
+                        df5 = pd.DataFrame(valuation_cash_flow_data)
+                        dataframes['Valuation Cash Flow'] = df5
+                        print("✅ Valuation Cash Flow data loaded for ALL export")
+                    else:
+                        print("❌ No Valuation Cash Flow data available")
+                except Exception as e:
+                    print(f"❌ Error loading Valuation Cash Flow: {e}")
+
+                # VALUATION GROWTH
+                try:
+                    valuation_growth_data = database.child('valuation_growth').child('valuation_growth').get().val()
+                    if valuation_growth_data and valuation_growth_data != '{"valuation_growth":{"none":"no data"}}':
+                        valuation_growth_data = json.loads(valuation_growth_data)
+                        df6 = pd.DataFrame(valuation_growth_data)
+                        dataframes['Valuation Growth'] = df6
+                        print("✅ Valuation Growth data loaded for ALL export")
+                    else:
+                        print("❌ No Valuation Growth data available")
+                except Exception as e:
+                    print(f"❌ Error loading Valuation Growth: {e}")
+
+                # VALUATION FINANCIAL HEALTH
+                try:
+                    valuation_financial_health_data = database.child('valuation_financial_health').child('valuation_financial_health').get().val()
+                    if valuation_financial_health_data and valuation_financial_health_data != '{"valuation_financial_health":{"none":"no data"}}':
+                        valuation_financial_health_data = json.loads(valuation_financial_health_data)
+                        df7 = pd.DataFrame(valuation_financial_health_data)
+                        dataframes['Valuation Financial Health'] = df7
+                        print("✅ Valuation Financial Health data loaded for ALL export")
+                    else:
+                        print("❌ No Valuation Financial Health data available")
+                except Exception as e:
+                    print(f"❌ Error loading Valuation Financial Health: {e}")
+
+                # Create comprehensive Excel file with all available data
+                if dataframes:
+                    writer = pd.ExcelWriter("all_stock_data.xlsx", engine='xlsxwriter')
+                    
+                    # Write each dataframe to a separate sheet
+                    for sheet_name, df in dataframes.items():
+                        df.to_excel(writer, sheet_name=sheet_name, index=False)
+                        print(f"✅ Added {sheet_name} to Excel file")
+                    
+                    writer.close()
+                    
+                    # Return the Excel file
+                    with open("all_stock_data.xlsx", 'rb') as file:
+                        response = HttpResponse(file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                        response['Content-Disposition'] = 'attachment; filename=all_stock_data.xlsx'   
+                        return response
+                else:
+                    # No data available, create a simple message file
+                    df_no_data = pd.DataFrame({"Message": ["No data available for any categories"]})
+                    writer = pd.ExcelWriter("no_data.xlsx", engine='xlsxwriter')
+                    df_no_data.to_excel(writer, sheet_name='No Data', index=False)
+                    writer.close()
+                    
+                    with open("no_data.xlsx", 'rb') as file:
+                        response = HttpResponse(file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                        response['Content-Disposition'] = 'attachment; filename=no_data_available.xlsx'   
+                        return response
+                        
+            except Exception as e:
+                print(f"❌ Error creating ALL Excel file: {e}")
+                # Return error message as Excel file
+                df_error = pd.DataFrame({"Error": [f"Error creating comprehensive file: {str(e)}"]})
+                writer = pd.ExcelWriter("error.xlsx", engine='xlsxwriter')
+                df_error.to_excel(writer, sheet_name='Error', index=False)
+                writer.close()
+                
+                with open("error.xlsx", 'rb') as file:
+                    response = HttpResponse(file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                    response['Content-Disposition'] = 'attachment; filename=error.xlsx'   
                     return response
         else:
              return render(request, "../templates/loadScreen.html")
