@@ -772,7 +772,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
         
         # Click the appropriate tab based on download_type FIRST
         tab_clicked = False
-        if download_type == "VALUATION_CASH_FLOW":
+        if download_type == "KEY_METRICS_CASH_FLOW":
             # Click Cash Flow tab
             try:
                 # Strategy 1: By ID
@@ -794,7 +794,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
                     except:
                         print("Warning: Could not find Cash Flow tab")
                         
-        elif download_type == "VALUATION_GROWTH":
+        elif download_type == "KEY_METRICS_GROWTH":
             # Click Growth tab
             try:
                 # Strategy 1: By ID
@@ -816,7 +816,7 @@ def scraper_valuation(ticker_value,market_value,download_type):
                     except:
                         print("Warning: Could not find Growth tab")
                         
-        elif download_type == "VALUATION_FINANCIAL_HEALTH":
+        elif download_type == "KEY_METRICS_FINANCIAL_HEALTH":
             # Click Financial Health tab
             try:
                 # Strategy 1: By ID
@@ -962,19 +962,19 @@ def scraper_valuation(ticker_value,market_value,download_type):
             
             # Read the downloaded file based on download_type
             try:
-                if download_type == "VALUATION_CASH_FLOW":
+                if download_type == "KEY_METRICS_CASH_FLOW":
                     excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/cashFlow.xls")
                     data1 = excel_data_df.to_json()
                     print("Successfully read cash flow valuation Excel file")
                     print(data1)
                     database.child("valuation_cash_flow").set({"valuation_cash_flow": data1})
-                elif download_type == "VALUATION_GROWTH":
+                elif download_type == "KEY_METRICS_GROWTH":
                     excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/growthTable.xls")
                     data1 = excel_data_df.to_json()
                     print("Successfully read growth valuation Excel file")
                     print(data1)
                     database.child("valuation_growth").set({"valuation_growth": data1})
-                elif download_type == "VALUATION_FINANCIAL_HEALTH":
+                elif download_type == "KEY_METRICS_FINANCIAL_HEALTH":
                     excel_data_df = pd.read_excel(BASE_DIR + DOWNLOAD_DIRECTORY + "/financialHealth.xls")
                     data1 = excel_data_df.to_json()
                     print("Successfully read financial health valuation Excel file")
@@ -989,13 +989,13 @@ def scraper_valuation(ticker_value,market_value,download_type):
             except Exception as e:
                 print(f"Error reading Excel file for {download_type}: {e}")
                 # Set fallback data based on download_type
-                if download_type == "VALUATION_CASH_FLOW":
+                if download_type == "KEY_METRICS_CASH_FLOW":
                     x = '{"valuation_cash_flow":{"none":"no data"}}'
                     database.child("valuation_cash_flow").set({"valuation_cash_flow": x})
-                elif download_type == "VALUATION_GROWTH":
+                elif download_type == "KEY_METRICS_GROWTH":
                     x = '{"valuation_growth":{"none":"no data"}}'
                     database.child("valuation_growth").set({"valuation_growth": x})
-                elif download_type == "VALUATION_FINANCIAL_HEALTH":
+                elif download_type == "KEY_METRICS_FINANCIAL_HEALTH":
                     x = '{"valuation_financial_health":{"none":"no data"}}'
                     database.child("valuation_financial_health").set({"valuation_financial_health": x})
                 elif download_type == "VALUATION_OPERATING_EFFICIENCY":
@@ -1004,13 +1004,13 @@ def scraper_valuation(ticker_value,market_value,download_type):
         else:
             print("Export failed, setting fallback data")
             # Set fallback data based on download_type
-            if download_type == "VALUATION_CASH_FLOW":
+            if download_type == "KEY_METRICS_CASH_FLOW":
                 x = '{"valuation_cash_flow":{"none":"no data"}}'
                 database.child("valuation_cash_flow").set({"valuation_cash_flow": x})
-            elif download_type == "VALUATION_GROWTH":
+            elif download_type == "KEY_METRICS_GROWTH":
                 x = '{"valuation_growth":{"none":"no data"}}'
                 database.child("valuation_growth").set({"valuation_growth": x})
-            elif download_type == "VALUATION_FINANCIAL_HEALTH":
+            elif download_type == "KEY_METRICS_FINANCIAL_HEALTH":
                 x = '{"valuation_financial_health":{"none":"no data"}}'
                 database.child("valuation_financial_health").set({"valuation_financial_health": x})
             elif download_type == "VALUATION_OPERATING_EFFICIENCY":
@@ -1022,13 +1022,13 @@ def scraper_valuation(ticker_value,market_value,download_type):
     except Exception as e:
         print(f"Error in scraper_valuation: {e}")
         # Set appropriate error data based on download_type
-        if download_type == "VALUATION_CASH_FLOW":
+        if download_type == "KEY_METRICS_CASH_FLOW":
             x = '{"valuation_cash_flow":{"none":"no data"}}'
             database.child("valuation_cash_flow").set({"valuation_cash_flow": x})
-        elif download_type == "VALUATION_GROWTH":
+        elif download_type == "KEY_METRICS_GROWTH":
             x = '{"valuation_growth":{"none":"no data"}}'
             database.child("valuation_growth").set({"valuation_growth": x})
-        elif download_type == "VALUATION_FINANCIAL_HEALTH":
+        elif download_type == "KEY_METRICS_FINANCIAL_HEALTH":
             x = '{"valuation_financial_health":{"none":"no data"}}'
             database.child("valuation_financial_health").set({"valuation_financial_health": x})
         elif download_type == "VALUATION_OPERATING_EFFICIENCY":
@@ -1044,7 +1044,7 @@ def all_scraper(self, ticker_value, market_value):
     Comprehensive scraper that collects all data types:
     - Balance Sheet, Income Statement, Cash Flow
     - Dividends
-    - Valuation: Cash Flow, Growth, Financial Health
+    - Key Metrics: Cash Flow, Growth, Financial Health
     """
     print(f"Starting comprehensive scraping for {ticker_value} on {market_value}")
     
@@ -1263,8 +1263,8 @@ def all_scraper(self, ticker_value, market_value):
             print(f"❌ Error scraping Dividends: {e}")
             database.child("dividends").set({"dividends": '{"dividends":{"none":"no data"}}'})
         
-        # 5. Scrape Valuation Cash Flow
-        update_progress("Valuation Cash Flow")
+        # 5. Scrape Key Metrics Cash Flow
+        update_progress("Key Metrics Cash Flow")
         try:
             driver = create_stealth_driver()
             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
@@ -1289,7 +1289,7 @@ def all_scraper(self, ticker_value, market_value):
                     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[contains(., '10 Years')]"))).click()
                     sleep(3)
                 except:
-                    print("Could not set time period to 10 years for Cash Flow valuation")
+                    print("Could not set time period to 10 years for Key Metrics Cash Flow")
                 
                 # Export data
                 export_clicked = False
@@ -1308,9 +1308,9 @@ def all_scraper(self, ticker_value, market_value):
                         data1 = excel_data_df.to_json()
                         database.child("valuation_cash_flow").set({"valuation_cash_flow": data1})
                         results['valuation_cash_flow'] = True
-                        print("✅ Valuation Cash Flow scraped successfully")
+                        print("✅ Key Metrics Cash Flow scraped successfully")
                     except Exception as e:
-                        print(f"❌ Error reading Valuation Cash Flow file: {e}")
+                        print(f"❌ Error reading Key Metrics Cash Flow file: {e}")
                         database.child("valuation_cash_flow").set({"valuation_cash_flow": '{"valuation_cash_flow":{"none":"no data"}}'})
                 else:
                     database.child("valuation_cash_flow").set({"valuation_cash_flow": '{"valuation_cash_flow":{"none":"no data"}}'})
@@ -1319,11 +1319,11 @@ def all_scraper(self, ticker_value, market_value):
             
             driver.quit()
         except Exception as e:
-            print(f"❌ Error scraping Valuation Cash Flow: {e}")
+            print(f"❌ Error scraping Key Metrics Cash Flow: {e}")
             database.child("valuation_cash_flow").set({"valuation_cash_flow": '{"valuation_cash_flow":{"none":"no data"}}'})
         
-        # 6. Scrape Valuation Growth
-        update_progress("Valuation Growth")
+        # 6. Scrape Key Metrics Growth
+        update_progress("Key Metrics Growth")
         try:
             driver = create_stealth_driver()
             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
@@ -1348,7 +1348,7 @@ def all_scraper(self, ticker_value, market_value):
                     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[contains(., '10 Years')]"))).click()
                     sleep(3)
                 except:
-                    print("Could not set time period to 10 years for Growth valuation")
+                    print("Could not set time period to 10 years for Key Metrics Growth")
                 
                 # Export data
                 export_clicked = False
@@ -1367,9 +1367,9 @@ def all_scraper(self, ticker_value, market_value):
                         data1 = excel_data_df.to_json()
                         database.child("valuation_growth").set({"valuation_growth": data1})
                         results['valuation_growth'] = True
-                        print("✅ Valuation Growth scraped successfully")
+                        print("✅ Key Metrics Growth scraped successfully")
                     except Exception as e:
-                        print(f"❌ Error reading Valuation Growth file: {e}")
+                        print(f"❌ Error reading Key Metrics Growth file: {e}")
                         database.child("valuation_growth").set({"valuation_growth": '{"valuation_growth":{"none":"no data"}}'})
                 else:
                     database.child("valuation_growth").set({"valuation_growth": '{"valuation_growth":{"none":"no data"}}'})
@@ -1378,11 +1378,11 @@ def all_scraper(self, ticker_value, market_value):
             
             driver.quit()
         except Exception as e:
-            print(f"❌ Error scraping Valuation Growth: {e}")
+            print(f"❌ Error scraping Key Metrics Growth: {e}")
             database.child("valuation_growth").set({"valuation_growth": '{"valuation_growth":{"none":"no data"}}'})
         
-        # 7. Scrape Valuation Financial Health
-        update_progress("Valuation Financial Health")
+        # 7. Scrape Key Metrics Financial Health
+        update_progress("Key Metrics Financial Health")
         try:
             driver = create_stealth_driver()
             driver.get(f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/key-metrics")
@@ -1407,7 +1407,7 @@ def all_scraper(self, ticker_value, market_value):
                     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//*[contains(., '10 Years')]"))).click()
                     sleep(3)
                 except:
-                    print("Could not set time period to 10 years for Financial Health valuation")
+                    print("Could not set time period to 10 years for Key Metrics Financial Health")
                 
                 # Export data
                 export_clicked = False
@@ -1426,9 +1426,9 @@ def all_scraper(self, ticker_value, market_value):
                         data1 = excel_data_df.to_json()
                         database.child("valuation_financial_health").set({"valuation_financial_health": data1})
                         results['valuation_financial_health'] = True
-                        print("✅ Valuation Financial Health scraped successfully")
+                        print("✅ Key Metrics Financial Health scraped successfully")
                     except Exception as e:
-                        print(f"❌ Error reading Valuation Financial Health file: {e}")
+                        print(f"❌ Error reading Key Metrics Financial Health file: {e}")
                         database.child("valuation_financial_health").set({"valuation_financial_health": '{"valuation_financial_health":{"none":"no data"}}'})
                 else:
                     database.child("valuation_financial_health").set({"valuation_financial_health": '{"valuation_financial_health":{"none":"no data"}}'})
@@ -1437,7 +1437,7 @@ def all_scraper(self, ticker_value, market_value):
             
             driver.quit()
         except Exception as e:
-            print(f"❌ Error scraping Valuation Financial Health: {e}")
+            print(f"❌ Error scraping Key Metrics Financial Health: {e}")
             database.child("valuation_financial_health").set({"valuation_financial_health": '{"valuation_financial_health":{"none":"no data"}}'})
         
         # Summary

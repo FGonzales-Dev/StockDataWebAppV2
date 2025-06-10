@@ -159,7 +159,7 @@ def scrape(request):
         if download_type == "INCOME_STATEMENT" or download_type == "BALANCE_SHEET" or download_type == "CASH_FLOW":
             task = scraper.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
-        elif download_type == "VALUATION_CASH_FLOW" or download_type == "VALUATION_GROWTH" or download_type == "VALUATION_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
+        elif download_type == "KEY_METRICS_CASH_FLOW" or download_type == "KEY_METRICS_GROWTH" or download_type == "KEY_METRICS_FINANCIAL_HEALTH" or download_type == "VALUATION_OPERATING_EFFICIENCY":
             task = scraper_valuation.delay(ticker_value=ticker_value, market_value=market_value, download_type=download_type)
             return render(request, "../templates/loadScreen.html",{ "download_type": download_type,"task_id": task.id, "task_stat": task.status})
         elif download_type =="DIVIDENDS":
@@ -221,7 +221,7 @@ def scrape(request):
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
-        elif download_type == "VALUATION_CASH_FLOW":
+        elif download_type == "KEY_METRICS_CASH_FLOW":
                 valuation_cash_flow_data = database.child('valuation_cash_flow').child('valuation_cash_flow').get().val()
                 valuation_cash_flow_data = json.loads(valuation_cash_flow_data)
                 print(valuation_cash_flow_data)
@@ -230,7 +230,7 @@ def scrape(request):
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
-        elif download_type == "VALUATION_GROWTH":
+        elif download_type == "KEY_METRICS_GROWTH":
                 valuation_growth_data = database.child('valuation_growth').child('valuation_growth').get().val()
                 valuation_growth_data = json.loads(valuation_growth_data)
                 print(valuation_growth_data)
@@ -239,7 +239,7 @@ def scrape(request):
                         response = HttpResponse(file, content_type='application/vnd.ms-excel')
                         response['Content-Disposition'] = 'attachment; filename=stockData.xlsx'   
                         return response
-        elif download_type == "VALUATION_FINANCIAL_HEALTH":
+        elif download_type == "KEY_METRICS_FINANCIAL_HEALTH":
                 valuation_financial_health_data = database.child('valuation_financial_health').child('valuation_financial_health').get().val()
                 valuation_financial_health_data = json.loads(valuation_financial_health_data)
                 print(valuation_financial_health_data)
@@ -317,44 +317,44 @@ def scrape(request):
                 except Exception as e:
                     print(f"❌ Error loading Dividends: {e}")
 
-                # VALUATION CASH FLOW
+                # KEY METRICS CASH FLOW
                 try:
                     valuation_cash_flow_data = database.child('valuation_cash_flow').child('valuation_cash_flow').get().val()
                     if valuation_cash_flow_data and valuation_cash_flow_data != '{"valuation_cash_flow":{"none":"no data"}}':
                         valuation_cash_flow_data = json.loads(valuation_cash_flow_data)
                         df5 = pd.DataFrame(valuation_cash_flow_data)
-                        dataframes['Valuation Cash Flow'] = df5
-                        print("✅ Valuation Cash Flow data loaded for ALL export")
+                        dataframes['Key Metrics Cash Flow'] = df5
+                        print("✅ Key Metrics Cash Flow data loaded for ALL export")
                     else:
-                        print("❌ No Valuation Cash Flow data available")
+                        print("❌ No Key Metrics Cash Flow data available")
                 except Exception as e:
-                    print(f"❌ Error loading Valuation Cash Flow: {e}")
+                    print(f"❌ Error loading Key Metrics Cash Flow: {e}")
 
-                # VALUATION GROWTH
+                # KEY METRICS GROWTH
                 try:
                     valuation_growth_data = database.child('valuation_growth').child('valuation_growth').get().val()
                     if valuation_growth_data and valuation_growth_data != '{"valuation_growth":{"none":"no data"}}':
                         valuation_growth_data = json.loads(valuation_growth_data)
                         df6 = pd.DataFrame(valuation_growth_data)
-                        dataframes['Valuation Growth'] = df6
-                        print("✅ Valuation Growth data loaded for ALL export")
+                        dataframes['Key Metrics Growth'] = df6
+                        print("✅ Key Metrics Growth data loaded for ALL export")
                     else:
-                        print("❌ No Valuation Growth data available")
+                        print("❌ No Key Metrics Growth data available")
                 except Exception as e:
-                    print(f"❌ Error loading Valuation Growth: {e}")
+                    print(f"❌ Error loading Key Metrics Growth: {e}")
 
-                # VALUATION FINANCIAL HEALTH
+                # KEY METRICS FINANCIAL HEALTH
                 try:
                     valuation_financial_health_data = database.child('valuation_financial_health').child('valuation_financial_health').get().val()
                     if valuation_financial_health_data and valuation_financial_health_data != '{"valuation_financial_health":{"none":"no data"}}':
                         valuation_financial_health_data = json.loads(valuation_financial_health_data)
                         df7 = pd.DataFrame(valuation_financial_health_data)
-                        dataframes['Valuation Financial Health'] = df7
-                        print("✅ Valuation Financial Health data loaded for ALL export")
+                        dataframes['Key Metrics Financial Health'] = df7
+                        print("✅ Key Metrics Financial Health data loaded for ALL export")
                     else:
-                        print("❌ No Valuation Financial Health data available")
+                        print("❌ No Key Metrics Financial Health data available")
                 except Exception as e:
-                    print(f"❌ Error loading Valuation Financial Health: {e}")
+                    print(f"❌ Error loading Key Metrics Financial Health: {e}")
 
                 # Create comprehensive Excel file with all available data
                 if dataframes:
