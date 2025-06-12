@@ -26,7 +26,7 @@
 - 🌐 **Web Interface**: User-friendly HTML interface for manual data retrieval
 - 📈 **Export Options**: Excel file downloads with comprehensive data formatting
 - 🔓 **Open Access**: Public API endpoints without authentication requirements
-- 🚀 **Cloud Deployment**: Optimized for Fly.io container platform
+- 🚀 **Cloud Deployment**: Optimized for DigitalOcean container platform
 
 ---
 
@@ -45,7 +45,7 @@ graph TB
     end
     
     subgraph "Load Balancer"
-        FLY[Fly.io Load Balancer]
+        FLY[DigitalOcean Load Balancer]
     end
     
     subgraph "Application Layer"
@@ -120,7 +120,7 @@ graph TB
 - **HTML5/CSS3/JavaScript**: Frontend technologies
 
 ### Deployment & Infrastructure
-- **Fly.io**: Container hosting platform
+- **DigitalOcean**: Container hosting platform
 - **Docker**: Containerization
 - **GitHub**: Version control and CI/CD
 
@@ -156,7 +156,7 @@ StockDataWebAppV2/
 │   └── 📄 asgi.py                    # ASGI application
 │
 ├── 📄 Dockerfile                     # Container configuration
-├── 📄 fly.toml                       # Fly.io deployment config
+├── 📄 fly.toml                       # DigitalOcean deployment config
 ├── 📄 requirements.txt               # Python dependencies
 ├── 📄 manage.py                      # Django management script
 ├── 📄 scraper_config.py              # Scraping configuration
@@ -390,7 +390,7 @@ graph LR
 
 ## Deployment Architecture
 
-### Fly.io Container Configuration
+### DigitalOcean Container Configuration
 
 ```mermaid
 graph TB
@@ -398,12 +398,12 @@ graph TB
         USERS[Users Worldwide]
     end
     
-    subgraph "Fly.io Edge Network"
+    subgraph "DigitalOcean Edge Network"
         LB[Global Load Balancer]
         CDN[Edge Caching]
     end
     
-    subgraph "Fly.io Data Center"
+    subgraph "DigitalOcean Data Center"
         subgraph "Web Machines"
             WEB1[Web Instance 1<br/>Django + Gunicorn]
             WEB2[Web Instance 2<br/>Django + Gunicorn]
@@ -457,7 +457,7 @@ graph TB
 ### 1. Web Interface Usage
 
 #### Step-by-Step Process:
-1. **Navigate** to `https://stockdata-scraper.fly.dev/`
+1. **Navigate** to `YOUR_DOMAIN_HERE/`
 2. **Select** data type from dropdown (Income Statement, Balance Sheet, etc.)
 3. **Enter** ticker symbol (e.g., "AAPL")
 4. **Choose** market (e.g., "XNAS")
@@ -469,7 +469,7 @@ graph TB
 
 #### Income Statement API Call:
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=is"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=is"
 ```
 
 **Response:**
@@ -489,12 +489,12 @@ curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&ma
 
 #### Balance Sheet API Call:
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=TSLA&market=XNAS&type=bs"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=TSLA&market=XNAS&type=bs"
 ```
 
 #### Cash Flow API Call:
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=MSFT&market=XNAS&type=cf"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=MSFT&market=XNAS&type=cf"
 ```
 
 ### 3. Python Integration Example
@@ -505,7 +505,7 @@ import json
 import time
 
 class StockDataAPI:
-    BASE_URL = "https://stockdata-scraper.fly.dev"
+    BASE_URL = "YOUR_DOMAIN_HERE"
     
     def get_financial_statement(self, ticker, market, statement_type):
         """

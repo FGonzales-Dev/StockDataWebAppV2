@@ -73,13 +73,13 @@ def financial_statements_json(request):
 ### ✅ Validation Tests Passed
 1. **Invalid Type Parameter**:
    ```bash
-   curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=invalid"
+   curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=invalid"
    # Returns: {"error": "Invalid type parameter. Use: is (income statement), bs (balance sheet), cf (cash flow)"}
    ```
 
 2. **Missing Parameters**:
    ```bash
-   curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL"
+   curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL"
    # Returns: {"error": "Missing required parameters: ticker, market, type"}
    ```
 
@@ -87,8 +87,8 @@ def financial_statements_json(request):
 
 ## Deployment Status
 
-### ✅ Successfully Deployed to Fly.io
-- **URL**: `https://stockdata-scraper.fly.dev/financial-statements-json`
+### ✅ Successfully Deployed to DigitalOcean
+- **URL**: `YOUR_DOMAIN_HERE/financial-statements-json`
 - **Status**: Live and functional
 - **Access**: Open to all users worldwide
 - **Performance**: Same Celery-based async processing as before
@@ -118,17 +118,17 @@ def financial_statements_json(request):
 
 ### Income Statement
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=is"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=is"
 ```
 
 ### Balance Sheet
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=bs"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=bs"
 ```
 
 ### Cash Flow Statement
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=cf"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=cf"
 ```
 
 ## Migration Checklist

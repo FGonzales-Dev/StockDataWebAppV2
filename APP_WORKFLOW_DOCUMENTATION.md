@@ -180,7 +180,7 @@ JSON Response ← Data Formatting ← Scraping Complete ← Browser Automation
 
 **API Request Example**:
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=is"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=is"
 ```
 
 **Processing Steps**:

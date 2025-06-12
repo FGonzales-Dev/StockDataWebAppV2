@@ -37,7 +37,7 @@ A new REST API endpoint has been created that allows users to scrape and retriev
 - **Task Queue**: Celery with Redis/RabbitMQ
 - **Web Scraping**: Selenium WebDriver with Chrome
 - **Database**: Firebase Realtime Database
-- **Deployment**: Fly.io container platform
+- **Deployment**: DigitalOcean container platform
 
 ### Code Structure
 
@@ -109,17 +109,17 @@ The implementation leverages existing infrastructure:
 
 ### Income Statement
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=is"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=is"
 ```
 
 ### Balance Sheet
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=bs"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=bs"
 ```
 
 ### Cash Flow Statement
 ```bash
-curl "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=cf"
+curl "YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=cf"
 ```
 
 ## Features
@@ -167,7 +167,7 @@ python test_financial_statements_endpoint.py
 ## Deployment
 
 ### Current Status
-- ✅ Deployed to Fly.io at `https://stockdata-scraper.fly.dev`
+- ✅ Deployed to DigitalOcean at `YOUR_DOMAIN_HERE`
 - ✅ All dependencies installed and configured
 - ✅ Celery worker processes running
 - ✅ Firebase database connected
@@ -175,7 +175,7 @@ python test_financial_statements_endpoint.py
 ### Production Configuration
 - **Container**: Docker with Chrome and ChromeDriver
 - **Scaling**: 2 web machines + 1 worker machine
-- **Monitoring**: Fly.io built-in monitoring and logs
+- **Monitoring**: DigitalOcean built-in monitoring and logs
 
 ## Integration Points
 

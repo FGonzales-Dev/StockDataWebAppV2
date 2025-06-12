@@ -1,4 +1,4 @@
-# Fly.io optimized Dockerfile for Stock Data Web App
+# Dockerfile for Stock Data Web App
 FROM python:3.11-slim
 
 # Set environment variables
@@ -7,16 +7,15 @@ ENV PYTHONUNBUFFERED=1
 ENV CHROME_BIN=/usr/bin/google-chrome-stable
 ENV CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
 ENV DISPLAY=:99
-ENV FLY_ENVIRONMENT=true
 
-# Fly.io memory optimization
+# Memory optimization
 ENV MALLOC_ARENA_MAX=2
 ENV NODE_OPTIONS="--max-old-space-size=512"
 
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies optimized for Fly.io
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \

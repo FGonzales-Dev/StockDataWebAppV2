@@ -115,9 +115,8 @@ def create_stealth_driver():
     options = uc.ChromeOptions()
     
     # Detect environment
-    IS_FLY = os.environ.get('FLY_ENVIRONMENT') or os.environ.get('FLY_APP_NAME')
     IS_RAILWAY = os.environ.get('RAILWAY_ENVIRONMENT')
-    IS_PRODUCTION = IS_FLY or IS_RAILWAY
+    IS_PRODUCTION = os.environ.get('PRODUCTION') or IS_RAILWAY
     
     # Ensure download directory exists
     download_path = BASE_DIR + DOWNLOAD_DIRECTORY
@@ -127,7 +126,7 @@ def create_stealth_driver():
     
     # Container-specific Chrome options for production deployment
     if IS_PRODUCTION:
-        print(f"🚀 Production environment detected: {'Fly.io' if IS_FLY else 'Railway' if IS_RAILWAY else 'Unknown'}")
+        print(f"🚀 Production environment detected: {'Railway' if IS_RAILWAY else 'Production'}")
         # Essential container flags
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
@@ -154,10 +153,7 @@ def create_stealth_driver():
         options.add_argument("--disable-popup-blocking")
         
         # Resource limits
-        if IS_FLY:
-            options.add_argument("--max_old_space_size=1024")  # 1GB for Fly.io
-        else:
-            options.add_argument("--max_old_space_size=512")   # 512MB for Railway
+        options.add_argument("--max_old_space_size=512")   # 512MB for production
         
         # Shared memory size
         options.add_argument("--shm-size=1gb")
@@ -260,13 +256,12 @@ def create_stealth_driver():
 @shared_task(bind=True)
 def scraper(self,ticker_value,market_value,download_type):
     # Production debugging
-    IS_FLY = os.environ.get('FLY_ENVIRONMENT') or os.environ.get('FLY_APP_NAME')
-    IS_PRODUCTION = IS_FLY or os.environ.get('RAILWAY_ENVIRONMENT')
+    IS_PRODUCTION = os.environ.get('PRODUCTION') or os.environ.get('RAILWAY_ENVIRONMENT')
     
     # Create ticker-specific database key
     db_key_prefix = f"{ticker_value}_{market_value}"
     
-    print(f"[DEBUG] Environment - IS_FLY: {IS_FLY}, IS_PRODUCTION: {IS_PRODUCTION}")
+    print(f"[DEBUG] Environment - IS_PRODUCTION: {IS_PRODUCTION}")
     print(f"[DEBUG] Scraping for ticker: {ticker_value}, market: {market_value}")
     print(f"[DEBUG] Database key prefix: {db_key_prefix}")
     print(f"[DEBUG] BASE_DIR: {BASE_DIR}")

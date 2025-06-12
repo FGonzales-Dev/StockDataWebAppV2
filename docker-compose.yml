@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "80:8000"
+    environment:
+      - PRODUCTION=true
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=sqlite:///app/db.sqlite3
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+    volumes:
+      - ./data:/app/data
+      - ./db.sqlite3:/app/db.sqlite3
+    depends_on:
+      - redis
+    restart: unless-stopped
+      
+  worker:
+    build: .
+    command: celery -A stock_scraper worker -l info --concurrency=1
+    environment:
+      - PRODUCTION=true
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=sqlite:///app/db.sqlite3
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+    volumes:
+      - ./data:/app/data
+      - ./db.sqlite3:/app/db.sqlite3
+    depends_on:
+      - redis
+    restart: unless-stopped
+      
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data: 

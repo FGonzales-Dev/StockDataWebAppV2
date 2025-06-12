@@ -106,18 +106,18 @@ def analyze_resource_usage(log_file_path='resource_usage.log'):
     else:
         print("   🟢 CPU USAGE LOOKS EFFICIENT")
     
-    # Fly.io recommendations
-    print(f"\n✈️ FLY.IO MACHINE RECOMMENDATIONS:")
+    # Server recommendations
+    print(f"\n🖥️ SERVER RESOURCE RECOMMENDATIONS:")
     max_memory = max(all_memory)
     
     if max_memory <= 256:
-        print("   📱 shared-cpu-1x + 256MB RAM (~$1.94/month) should be sufficient")
+        print("   📱 512MB RAM server should be sufficient")
     elif max_memory <= 512:
-        print("   📱 shared-cpu-1x + 512MB RAM (~$5.70/month) recommended")
+        print("   📱 1GB RAM server recommended")
     elif max_memory <= 1024:
-        print("   💻 shared-cpu-1x + 1GB RAM (~$8.19/month) recommended")
+        print("   💻 2GB RAM server recommended")
     else:
-        print("   💻 shared-cpu-2x + additional RAM may be needed")
+        print("   💻 4GB+ RAM server may be needed")
         print(f"      Peak usage: {max_memory:.2f}MB")
 
 def main():

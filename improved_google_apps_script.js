@@ -49,7 +49,7 @@ function ImportJSONAdvancedImportStockHistory(url, market, type, fetchOptions, q
       });
     }
     
-    var apiUrl = "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=" + url + "&market=" + market + "&type=" + type;
+    var apiUrl = "YOUR_DOMAIN_HERE/financial-statements-json?ticker=" + url + "&market=" + market + "&type=" + type;
     console.log("Making API request to: " + apiUrl);
     
     // Single attempt with timeout handling - no retries to avoid script timeout
@@ -149,7 +149,7 @@ function ImportStockHistoryFast(url, market, type, query, parseOptions) {
       'headers': {'User-Agent': 'GoogleSheets/Fast/1.0'}
     };
     
-    var apiUrl = "https://stockdata-scraper.fly.dev/financial-statements-json?ticker=" + url + "&market=" + market + "&type=" + type;
+    var apiUrl = "YOUR_DOMAIN_HERE/financial-statements-json?ticker=" + url + "&market=" + market + "&type=" + type;
     var jsondata = UrlFetchApp.fetch(apiUrl, options);
     
     var responseCode = jsondata.getResponseCode();
@@ -185,7 +185,7 @@ function ImportStockHistoryFast(url, market, type, query, parseOptions) {
 // QUICK API STATUS CHECK
 function checkAPIStatusFast() {
   try {
-    var response = UrlFetchApp.fetch("https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=is", {
+    var response = UrlFetchApp.fetch("YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=is", {
       'muteHttpExceptions': true,
       'method': 'GET'
     });
@@ -208,7 +208,7 @@ function checkAPIStatusFast() {
 // ORIGINAL API STATUS CHECK (DETAILED)
 function checkAPIStatus() {
   try {
-    var response = UrlFetchApp.fetch("https://stockdata-scraper.fly.dev/financial-statements-json?ticker=AAPL&market=XNAS&type=is", {
+    var response = UrlFetchApp.fetch("YOUR_DOMAIN_HERE/financial-statements-json?ticker=AAPL&market=XNAS&type=is", {
       'muteHttpExceptions': true,
       'method': 'GET'
     });
