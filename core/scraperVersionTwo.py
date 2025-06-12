@@ -46,7 +46,6 @@ import csv
 import pandas as pd
 from json import loads
 import requests
-from time import *
 from time import sleep
 import glob
 from django.http import JsonResponse
@@ -275,6 +274,12 @@ def monitor_scraping_resources(func):
 
 @monitor_scraping_resources
 def scrape(request):
+    # Handle GET requests (homepage visits) vs POST requests (form submissions)
+    if request.method == 'GET':
+        # Show the main form page for GET requests
+        return render(request, "../templates/stockData.html")
+    
+    # Handle POST requests (form submissions)
     clear_selenium_directory()
 
     ticker_value =  request.POST.get("ticker", "")
