@@ -1,4 +1,4 @@
-# Fly.io configuration for Stock Data Web App
+# Fly.io configuration for Stock Data Web App - Single Machine Optimized
 app = "stockdata-scraper"
 primary_region = "sjc"  # San Jose (close to stock markets)
 
@@ -14,7 +14,7 @@ primary_region = "sjc"  # San Jose (close to stock markets)
   CHROME_BIN = "/usr/bin/google-chrome-stable"
   CHROMEDRIVER_PATH = "/usr/local/bin/chromedriver"
   
-  # Memory optimization
+  # Memory optimization for smaller machine
   MALLOC_ARENA_MAX = "2"
   
   # Fly.io environment detection
@@ -25,18 +25,19 @@ primary_region = "sjc"  # San Jose (close to stock markets)
   force_https = true
   auto_stop_machines = false  # Keep running for background tasks
   auto_start_machines = true
-  min_machines_running = 1
-  processes = ["web"]  # Only web process handles HTTP
+  min_machines_running = 1    # Exactly 1 machine minimum
+  max_machines_running = 1    # Maximum 1 machine (prevents scaling)
+  processes = ["web"]         # Only web process
   
   [http_service.concurrency]
     type = "requests"
-    hard_limit = 25    # Conservative for 2GB RAM
-    soft_limit = 20
+    hard_limit = 15    # Reduced for 512MB RAM
+    soft_limit = 10    # Reduced for 512MB RAM
 
 [[vm]]
-  size = "shared-cpu-2x"  # 2GB RAM, $3.88/month
-  memory = "2gb"
+  size = "shared-cpu-1x"      # Reduced from shared-cpu-2x
+  memory = "512mb"            # Reduced from 2gb
 
+# Simplified processes - back to separate but limited machines
 [processes]
-  web = "gunicorn --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120 --max-requests 100 stock_scraper.wsgi:application"
-  worker = "celery -A stock_scraper worker --loglevel=info --concurrency=1" 
+  web = "gunicorn --bind 0.0.0.0:8000 --workers 1 --threads 2 --timeout 120 --max-requests 100 stock_scraper.wsgi:application" 

@@ -1,6 +1,7 @@
 from xml.etree.ElementInclude import include
 from django.urls import path
-from core import historicalData, scraperVersionTwo, views
+from django.views.generic import TemplateView
+from core import historicalData, scraperVersionTwo, views, monitoring_views
 
 urlpatterns = [
     path('stock/<data_param>/', views.home, name='home'),
@@ -27,10 +28,14 @@ urlpatterns = [
     path('stock_history_key_ratio_json', historicalData.stock_history_key_ratio_json, name='home'),
     ######TEST FOR JSON#######
     path('stock_history_json', historicalData.stock_history_json, name='home'),
+    # New financial statements JSON endpoint (Open Access)
+    path('financial-statements-json', scraperVersionTwo.financial_statements_json, name='financial_statements_json'),
     
-
-      
- 
+    # Resource monitoring endpoints
+    path('monitoring/system-status/', monitoring_views.system_status, name='system_status'),
+    path('monitoring/history/', monitoring_views.resource_usage_history, name='resource_usage_history'),
+    path('monitoring/alerts/', monitoring_views.resource_alerts, name='resource_alerts'),
+    path('monitoring/dashboard/', TemplateView.as_view(template_name='monitoring_dashboard.html'), name='monitoring_dashboard'),
 
     ######TEST FOR JSON#######
 ]

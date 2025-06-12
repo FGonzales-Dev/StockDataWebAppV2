@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Monitoring Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric {
+            display: inline-block;
+            margin: 10px 20px 10px 0;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .status-good { color: #28a745; }
+        .status-warning { color: #ffc107; }
+        .status-critical { color: #dc3545; }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .refresh-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .refresh-btn:hover {
+            background: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        .alert {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .alert-critical {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Resource Monitoring Dashboard</h1>
+        
+        <button class="refresh-btn" onclick="refreshData()">🔄 Refresh Data</button>
+        
+        <!-- Current Status -->
+        <div class="card">
+            <h2>📊 Current System Status</h2>
+            <div id="current-status">
+                <div class="metric">
+                    <div class="metric-label">Process Memory</div>
+                    <div class="metric-value" id="process-memory">-- MB</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">System CPU</div>
+                    <div class="metric-value" id="system-cpu">--%</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">System Memory</div>
+                    <div class="metric-value" id="system-memory">--%</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Disk Usage</div>
+                    <div class="metric-value" id="disk-usage">--%</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <label>Memory Usage:</label>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="memory-progress" style="width: 0%; background-color: #28a745;"></div>
+                </div>
+                
+                <label>CPU Usage:</label>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cpu-progress" style="width: 0%; background-color: #17a2b8;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerts -->
+        <div class="card">
+            <h2>⚠️ Resource Alerts</h2>
+            <div id="alerts-container">
+                <p>No alerts at this time ✅</p>
+            </div>
+        </div>
+        
+        <!-- Recent Operations -->
+        <div class="card">
+            <h2>📈 Recent Scraping Operations</h2>
+            <div id="recent-operations">
+                <p>Loading recent operations...</p>
+            </div>
+        </div>
+        
+        <!-- Fly.io Recommendations -->
+        <div class="card">
+            <h2>✈️ Fly.io Cost Optimization</h2>
+            <div id="flyio-recommendations">
+                <p>Analyzing usage patterns...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+        
+        // Initial load
+        refreshData();
+        
+        async function refreshData() {
+            try {
+                await Promise.all([
+                    updateCurrentStatus(),
+                    updateAlerts(),
+                    updateRecentOperations()
+                ]);
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }
+        
+        async function updateCurrentStatus() {
+            try {
+                const response = await fetch('/monitoring/system-status/');
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('current-status').innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                // Update metrics
+                document.getElementById('process-memory').textContent = data.process.memory_mb + ' MB';
+                document.getElementById('system-cpu').textContent = data.system.cpu_percent + '%';
+                document.getElementById('system-memory').textContent = data.system.memory.percent + '%';
+                document.getElementById('disk-usage').textContent = data.system.disk.percent + '%';
+                
+                // Update progress bars
+                const memoryProgress = document.getElementById('memory-progress');
+                const cpuProgress = document.getElementById('cpu-progress');
+                
+                memoryProgress.style.width = data.system.memory.percent + '%';
+                cpuProgress.style.width = data.system.cpu_percent + '%';
+                
+                // Color coding
+                if (data.system.memory.percent > 80) {
+                    memoryProgress.style.backgroundColor = '#dc3545';
+                } else if (data.system.memory.percent > 60) {
+                    memoryProgress.style.backgroundColor = '#ffc107';
+                } else {
+                    memoryProgress.style.backgroundColor = '#28a745';
+                }
+                
+                if (data.system.cpu_percent > 80) {
+                    cpuProgress.style.backgroundColor = '#dc3545';
+                } else if (data.system.cpu_percent > 60) {
+                    cpuProgress.style.backgroundColor = '#ffc107';
+                } else {
+                    cpuProgress.style.backgroundColor = '#17a2b8';
+                }
+                
+            } catch (error) {
+                console.error('Error updating current status:', error);
+            }
+        }
+        
+        async function updateAlerts() {
+            try {
+                const response = await fetch('/monitoring/alerts/');
+                const data = await response.json();
+                
+                const alertsContainer = document.getElementById('alerts-container');
+                
+                if (data.alerts && data.alerts.length > 0) {
+                    alertsContainer.innerHTML = '';
+                    data.alerts.forEach(alert => {
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = `alert alert-${alert.level}`;
+                        alertDiv.innerHTML = `
+                            <strong>${alert.type.toUpperCase()}:</strong> ${alert.message}<br>
+                            <small>${alert.recommendation}</small>
+                        `;
+                        alertsContainer.appendChild(alertDiv);
+                    });
+                } else {
+                    alertsContainer.innerHTML = '<p>No alerts at this time ✅</p>';
+                }
+                
+            } catch (error) {
+                console.error('Error updating alerts:', error);
+            }
+        }
+        
+        async function updateRecentOperations() {
+            try {
+                const response = await fetch('/monitoring/history/');
+                const data = await response.json();
+                
+                const container = document.getElementById('recent-operations');
+                
+                if (data.operations && data.operations.length > 0) {
+                    let html = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Operation</th>
+                                    <th>Duration (s)</th>
+                                    <th>Peak Memory (MB)</th>
+                                    <th>Peak CPU (%)</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.operations.slice(0, 10).forEach(op => {
+                        const timestamp = new Date(op.timestamp).toLocaleString();
+                        html += `
+                            <tr>
+                                <td>${op.operation}</td>
+                                <td>${op.duration_seconds}</td>
+                                <td>${op.peak_memory_mb}</td>
+                                <td>${op.peak_cpu_percent}</td>
+                                <td>${timestamp}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                    
+                    // Add Fly.io recommendations
+                    updateFlyioRecommendations(data.operations);
+                    
+                } else {
+                    container.innerHTML = '<p>No operations recorded yet. Run some scraping operations to see data.</p>';
+                }
+                
+            } catch (error) {
+                console.error('Error updating recent operations:', error);
+                document.getElementById('recent-operations').innerHTML = '<p>Error loading operations data.</p>';
+            }
+        }
+        
+        function updateFlyioRecommendations(operations) {
+            if (!operations || operations.length === 0) {
+                document.getElementById('flyio-recommendations').innerHTML = '<p>Run some operations to get recommendations.</p>';
+                return;
+            }
+            
+            const maxMemory = Math.max(...operations.map(op => op.peak_memory_mb));
+            const avgMemory = operations.reduce((sum, op) => sum + op.peak_memory_mb, 0) / operations.length;
+            
+            let recommendation = '';
+            let cost = '';
+            
+            if (maxMemory <= 256) {
+                recommendation = 'shared-cpu-1x + 256MB RAM';
+                cost = '~$1.94/month';
+            } else if (maxMemory <= 512) {
+                recommendation = 'shared-cpu-1x + 512MB RAM';
+                cost = '~$5.70/month';
+            } else if (maxMemory <= 1024) {
+                recommendation = 'shared-cpu-1x + 1GB RAM';
+                cost = '~$8.19/month';
+            } else {
+                recommendation = 'shared-cpu-2x + additional RAM';
+                cost = '$10+ /month';
+            }
+            
+            const currentCost = '$15.03/month';
+            const savings = maxMemory <= 512 ? 'Save $9-13/month!' : 'Optimize for better performance';
+            
+            document.getElementById('flyio-recommendations').innerHTML = `
+                <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; border-left: 4px solid #007bff;">
+                    <h4>💡 Recommendation for your usage:</h4>
+                    <p><strong>Peak Memory Usage:</strong> ${maxMemory.toFixed(2)} MB</p>
+                    <p><strong>Average Memory Usage:</strong> ${avgMemory.toFixed(2)} MB</p>
+                    <p><strong>Recommended Machine:</strong> ${recommendation}</p>
+                    <p><strong>Estimated Cost:</strong> ${cost}</p>
+                    <p><strong>Current Cost:</strong> ${currentCost}</p>
+                    <p style="color: #28a745; font-weight: bold;">${savings}</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 

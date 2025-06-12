@@ -40,6 +40,7 @@ from .models import APIRequest
 from register.models import Profile
 from django.contrib.auth.models import User
 
+
 # Import scraper configuration
 try:
     from scraper_config import *
@@ -636,3 +637,5 @@ def stock_history_key_ratio_json(request):
             return HttpResponse(pretty_json, content_type='text/json')
         else:
             return HttpResponse("REGISTER TO SEE DATA", content_type='text/json')
+
+

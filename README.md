@@ -208,3 +208,42 @@ Based on code analysis, the following packages may not be actively used and coul
 
 **Clear pip cache**
 - pip cache purge
+
+## New Financial Statements JSON API
+
+### Endpoint: `/financial-statements-json`
+
+This endpoint allows you to scrape and retrieve financial statement data in JSON format.
+
+#### Parameters:
+- `ticker` (required): Stock ticker symbol (e.g., "AAPL")
+- `market` (required): Market code (e.g., "XNAS")
+- `type` (required): Financial statement type:
+  - `is` = Income Statement
+  - `bs` = Balance Sheet  
+  - `cf` = Cash Flow Statement
+
+#### Example Usage:
+
+```
+# Income Statement
+GET /financial-statements-json?ticker=AAPL&market=XNAS&type=is
+
+# Balance Sheet
+GET /financial-statements-json?ticker=AAPL&market=XNAS&type=bs
+
+# Cash Flow Statement
+GET /financial-statements-json?ticker=AAPL&market=XNAS&type=cf
+```
+
+#### Response Format:
+- **Success**: JSON object containing the financial statement data
+- **Error**: JSON object with error message and appropriate HTTP status code
+
+#### Features:
+- **Open Access**: No API key required - accessible to all users
+- Uses Celery background tasks for efficient scraping
+- 2-minute timeout protection
+- Comprehensive error handling
+- API request logging with location tracking
+- Data validation and cleaning
