@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ScrapingConfig:
     """Configuration for scraping operations"""
-    show_browser: bool = False
+    show_browser: bool = True
     element_wait_timeout: int = 30
     download_directory: str = "/selenium"
     browser_width: int = 1920
