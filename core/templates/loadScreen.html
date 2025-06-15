@@ -301,16 +301,30 @@
     <!-- Form (Hidden) -->
     <form method="POST">
       {% csrf_token %}
-      <input type="text" name="download_type" value="{{download_type}}" class="hidden-input" />
-      <input type="text" name="task_id" value="{{task_id}}" class="hidden-input" />
+      <input type="hidden" name="ticker" value="{{ticker}}" />
+      <input type="hidden" name="market" value="{{market}}" />
+      <input type="hidden" name="download_type" value="{{download_type}}" />
+      <input type="hidden" name="task_id" value="{{task_id}}" />
       
       <!-- Success Section -->
       <div id="success-section" class="success-section">
         <div class="success-icon">
           <i class="fas fa-check-circle"></i>
         </div>
-        <h3 class="title">Data Ready!</h3>
-        <p class="subtitle">Your stock data has been successfully processed</p>
+        <h3 class="title">
+          {% if data_already_exists %}
+            Data Already Available!
+          {% else %}
+            Data Ready!
+          {% endif %}
+        </h3>
+        <p class="subtitle">
+          {% if data_already_exists %}
+            Your {{ticker}} ({{market}}) {{download_type}} data was previously scraped{% if scraped_at %} on {{scraped_at}}{% endif %} and is ready for download
+          {% else %}
+            Your {{ticker}} ({{market}}) {{download_type}} data has been successfully processed
+          {% endif %}
+        </p>
         <button type="submit" name="download" class="download-btn">
           <i class="fas fa-download me-2"></i>
           Download Excel File
@@ -363,10 +377,15 @@
 
   <script>
     const taskId = '{{task_id}}';
+    const firestoreMode = {% if firestore_mode %}true{% else %}false{% endif %};
+    const dataAlreadyExists = {% if data_already_exists %}true{% else %}false{% endif %};
     let pollInterval;
     let retryCount = 0;
     const maxRetries = 3;
     let progressValue = 0;
+
+    // Determine the correct endpoint based on mode
+    const taskInfoEndpoint = firestoreMode ? '/firestore/get_task_info/' : '/get_task_info/';
 
     // Status icons mapping
     const statusIcons = {
@@ -403,7 +422,7 @@
         return;
       }
 
-      fetch(`/get_task_info/?task_id=${taskId}`)
+      fetch(`${taskInfoEndpoint}?task_id=${taskId}`)
         .then(response => {
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -416,13 +435,20 @@
           
           const statusMessage = document.getElementById('status-message');
           const icon = statusIcons[data.state] || 'fas fa-info-circle';
-          const message = statusMessages[data.state] || `Task status: ${data.state}`;
+          
+          // Use custom message if available, otherwise use default
+          let message = data.message || statusMessages[data.state] || `Task status: ${data.state}`;
           
           statusMessage.innerHTML = `<i class="${icon} me-2"></i>${message}`;
           
           // Update progress for active states
           if (data.state === 'STARTED' || data.state === 'PROGRESS') {
             updateProgress();
+          }
+          
+          // Handle progress bar updates
+          if (data.progress !== undefined) {
+            document.getElementById('progress-bar').style.width = data.progress + '%';
           }
           
           switch(data.state) {
@@ -434,7 +460,7 @@
               }, 500);
               break;
             case 'FAILURE':
-              showErrorMessage(data.result || 'Unknown error occurred');
+              showErrorMessage(data.error || data.result || 'Unknown error occurred');
               clearInterval(pollInterval);
               break;
             case 'REVOKED':
@@ -442,7 +468,7 @@
               clearInterval(pollInterval);
               break;
             case 'ERROR':
-              showErrorMessage(data.result || 'Error checking task status');
+              showErrorMessage(data.error || data.result || 'Error checking task status');
               clearInterval(pollInterval);
               break;
           }
@@ -488,7 +514,13 @@
     }
 
     // Start polling when page loads
-    if (taskId) {
+    if (dataAlreadyExists) {
+      // Data already exists, show success section immediately
+      console.log('Data already exists, showing success section immediately');
+      setTimeout(() => {
+        showSuccessSection();
+      }, 100);
+    } else if (taskId) {
       // Check immediately
       checkTaskStatus();
       

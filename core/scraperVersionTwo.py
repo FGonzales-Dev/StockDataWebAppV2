@@ -23,8 +23,6 @@ import openpyxl
 from openpyxl import workbook
 from openpyxl.styles import *
 
-
-from core.views import get_balance_sheet
 from requests.structures import CaseInsensitiveDict
 from selenium import webdriver
 from selenium.webdriver.common.by import By
