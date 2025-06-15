@@ -459,4 +459,147 @@ def direct_scrape_firestore(request):
         logger.error(f"Error in direct scrape: {str(e)}")
         return JsonResponse({
             'error': f'Error during scraping: {str(e)}'
+        }, status=500)
+
+@csrf_exempt
+def api_stock_data_firestore(request, ticker, market, data_type_param):
+    """
+    API endpoint to get specific stock data from Firestore or trigger scraping
+    URL format: /api/stock/{ticker}/{market}/{data_type}/
+    
+    Data type parameters:
+    - financialincomestatement -> INCOME_STATEMENT
+    - financialbalancesheet -> BALANCE_SHEET
+    - financialcashflow -> CASH_FLOW
+    - dividends -> DIVIDENDS
+    - keymetricscashflow -> KEY_METRICS_CASH_FLOW
+    - keymetricsgrowth -> KEY_METRICS_GROWTH
+    - keymetricsfinancialhealth -> KEY_METRICS_FINANCIAL_HEALTH
+    """
+    
+    # Normalize inputs
+    ticker = ticker.upper()
+    market = market.upper()
+    
+    # Map URL parameter to DataType enum
+    data_type_mapping = {
+        'financialincomestatement': DataType.INCOME_STATEMENT,
+        'financialbalancesheet': DataType.BALANCE_SHEET,
+        'financialcashflow': DataType.CASH_FLOW,
+        'dividends': DataType.DIVIDENDS,
+        'keymetricscashflow': DataType.KEY_METRICS_CASH_FLOW,
+        'keymetricsgrowth': DataType.KEY_METRICS_GROWTH,
+        'keymetricsfinancialhealth': DataType.KEY_METRICS_FINANCIAL_HEALTH
+    }
+    
+    data_type_param_lower = data_type_param.lower()
+    if data_type_param_lower not in data_type_mapping:
+        return JsonResponse({
+            'error': f'Invalid data type: {data_type_param}',
+            'valid_types': list(data_type_mapping.keys())
+        }, status=400)
+    
+    data_type = data_type_mapping[data_type_param_lower]
+    
+    try:
+        storage = get_storage()
+        
+        # Check if data already exists
+        existing_data = storage.check_data_exists(ticker, market, data_type)
+        
+        if existing_data and existing_data['status'] == 'DONE':
+            # Return existing data
+            data_json = existing_data['data']
+            if isinstance(data_json, str):
+                try:
+                    data_json = json.loads(data_json)
+                except json.JSONDecodeError:
+                    logger.warning(f"Could not parse stored JSON for {ticker} {market} {data_type.value}")
+            
+            return JsonResponse({
+                'status': 'success',
+                'source': 'existing_data',
+                'ticker': ticker,
+                'market': market,
+                'data_type': data_type.value,
+                'scraped_at': existing_data['scraped_at'].isoformat(),
+                'data': data_json
+            })
+        
+        # Data doesn't exist, trigger scraping
+        logger.info(f"No existing data for {ticker} {market} {data_type.value} - starting scrape")
+        
+        # Trigger appropriate scraper based on data type
+        if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
+            from .tasks_firestore import scrape_financial_statement_firestore
+            result = scrape_financial_statement_firestore(ticker, market, data_type)
+        elif data_type == DataType.DIVIDENDS:
+            # For dividends, we need to implement a sync version
+            result = scrape_dividends_direct(ticker, market)
+        elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+            # For key metrics, we need to implement a sync version
+            result = scrape_key_metrics_direct(ticker, market, data_type)
+        else:
+            return JsonResponse({
+                'error': f'Scraping not implemented for {data_type.value}'
+            }, status=501)
+        
+        if result == 'EXISTING':
+            # Data was found during scraping (race condition)
+            new_data = storage.check_data_exists(ticker, market, data_type)
+            data_json = new_data['data']
+            if isinstance(data_json, str):
+                try:
+                    data_json = json.loads(data_json)
+                except json.JSONDecodeError:
+                    pass
+            
+            return JsonResponse({
+                'status': 'success',
+                'source': 'existing_data',
+                'ticker': ticker,
+                'market': market,
+                'data_type': data_type.value,
+                'scraped_at': new_data['scraped_at'].isoformat(),
+                'data': data_json
+            })
+        
+        elif result == 'DONE':
+            # Successfully scraped new data
+            new_data = storage.check_data_exists(ticker, market, data_type)
+            data_json = new_data['data']
+            if isinstance(data_json, str):
+                try:
+                    data_json = json.loads(data_json)
+                except json.JSONDecodeError:
+                    pass
+            
+            return JsonResponse({
+                'status': 'success',
+                'source': 'newly_scraped',
+                'ticker': ticker,
+                'market': market,
+                'data_type': data_type.value,
+                'scraped_at': new_data['scraped_at'].isoformat(),
+                'data': data_json
+            })
+        
+        else:
+            # Scraping failed or returned partial data
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Scraping failed with result: {result}',
+                'ticker': ticker,
+                'market': market,
+                'data_type': data_type.value
+            }, status=500)
+            
+    except Exception as e:
+        logger.error(f"Error in API endpoint: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Internal server error: {str(e)}',
+            'ticker': ticker,
+            'market': market,
+            'data_type': data_type.value
         }, status=500) 
