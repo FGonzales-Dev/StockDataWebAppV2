@@ -149,14 +149,6 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
         
         sleep(3)
         
-        # Expand and export
-        expand_selectors = [
-            "//a[contains(., 'Expand Detail View')]",
-            "//a[contains(text(), 'Expand')]"
-        ]
-        strategy.safe_click(expand_selectors)
-        sleep(2)
-        
         export_selectors = [
             "//button[contains(., 'Export Data')]",
             "//button[@id='salEqsvFinancialsPopoverExport']"
@@ -306,6 +298,23 @@ def scraper_key_metrics_firestore(self, ticker_value: str, market_value: str, do
             logger.warning(f"Failed to click tab for {data_type.value}")
         
         sleep(3)
+        
+        # Click Export Data button
+        export_selectors = [
+            "//button[@id='salEqsvFinancialsPopoverExport']",  # Primary selector based on actual HTML
+            "//button[@aria-label='Export']",  # Based on the aria-label attribute
+            "//div[@class='sal-financials__exportSection']//button",  # Find button within export section
+            "//button[contains(@class, 'mds-button--icon-only__sal')]",  # Based on specific class
+            "//button[contains(., 'Export Data')]",  # Original fallback
+            "//button[contains(@class, 'export')]"  # General export class fallback
+        ]
+        
+        if not strategy.safe_click(export_selectors):
+            logger.warning(f"Failed to click Export Data button for {data_type.value}")
+            strategy.store_fallback_data(ticker_value, market_value, data_type)
+            return 'ERROR'
+        
+        sleep(10)  # Wait for download to complete
         progress_recorder.set_progress(75, 100, description="Processing data")
         
         # Export and process
@@ -376,20 +385,12 @@ def _click_key_metrics_tab(scraper, data_type: DataType) -> bool:
     tab_selectors = [f"//button[contains(., '{tab_text}')]"]
     return scraper.safe_click(tab_selectors)
 
-def _set_time_period(scraper):
-    """Set time period to 10 years for key metrics data"""
-    period_selectors = [
-        "//button[contains(., '10 Years')]",
-        "//option[contains(text(), '10 Years')]"
-    ]
-    return scraper.safe_click(period_selectors)
-
 def _process_key_metrics_file(scraper, data_type: DataType, ticker: str, market: str) -> str:
     """Process downloaded key metrics file"""
     filename_map = {
-        DataType.KEY_METRICS_CASH_FLOW: "Cash Flow.xls",
-        DataType.KEY_METRICS_GROWTH: "Growth.xls",
-        DataType.KEY_METRICS_FINANCIAL_HEALTH: "Financial Health.xls"
+        DataType.KEY_METRICS_CASH_FLOW: "cashFlow.xls",
+        DataType.KEY_METRICS_GROWTH: "growthTable.xls",
+        DataType.KEY_METRICS_FINANCIAL_HEALTH: "financialHealth.xls"
     }
     
     file_path = BASE_DIR + scraper.config.download_directory + "/" + filename_map[data_type]
@@ -399,7 +400,7 @@ def _process_key_metrics_file(scraper, data_type: DataType, ticker: str, market:
             df = pd.read_excel(file_path)
             data_json = df.to_json()
             scraper.store_data(ticker, market, data_type, data_json, 'DONE')
-            os.remove(file_path)
+            os.remove(file_path)  # Delete file after successful storage
             return 'DONE'
         except Exception as e:
             logger.error(f"Error processing file: {e}")
