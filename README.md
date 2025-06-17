@@ -107,14 +107,14 @@ The application automatically detects the environment and uses the appropriate C
 - No environment variables needed
 - **Browser Mode**: Controlled by `SHOW_BROWSER` setting in `scraper_config.py`
 
-**Production (Heroku/Cloud):**
+**Production (Cloud):**
 - Uses `CHROMEDRIVER_PATH` environment variable
 - Set this variable in your production environment
 - **Recommended**: Set `SHOW_BROWSER = False` for headless mode
 
 **Example for production:**
 ```bash
-export CHROMEDRIVER_PATH=/app/.chromedriver/bin/chromedriver
+export CHROMEDRIVER_PATH=/path/to/chromedriver
 ```
 
 ### Updating ChromeDriver
@@ -143,62 +143,24 @@ When Chrome browser updates, you may need to update ChromeDriver to match:
 
 ## Package Analysis
 
-### Potentially Unused Packages in requirements.txt
+### Requirements.txt Cleanup Complete
 
-Based on code analysis, the following packages may not be actively used and could potentially be removed:
+The requirements.txt file has been cleaned up to include only the packages that are actually used in the codebase:
 
-**Likely Unused:**
-- `arrow==1.2.3` - Date/time library (not found in imports)
-- `async-generator==1.10` - Async utilities (not found in imports)
-- `attrs==22.1.0` - Class utilities (not found in imports)
-- `blessed==1.19.1` - Terminal utilities (not found in imports)
-- `cachetools==5.2.0` - Caching utilities (not found in imports)
-- `gcloud==0.18.3` - Google Cloud (not found in imports)
-- `google-auth==2.11.0` - Google authentication (not found in imports)
-- `google-auth-oauthlib==0.5.2` - Google OAuth (not found in imports)
-- `googleapis-common-protos==1.58.0` - Google API protos (not found in imports)
-- `gspread==5.5.0` - Google Sheets API (not found in imports)
-- `h11==0.13.0` - HTTP/1.1 library (not found in imports)
-- `html5lib==1.1` - HTML parser (not found in imports)
-- `httplib2==0.20.4` - HTTP library (not found in imports)
-- `Jinja2==3.1.2` - Template engine (not found in imports)
-- `jws==0.1.3` - JSON Web Signatures (not found in imports)
-- `oauth2client==4.1.3` - OAuth2 client (not found in imports)
-- `oauthlib==3.2.1` - OAuth library (not found in imports)
-- `outcome==1.2.0` - Async utilities (not found in imports)
-- `progress==1.6` - Progress bars (not found in imports)
-- `prompt-toolkit==3.0.31` - Command line interface (not found in imports)
-- `protobuf==4.21.12` - Protocol buffers (not found in imports)
-- `pyasn1==0.4.8` - ASN.1 library (not found in imports)
-- `pyasn1-modules==0.2.8` - ASN.1 modules (not found in imports)
-- `pycryptodome==3.17` - Cryptography (not found in imports)
-- `pyparsing==3.0.9` - Parsing library (not found in imports)
-- `PySocks==1.7.1` - SOCKS proxy (not found in imports)
-- `python-jwt==2.0.1` - JWT library (not found in imports)
-- `rsa==4.9` - RSA cryptography (not found in imports)
-- `six==1.15.0` - Python 2/3 compatibility (not found in imports)
-- `sniffio==1.2.0` - Async library detection (not found in imports)
-- `sortedcontainers==2.4.0` - Sorted containers (not found in imports)
-- `trio==0.21.0` - Async library (not found in imports)
-- `trio-websocket==0.9.2` - WebSocket for trio (not found in imports)
-- `wcwidth==0.2.5` - Terminal width (not found in imports)
-- `webencodings==0.5.1` - Web encodings (not found in imports)
-- `wsproto==1.1.0` - WebSocket protocol (not found in imports)
-- `xlrd==2.0.1` - Excel reader (not found in imports)
-- `xlwt==1.3.0` - Excel writer (not found in imports)
+**Core Packages:**
+- **Django and related**: Django, django-crispy-forms, asgiref, sqlparse
+- **Celery for background tasks**: celery, celery-progress, django-celery-results, redis, and related dependencies
+- **Firebase/Firestore**: firebase-admin, google-cloud-firestore, and authentication packages
+- **Web scraping**: selenium, undetected-chromedriver, beautifulsoup4
+- **Data processing**: pandas, numpy, openpyxl, XlsxWriter
+- **HTTP requests**: requests and related packages
+- **Utilities**: lxml, python-dateutil, pytz, soupsieve
 
-**Currently Used Packages:**
-- Django and related packages
-- Selenium and webdriver-manager
-- BeautifulSoup4 for web scraping
-- Pandas for data manipulation
-- Celery for task queue
-- Pyrebase4 for Firebase
-- Openpyxl and XlsxWriter for Excel files
-- Requests for HTTP requests
-- Redis for caching/message broker
+**Removed Unused Packages:**
+All packages that were not found in the codebase imports have been removed, including:
+- arrow, blessed, trio, progress, gspread, oauth2client, pycryptodome, xlrd, xlwt, and many others
 
-**Recommendation:** Test removing unused packages one by one to ensure the application still works correctly.
+This cleanup reduces the number of dependencies from 89 to approximately 35 packages, making the project lighter and easier to maintain.
 
 ## Reinstall package
 **Remove all installed package**
