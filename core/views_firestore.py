@@ -17,11 +17,7 @@ from .firestore_storage import (
     get_storage,
     check_existing_data
 )
-# Import AsyncResult only if needed (optional for Redis/Celery support)
-try:
-    from celery.result import AsyncResult
-except ImportError:
-    AsyncResult = None
+from celery.result import AsyncResult
 import logging
 
 logger = logging.getLogger(__name__)
@@ -150,52 +146,36 @@ def scrape_firestore(request):
                 })
             
             # Data doesn't exist, start background scraping and show loading screen
-            logger.info(f"No existing data found for {ticker_value} {market_value} {download_type} - starting direct scrape")
+            logger.info(f"No existing data found for {ticker_value} {market_value} {download_type} - starting background scrape")
             
-            # Run scraping directly (synchronously) without Celery
-            logger.info(f"Starting direct scraping for {ticker_value} {market_value} {download_type}")
-            
-            try:
-                if download_type in ["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW"]:
-                    result = scrape_financial_statement_firestore(ticker_value, market_value, DataType(download_type))
-                elif download_type in ["KEY_METRICS_CASH_FLOW", "KEY_METRICS_GROWTH", 
-                                       "KEY_METRICS_FINANCIAL_HEALTH"]:
-                    result = scrape_key_metrics_direct(ticker_value, market_value, DataType(download_type))
-                elif download_type == "DIVIDENDS":
-                    result = scrape_dividends_direct(ticker_value, market_value)
-                elif download_type == "ALL":
-                    result = scrape_all_direct(ticker_value, market_value)
-                else:
-                    return render(request, "../templates/stockData.html", {
-                        "error": f"Unsupported download type: {download_type}"
-                    })
-                
-                # Show result immediately since scraping is complete
-                if result == 'EXISTING':
-                    message = f"Data for {ticker_value} ({market_value}) - {download_type} already existed in storage"
-                elif result == 'DONE':
-                    message = f"Successfully scraped and stored {download_type} data for {ticker_value} ({market_value})"
-                elif result == 'PARTIAL':
-                    message = f"Partially scraped {download_type} data for {ticker_value} ({market_value})"
-                else:
-                    message = f"Scraping completed with status: {result}"
-                
-                return render(request, "../templates/loadScreen.html", {
-                    "download_type": download_type,
-                    "ticker": ticker_value,
-                    "market": market_value,
-                    "firestore_mode": True,
-                    "scraping_complete": True,  # Flag to show completion immediately
-                    "task_id": "direct_execution",  # Dummy task ID
-                    "message": message,
-                    "result": result
-                })
-                
-            except Exception as e:
-                logger.error(f"Error in direct scraping: {e}")
+            # Create a background task for scraping
+            if download_type in ["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW"]:
+                from .tasks_firestore import scraper_firestore
+                task = scraper_firestore.delay(ticker_value, market_value, download_type)
+            elif download_type in ["KEY_METRICS_CASH_FLOW", "KEY_METRICS_GROWTH", 
+                                   "KEY_METRICS_FINANCIAL_HEALTH"]:
+                from .tasks_firestore import scraper_key_metrics_firestore  
+                task = scraper_key_metrics_firestore.delay(ticker_value, market_value, download_type)
+            elif download_type == "DIVIDENDS":
+                from .tasks_firestore import scraper_dividends_firestore
+                task = scraper_dividends_firestore.delay(ticker_value, market_value)
+            elif download_type == "ALL":
+                from .tasks_firestore import all_scraper_firestore
+                task = all_scraper_firestore.delay(ticker_value, market_value)
+            else:
                 return render(request, "../templates/stockData.html", {
-                    "error": f"Scraping failed: {str(e)}"
+                    "error": f"Unsupported download type: {download_type}"
                 })
+            
+            # Return loading screen immediately with task ID
+            return render(request, "../templates/loadScreen.html", {
+                "download_type": download_type,
+                "task_id": task.id,
+                "task_stat": task.status,
+                "ticker": ticker_value,
+                "market": market_value,
+                "firestore_mode": True  # Flag to indicate this is firestore scraping
+            })
             
         elif 'download' in request.POST:
             return handle_download_firestore(ticker_value, market_value, download_type)
@@ -291,20 +271,7 @@ def get_task_info_firestore(request):
             'result': 'No task ID provided'
         })
     
-    # Handle direct execution (no Redis/Celery)
-    if task_id == "direct_execution" or task_id == "existing_data":
-        return JsonResponse({
-            'state': 'SUCCESS',
-            'result': 'DONE',
-            'firestore': True,
-            'message': 'Scraping completed successfully',
-            'progress': 100
-        })
-    
     try:
-        # Try to use Celery task result (if Redis is available)
-        if AsyncResult is None:
-            raise ImportError("Celery not available")
         task = AsyncResult(task_id)
         data = {
             'state': task.state,
@@ -358,14 +325,10 @@ def get_task_info_firestore(request):
         return JsonResponse(data)
         
     except Exception as e:
-        # If Celery/Redis is not available, return a default success response
-        logger.warning(f"Task info request failed (likely no Redis/Celery): {str(e)}")
         return JsonResponse({
-            'state': 'SUCCESS',
-            'result': 'DONE',
-            'firestore': True,
-            'message': 'Direct execution completed (no task queue)',
-            'progress': 100
+            'state': 'ERROR',
+            'result': f'Error retrieving task info: {str(e)}',
+            'message': f'Error retrieving task info: {str(e)}'
         })
 
 def check_data_status_firestore(request):
