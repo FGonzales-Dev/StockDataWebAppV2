@@ -145,37 +145,57 @@ def scrape_firestore(request):
                     "error": f"Invalid download type: {download_type}"
                 })
             
-            # Data doesn't exist, start background scraping and show loading screen
-            logger.info(f"No existing data found for {ticker_value} {market_value} {download_type} - starting background scrape")
+            # Use the smart scraping manager (auto-detects Redis/Celery availability)
+            from .scraping_manager import get_scraping_manager
             
-            # Create a background task for scraping
-            if download_type in ["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW"]:
-                from .tasks_firestore import scraper_firestore
-                task = scraper_firestore.delay(ticker_value, market_value, download_type)
-            elif download_type in ["KEY_METRICS_CASH_FLOW", "KEY_METRICS_GROWTH", 
-                                   "KEY_METRICS_FINANCIAL_HEALTH"]:
-                from .tasks_firestore import scraper_key_metrics_firestore  
-                task = scraper_key_metrics_firestore.delay(ticker_value, market_value, download_type)
-            elif download_type == "DIVIDENDS":
-                from .tasks_firestore import scraper_dividends_firestore
-                task = scraper_dividends_firestore.delay(ticker_value, market_value)
-            elif download_type == "ALL":
-                from .tasks_firestore import all_scraper_firestore
-                task = all_scraper_firestore.delay(ticker_value, market_value)
-            else:
-                return render(request, "../templates/stockData.html", {
-                    "error": f"Unsupported download type: {download_type}"
+            scraping_manager = get_scraping_manager()
+            mode, task_id, context_data = scraping_manager.scrape_stock_data(ticker_value, market_value, download_type)
+            
+            logger.info(f"Scraping mode: {mode}, Task ID: {task_id}")
+            
+            # Handle different modes
+            if mode == 'error':
+                return render(request, "../templates/stockData.html", context_data)
+            
+            elif mode == 'existing':
+                # Data already exists, show loading screen with success
+                return render(request, "../templates/loadScreen.html", {
+                    "download_type": download_type,
+                    "ticker": ticker_value,
+                    "market": market_value,
+                    "firestore_mode": True,
+                    "data_already_exists": True,
+                    "task_id": task_id,
+                    **context_data
                 })
             
-            # Return loading screen immediately with task ID
-            return render(request, "../templates/loadScreen.html", {
-                "download_type": download_type,
-                "task_id": task.id,
-                "task_stat": task.status,
-                "ticker": ticker_value,
-                "market": market_value,
-                "firestore_mode": True  # Flag to indicate this is firestore scraping
-            })
+            elif mode == 'background':
+                # Background task started, show loading screen
+                return render(request, "../templates/loadScreen.html", {
+                    "download_type": download_type,
+                    "ticker": ticker_value,
+                    "market": market_value,
+                    "firestore_mode": True,
+                    "task_id": task_id,
+                    "task_stat": "PENDING",
+                    **context_data
+                })
+            
+            elif mode == 'direct':
+                # Direct execution completed, show results
+                return render(request, "../templates/loadScreen.html", {
+                    "download_type": download_type,
+                    "ticker": ticker_value,
+                    "market": market_value,
+                    "firestore_mode": True,
+                    "task_id": "direct_execution",
+                    **context_data
+                })
+            
+            else:
+                return render(request, "../templates/stockData.html", {
+                    "error": f"Unknown scraping mode: {mode}"
+                })
             
         elif 'download' in request.POST:
             return handle_download_firestore(ticker_value, market_value, download_type)
@@ -262,7 +282,7 @@ def handle_all_download_firestore(ticker: str, market: str):
         return HttpResponse(f"Error generating comprehensive download: {str(e)}", status=500)
 
 def get_task_info_firestore(request):
-    """Enhanced task status endpoint for Firestore tasks"""
+    """Enhanced task status endpoint that works with or without Redis/Celery"""
     
     task_id = request.GET.get('task_id', None)
     if not task_id:
@@ -271,65 +291,13 @@ def get_task_info_firestore(request):
             'result': 'No task ID provided'
         })
     
-    try:
-        task = AsyncResult(task_id)
-        data = {
-            'state': task.state,
-            'result': task.result,
-            'firestore': True  # Flag to indicate this is from Firestore scraper
-        }
-        
-        # Add additional info based on task state
-        if task.state == 'PROGRESS':
-            # Handle progress updates
-            if isinstance(task.result, dict):
-                data['progress'] = task.result.get('progress', 0)
-                data['current'] = task.result.get('current', 0)
-                data['total'] = task.result.get('total', 1)
-                data['message'] = task.result.get('message', 'Processing...')
-            else:
-                data['progress'] = 50  # Default progress
-                data['message'] = 'Scraping in progress...'
-                
-        elif task.state == 'SUCCESS':
-            if isinstance(task.result, str):
-                if task.result == 'EXISTING':
-                    data['message'] = 'Data already existed in Firestore storage'
-                    data['result'] = 'EXISTING'
-                elif task.result == 'DONE':
-                    data['message'] = 'Data scraped and stored successfully in Firestore'
-                    data['result'] = 'DONE'
-                elif task.result == 'PARTIAL':
-                    data['message'] = 'Data partially scraped and stored in Firestore'
-                    data['result'] = 'PARTIAL'
-                else:
-                    data['message'] = f'Task completed with result: {task.result}'
-            elif isinstance(task.result, dict):
-                data['results'] = task.result
-                data['message'] = 'Task completed successfully'
-            else:
-                data['message'] = 'Task completed successfully'
-                
-        elif task.state == 'FAILURE':
-            data['error'] = str(task.result)
-            data['message'] = f'Task failed: {str(task.result)}'
-            
-        elif task.state == 'PENDING':
-            data['message'] = 'Task is waiting to be processed'
-            data['progress'] = 0
-            
-        elif task.state == 'STARTED':
-            data['message'] = 'Task is being processed'
-            data['progress'] = 25
-        
-        return JsonResponse(data)
-        
-    except Exception as e:
-        return JsonResponse({
-            'state': 'ERROR',
-            'result': f'Error retrieving task info: {str(e)}',
-            'message': f'Error retrieving task info: {str(e)}'
-        })
+    # Use the scraping manager to get task status
+    from .scraping_manager import get_scraping_manager
+    
+    scraping_manager = get_scraping_manager()
+    data = scraping_manager.get_task_status(task_id)
+    
+    return JsonResponse(data)
 
 def check_data_status_firestore(request):
     """Check what data exists for a ticker/market combination"""
