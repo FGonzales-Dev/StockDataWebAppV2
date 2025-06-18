@@ -6,7 +6,7 @@ services:
     repo: your-username/StockDataWebAppV2
     branch: digital-ocean-deployment-v2
     deploy_on_push: true
-  run_command: ./start_server.sh
+  run_command: gunicorn --bind 0.0.0.0:8080 stock_scraper.wsgi:application
   environment_slug: python
   instance_count: 1
   instance_size_slug: basic-xxs
@@ -30,4 +30,23 @@ databases:
 - name: db
   engine: PG
   version: "13"
-  production: true 
+  production: true
+
+jobs:
+- name: migrate
+  source_dir: /
+  github:
+    repo: your-username/StockDataWebAppV2
+    branch: digital-ocean-deployment-v2
+  run_command: python manage.py migrate --noinput
+  environment_slug: python
+  kind: PRE_DEPLOY
+
+- name: collectstatic
+  source_dir: /
+  github:
+    repo: your-username/StockDataWebAppV2
+    branch: digital-ocean-deployment-v2
+  run_command: python manage.py collectstatic --noinput
+  environment_slug: python  
+  kind: PRE_DEPLOY 
