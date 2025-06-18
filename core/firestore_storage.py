@@ -43,9 +43,9 @@ class FirestoreStorage:
         if not firebase_admin._apps:
             try:
                 # Option 1: Try to use environment variables (recommended for production)
-                firebase_project_id = os.getenv('scraper-b0a07')
-                firebase_private_key = os.getenv('587beb6f98102e811e3c7d30c2f4fdd83c1c51ad')
-                firebase_client_email = os.getenv('firebase-adminsdk-qtqbw@scraper-b0a07.iam.gserviceaccount.com')
+                firebase_project_id = os.getenv('FIREBASE_PROJECT_ID')
+                firebase_private_key = os.getenv('FIREBASE_PRIVATE_KEY')
+                firebase_client_email = os.getenv('FIREBASE_CLIENT_EMAIL')
                 
                 if firebase_project_id and firebase_private_key and firebase_client_email:
                     # Use environment variables for credentials
