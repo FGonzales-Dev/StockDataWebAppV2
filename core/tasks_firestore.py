@@ -71,7 +71,7 @@ class OptimizedScrapingStrategy:
         options.binary_location = "/usr/bin/google-chrome"
         logger.info(f"Using Chrome binary location: {options.binary_location}")
         
-        return uc.Chrome(options=options)
+        return uc.Chrome(options=options, browser_executable_path="/usr/bin/google-chrome")
     
     def safe_click(self, selectors: List[str], timeout: int = 10) -> bool:
         """Safely click an element using multiple selectors"""
