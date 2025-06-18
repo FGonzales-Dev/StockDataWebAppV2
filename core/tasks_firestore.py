@@ -67,12 +67,11 @@ class OptimizedScrapingStrategy:
         if not self.config.show_browser:
             options.add_argument("--headless")
         
-        # Try an alternative binary location for Chrome
-        options.binary_location = "/usr/bin/google-chrome-stable"
-        logger.info(f"Using Chrome binary location: {options.binary_location}")
+        # Not specifying a binary location, letting undetected-chromedriver search for Chrome
+        logger.info("Attempting to initialize Chrome driver without specifying binary location")
         
         try:
-            driver = uc.Chrome(options=options, browser_executable_path="/usr/bin/google-chrome-stable")
+            driver = uc.Chrome(options=options)
             logger.info("Successfully initialized Chrome driver")
             return driver
         except Exception as e:
