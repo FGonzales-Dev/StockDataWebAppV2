@@ -37,10 +37,6 @@ Thumbs.db
 *.sublime-workspace
 *.sublime-project
 
-# Firebase credentials
-config/firebase-service-account.json
-config/*.json
-*.json
 !package.json
 !package-lock.json
 
