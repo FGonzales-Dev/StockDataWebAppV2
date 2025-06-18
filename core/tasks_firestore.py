@@ -67,6 +67,10 @@ class OptimizedScrapingStrategy:
         if not self.config.show_browser:
             options.add_argument("--headless")
         
+        # Explicitly set the binary location for Chrome
+        options.binary_location = "/usr/bin/google-chrome"
+        logger.info(f"Using Chrome binary location: {options.binary_location}")
+        
         return uc.Chrome(options=options)
     
     def safe_click(self, selectors: List[str], timeout: int = 10) -> bool:
