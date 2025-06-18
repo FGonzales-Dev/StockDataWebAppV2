@@ -42,7 +42,7 @@ class FirestoreStorage:
         # Initialize Firestore with service account JSON file
         if not firebase_admin._apps:
             # Try to get service account path from environment variable first
-            service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', 'config/scraper-b0a07-firebase-adminsdk-qtqbw-587beb6f98.json')
+            service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', 'config/scraper-b0a07-firebase-adminsdk-qtqbw-b80c90626b.json')
             
             try:
                 # Use service account JSON file
