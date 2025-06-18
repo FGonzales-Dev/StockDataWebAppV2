@@ -1,0 +1,33 @@
+name: stock-data-web-app
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: your-username/StockDataWebAppV2
+    branch: digital-ocean-deployment-v2
+    deploy_on_push: true
+  run_command: ./start_server.sh
+  environment_slug: python
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 8080
+  routes:
+  - path: /
+  health_check:
+    http_path: /
+  envs:
+  - key: DEBUG
+    value: "False"
+  - key: SECRET_KEY
+    value: "your-secret-key-here"
+    type: SECRET
+  - key: ALLOWED_HOSTS
+    value: "your-app-name.ondigitalocean.app"
+  - key: DJANGO_SETTINGS_MODULE
+    value: "stock_scraper.settings"
+
+databases:
+- name: db
+  engine: PG
+  version: "13"
+  production: true 
