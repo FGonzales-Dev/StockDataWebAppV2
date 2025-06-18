@@ -6,23 +6,19 @@ services:
     repo: your-username/StockDataWebAppV2
     branch: digital-ocean-deployment-v2
     deploy_on_push: true
-  run_command: gunicorn --bind 0.0.0.0:8080 stock_scraper.wsgi:application
+  run_command: python manage.py runserver 0.0.0.0:8080
   environment_slug: python
   instance_count: 1
   instance_size_slug: basic-xxs
   http_port: 8080
-  routes:
-  - path: /
-  health_check:
-    http_path: /
   envs:
   - key: DEBUG
-    value: "False"
+    value: "True"
   - key: SECRET_KEY
     value: "your-secret-key-here"
     type: SECRET
   - key: ALLOWED_HOSTS
-    value: "your-app-name.ondigitalocean.app"
+    value: "*"
   - key: DJANGO_SETTINGS_MODULE
     value: "stock_scraper.settings"
 
