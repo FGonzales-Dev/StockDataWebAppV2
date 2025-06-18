@@ -39,19 +39,42 @@ class FirestoreStorage:
     """Firestore-based storage for stock data"""
     
     def __init__(self):
-        # Initialize Firestore with service account JSON file
+        # Initialize Firestore with service account JSON file or environment variables
         if not firebase_admin._apps:
-            # Try to get service account path from environment variable first
-            service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', 'config/scraper-b0a07-firebase-adminsdk-qtqbw-587beb6f98.json')
-            
             try:
-                # Use service account JSON file
-                cred = credentials.Certificate(service_account_path)
-                firebase_admin.initialize_app(cred)
-                logger.info(f"Firebase initialized with service account: {service_account_path}")
+                # Option 1: Try to use environment variables (recommended for production)
+                firebase_project_id = os.getenv('scraper-b0a07')
+                firebase_private_key = os.getenv('587beb6f98102e811e3c7d30c2f4fdd83c1c51ad')
+                firebase_client_email = os.getenv('firebase-adminsdk-qtqbw@scraper-b0a07.iam.gserviceaccount.com')
+                
+                if firebase_project_id and firebase_private_key and firebase_client_email:
+                    # Use environment variables for credentials
+                    cred_dict = {
+                        "type": "service_account",
+                        "project_id": firebase_project_id,
+                        "private_key": firebase_private_key.replace('\\n', '\n'),  # Handle escaped newlines
+                        "client_email": firebase_client_email,
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs"
+                    }
+                    cred = credentials.Certificate(cred_dict)
+                    firebase_admin.initialize_app(cred)
+                    logger.info("Firebase initialized with environment variables")
+                else:
+                    # Option 2: Fall back to service account JSON file
+                    service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', 'config/scraper-b0a07-firebase-adminsdk-qtqbw-587beb6f98.json')
+                    cred = credentials.Certificate(service_account_path)
+                    firebase_admin.initialize_app(cred)
+                    logger.info(f"Firebase initialized with service account file: {service_account_path}")
+                    
             except Exception as e:
-                logger.error(f"Failed to initialize Firebase with service account: {e}")
-                logger.info("Make sure your firebase-service-account.json file is in the config/ directory")
+                logger.error(f"Failed to initialize Firebase: {e}")
+                logger.info("For production deployment, set these environment variables:")
+                logger.info("- FIREBASE_PROJECT_ID")
+                logger.info("- FIREBASE_PRIVATE_KEY")
+                logger.info("- FIREBASE_CLIENT_EMAIL")
+                logger.info("Or set FIREBASE_SERVICE_ACCOUNT_PATH to point to your service account JSON file")
                 raise
         
         self.db = firestore.client()
