@@ -67,11 +67,17 @@ class OptimizedScrapingStrategy:
         if not self.config.show_browser:
             options.add_argument("--headless")
         
-        # Explicitly set the binary location for Chrome
-        options.binary_location = "/usr/bin/google-chrome"
+        # Try an alternative binary location for Chrome
+        options.binary_location = "/usr/bin/google-chrome-stable"
         logger.info(f"Using Chrome binary location: {options.binary_location}")
         
-        return uc.Chrome(options=options, browser_executable_path="/usr/bin/google-chrome")
+        try:
+            driver = uc.Chrome(options=options, browser_executable_path="/usr/bin/google-chrome-stable")
+            logger.info("Successfully initialized Chrome driver")
+            return driver
+        except Exception as e:
+            logger.error(f"Failed to initialize Chrome driver: {str(e)}")
+            raise
     
     def safe_click(self, selectors: List[str], timeout: int = 10) -> bool:
         """Safely click an element using multiple selectors"""
