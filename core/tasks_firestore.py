@@ -159,6 +159,14 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
             raise Exception("Chrome driver is None after initialization")
         strategy.driver = driver
         
+        # Ensure download directory exists
+        download_dir = BASE_DIR + strategy.config.download_directory
+        if not os.path.exists(download_dir):
+            logger.info(f"Creating download directory at {download_dir}")
+            os.makedirs(download_dir, exist_ok=True)
+        else:
+            logger.info(f"Download directory already exists at {download_dir}")
+        
         url = f"https://www.morningstar.com/stocks/{market}/{ticker}/financials"
         logger.info(f"Navigating to {url}")
         driver.get(url)
