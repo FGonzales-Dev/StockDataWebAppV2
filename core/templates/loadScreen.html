@@ -418,6 +418,19 @@
       progressBar.style.width = progressValue + '%';
     }
   
+    function showSuccessSection() {
+      console.log('Showing success section');
+      document.getElementById('loading-section').style.display = 'none';
+      document.getElementById('success-section').style.display = 'block';
+    }
+  
+    function showErrorMessage(message) {
+      console.log('Showing error message:', message);
+      document.getElementById('loading-section').style.display = 'none';
+      document.getElementById('error-section').style.display = 'block';
+      document.getElementById('error-message').textContent = message;
+    }
+  
     function checkTaskStatus() {
       if (!taskId) {
         console.error('No task ID provided');
