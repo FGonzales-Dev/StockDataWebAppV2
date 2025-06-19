@@ -11,7 +11,7 @@ django-celery-results==2.4.0
 redis==3.5.3
 amqp==5.1.1
 billiard==4.2.0
-kombu==5.2.4
+kombu==5.3.4
 vine==5.0.0
 click==8.1.3
 
