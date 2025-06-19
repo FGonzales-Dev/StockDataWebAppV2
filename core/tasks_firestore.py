@@ -57,6 +57,9 @@ class OptimizedScrapingStrategy:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--remote-debugging-host=0.0.0.0")
+        options.add_argument("--headless")
+        options.add_argument("--disable-gpu")
         
         prefs = {
             "profile.managed_default_content_settings.images": 2,
