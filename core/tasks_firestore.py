@@ -27,6 +27,8 @@ from .firestore_storage import (
     store_scraped_data,
     get_storage
 )
+import uuid
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -52,24 +54,44 @@ class OptimizedScrapingStrategy:
     
     def create_driver(self):
         """Create optimized Chrome driver"""
+        # Set Chrome options
         options = uc.ChromeOptions()
+        options.binary_location = "/usr/bin/google-chrome"
         options.add_argument(f"--window-size={self.config.browser_width},{self.config.browser_height}")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
+        # Explicitly set remote debugging host and port to ensure accessibility
+        options.add_argument("--remote-debugging-host=127.0.0.1")
+        options.add_argument("--remote-debugging-port=9222")
+        options.add_argument(f"--user-data-dir=/tmp/{uuid.uuid4()}")
+        options.add_argument("--lang=en-US")
+        options.add_argument("--no-default-browser-check")
+        options.add_argument("--no-first-run")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--test-type")
+        options.add_argument(f"--window-size={self.config.browser_width},{self.config.browser_height}")
+        options.add_argument("--start-maximized")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--log-level=0")
         
-        prefs = {
-            "profile.managed_default_content_settings.images": 2,
-            "download.default_directory": BASE_DIR + self.config.download_directory,
-        }
-        options.add_experimental_option("prefs", prefs)
-        
-        if not self.config.show_browser:
-            options.add_argument("--headless")
-        
-        return uc.Chrome(options=options)
+        # Initialize driver with retry mechanism
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                self.driver = uc.Chrome(
+                    options=options,
+                    headless=False,
+                    version_main=126,  # Match the installed Chrome version
+                    driver_executable_path="/usr/local/bin/chromedriver"
+                )
+                logger.info("Chrome driver initialized successfully")
+                break
+            except Exception as e:
+                logger.error(f"Attempt {attempt + 1} failed to initialize Chrome: {str(e)}")
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(2)  # Wait before retrying
     
     def safe_click(self, selectors: List[str], timeout: int = 10) -> bool:
         """Safely click an element using multiple selectors"""
