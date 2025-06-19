@@ -131,11 +131,16 @@ STATIC_URL = '/static/'
 
 # For Local
 # CELERY_BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'django-db'
+# CELERY_RESULT_BACKEND = 'django-db'
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+
+
+# For production on Droplet
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
 
-#For prodution
-CELERY_BROKER_URL = 'redis://host.docker.internal:6379/0'
-# CELERY_BACKEND_URL = 'redis://:p1e842a929016d5b23eb852b0d462dc69169c1535f156dc5ade1296118d56b93c@ec2-34-195-183-221.compute-1.amazonaws.com:15900'
 
