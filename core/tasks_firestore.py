@@ -186,22 +186,29 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
         ]
         
         if strategy.safe_click(export_selectors):
-            sleep(20)
+            sleep(20)  # Increased wait time for download to complete
             
             # Process file
-            filename_map = {
-                DataType.INCOME_STATEMENT: "Income Statement_Annual_As Originally Reported.xls",
-                DataType.BALANCE_SHEET: "Balance Sheet_Annual_As Originally Reported.xls",
-                DataType.CASH_FLOW: "Cash Flow_Annual_As Originally Reported.xls"
+            filename_base_map = {
+                DataType.INCOME_STATEMENT: "Income Statement_Annual_As Originally Reported",
+                DataType.BALANCE_SHEET: "Balance Sheet_Annual_As Originally Reported",
+                DataType.CASH_FLOW: "Cash Flow_Annual_As Originally Reported"
             }
-            
-            file_path = BASE_DIR + strategy.config.download_directory + "/" + filename_map[data_type]
-            logger.info(f"Checking for downloaded file at: {file_path}")
+            filename_base = filename_base_map[data_type]
+            download_dir = "/root/Downloads"
+            logger.info(f"Checking for downloaded file in: {download_dir} with base name: {filename_base}")
             
             max_wait = 30  # Wait up to 30 seconds for file to appear
             wait_interval = 5
+            file_path = None
             for _ in range(max_wait // wait_interval):
-                if os.path.exists(file_path):
+                # Look for files matching the base name, including possible duplicates like (1), (2), etc.
+                import glob
+                possible_files = glob.glob(f"{download_dir}/{filename_base}*.xls")
+                if possible_files:
+                    # Sort by modification time, newest first
+                    possible_files.sort(key=os.path.getmtime, reverse=True)
+                    file_path = possible_files[0]  # Take the most recent file
                     logger.info(f"File found at {file_path}, processing Excel data")
                     try:
                         df = pd.read_excel(file_path)
@@ -209,16 +216,16 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
                         logger.info(f"Excel data converted to JSON, length: {len(data_json)} characters")
                         strategy.store_data(ticker, market, data_type, data_json, 'DONE')
                         logger.info(f"Data stored for {ticker} {market} {data_type.value}")
-                        os.remove(file_path)
+                        os.remove(file_path)  # Clean up the file after processing
                         return 'DONE'
                     except Exception as e:
                         logger.error(f"Error processing Excel file: {str(e)}")
                         break
                 else:
-                    logger.info(f"File not found yet at {file_path}, waiting...")
+                    logger.info(f"File not found yet in {download_dir} with base name {filename_base}, waiting...")
                     sleep(wait_interval)
             
-            logger.warning(f"File not found at {file_path} after waiting, falling back to placeholder data")
+            logger.warning(f"File not found in {download_dir} after waiting, falling back to placeholder data")
         
         strategy.store_fallback_data(ticker, market, data_type)
         logger.info(f"Stored fallback data for {ticker} {market} {data_type.value} due to download failure")
