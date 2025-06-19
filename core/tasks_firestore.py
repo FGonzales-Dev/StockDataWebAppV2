@@ -61,18 +61,12 @@ class OptimizedScrapingStrategy:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-blink-features=AutomationControlled")
-        # Explicitly set remote debugging host and port to ensure accessibility
-        options.add_argument("--remote-debugging-host=127.0.0.1")
-        options.add_argument("--remote-debugging-port=9222")
         options.add_argument(f"--user-data-dir=/tmp/{uuid.uuid4()}")
         options.add_argument("--lang=en-US")
         options.add_argument("--no-default-browser-check")
         options.add_argument("--no-first-run")
-        options.add_argument("--no-sandbox")
         options.add_argument("--test-type")
-        options.add_argument(f"--window-size={self.config.browser_width},{self.config.browser_height}")
         options.add_argument("--start-maximized")
-        options.add_argument("--no-sandbox")
         options.add_argument("--log-level=0")
         
         # Initialize driver with retry mechanism
@@ -82,8 +76,7 @@ class OptimizedScrapingStrategy:
                 self.driver = uc.Chrome(
                     options=options,
                     headless=False,
-                    version_main=126,  # Match the installed Chrome version
-                    driver_executable_path="/usr/local/bin/chromedriver"
+                    version_main=137  # Match the installed Chrome major version
                 )
                 logger.info("Chrome driver initialized successfully")
                 break
