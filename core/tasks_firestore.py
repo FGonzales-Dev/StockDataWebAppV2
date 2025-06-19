@@ -74,19 +74,20 @@ class OptimizedScrapingStrategy:
          # Initialize driver with retry mechanism
         max_retries = 5  # Increased retries
         for attempt in range(max_retries):
-             try:
-                 self.driver = uc.Chrome(
-                     options=options,
-                     headless=True,  # Enforce headless mode
-                     version_main=137  # Match the installed Chrome major version
-                 )
-                 logger.info("Chrome driver initialized successfully")
-                 break
-             except Exception as e:
-                 logger.error(f"Attempt {attempt + 1} failed to initialize Chrome: {str(e)}")
-                 if attempt == max_retries - 1:
-                     raise
-                 time.sleep(5)  # Increased wait time before retrying
+            try:
+                self.driver = uc.Chrome(
+                    options=options,
+                    headless=True,  # Enforce headless mode
+                    version_main=137  # Match the installed Chrome major version
+                )
+                logger.info("Chrome driver initialized successfully")
+                return self.driver  # Return the driver for explicit assignment if needed
+            except Exception as e:
+                logger.error(f"Attempt {attempt + 1} failed to initialize Chrome: {str(e)}")
+                if attempt == max_retries - 1:
+                    logger.error("All retries failed to initialize Chrome driver")
+                    raise
+                time.sleep(5)  # Increased wait time before retrying
     
     def safe_click(self, selectors: List[str], timeout: int = 10) -> bool:
         """Safely click an element using multiple selectors"""
@@ -153,11 +154,14 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
     driver = None
     try:
         driver = strategy.create_driver()
+        if driver is None:
+            logger.error("Driver initialization returned None, cannot proceed with scraping")
+            raise Exception("Chrome driver is None after initialization")
         strategy.driver = driver
         
         url = f"https://www.morningstar.com/stocks/{market}/{ticker}/financials"
-        driver.get(url)
         logger.info(f"Navigating to {url}")
+        driver.get(url)
         
         # Click tab
         tab_text = data_type.value.replace('_', ' ').title()
