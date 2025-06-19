@@ -68,23 +68,25 @@ class OptimizedScrapingStrategy:
         options.add_argument("--test-type")
         options.add_argument("--start-maximized")
         options.add_argument("--log-level=0")
-        
-        # Initialize driver with retry mechanism
-        max_retries = 3
+        options.add_argument("--headless")  # Explicitly set headless mode
+        options.add_argument("--disable-gpu")  # Disable GPU for headless mode in Docker
+         
+         # Initialize driver with retry mechanism
+        max_retries = 5  # Increased retries
         for attempt in range(max_retries):
-            try:
-                self.driver = uc.Chrome(
-                    options=options,
-                    headless=False,
-                    version_main=137  # Match the installed Chrome major version
-                )
-                logger.info("Chrome driver initialized successfully")
-                break
-            except Exception as e:
-                logger.error(f"Attempt {attempt + 1} failed to initialize Chrome: {str(e)}")
-                if attempt == max_retries - 1:
-                    raise
-                time.sleep(2)  # Wait before retrying
+             try:
+                 self.driver = uc.Chrome(
+                     options=options,
+                     headless=True,  # Enforce headless mode
+                     version_main=137  # Match the installed Chrome major version
+                 )
+                 logger.info("Chrome driver initialized successfully")
+                 break
+             except Exception as e:
+                 logger.error(f"Attempt {attempt + 1} failed to initialize Chrome: {str(e)}")
+                 if attempt == max_retries - 1:
+                     raise
+                 time.sleep(5)  # Increased wait time before retrying
     
     def safe_click(self, selectors: List[str], timeout: int = 10) -> bool:
         """Safely click an element using multiple selectors"""
@@ -198,8 +200,12 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
         strategy.store_fallback_data(ticker, market, data_type)
         return 'ERROR'
     finally:
-        if driver:
-            driver.quit()
+             if driver:
+                 try:
+                     driver.quit()
+                     logger.info("Chrome driver closed successfully")
+                 except Exception as e:
+                     logger.error(f"Failed to close Chrome driver: {str(e)}")
 
 @shared_task(bind=True)
 def scraper_firestore(self, ticker_value: str, market_value: str, download_type: str):
