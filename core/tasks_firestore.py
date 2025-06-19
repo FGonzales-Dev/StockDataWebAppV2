@@ -216,7 +216,7 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
                         logger.info(f"Excel data converted to JSON, length: {len(data_json)} characters")
                         strategy.store_data(ticker, market, data_type, data_json, 'DONE')
                         logger.info(f"Data stored for {ticker} {market} {data_type.value}")
-                        os.remove(file_path)  # Clean up the file after processing
+                        os.remove(file_path) 
                         return 'DONE'
                     except Exception as e:
                         logger.error(f"Error processing Excel file: {str(e)}")
