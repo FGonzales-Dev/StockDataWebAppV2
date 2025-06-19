@@ -178,7 +178,7 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
         ]
         
         if strategy.safe_click(export_selectors):
-            sleep(10)
+            sleep(20)
             
             # Process file
             filename_map = {
@@ -188,15 +188,32 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
             }
             
             file_path = BASE_DIR + strategy.config.download_directory + "/" + filename_map[data_type]
+            logger.info(f"Checking for downloaded file at: {file_path}")
             
-            if os.path.exists(file_path):
-                df = pd.read_excel(file_path)
-                data_json = df.to_json()
-                strategy.store_data(ticker, market, data_type, data_json, 'DONE')
-                os.remove(file_path)
-                return 'DONE'
+            max_wait = 30  # Wait up to 30 seconds for file to appear
+            wait_interval = 5
+            for _ in range(max_wait // wait_interval):
+                if os.path.exists(file_path):
+                    logger.info(f"File found at {file_path}, processing Excel data")
+                    try:
+                        df = pd.read_excel(file_path)
+                        data_json = df.to_json()
+                        logger.info(f"Excel data converted to JSON, length: {len(data_json)} characters")
+                        strategy.store_data(ticker, market, data_type, data_json, 'DONE')
+                        logger.info(f"Data stored for {ticker} {market} {data_type.value}")
+                        os.remove(file_path)
+                        return 'DONE'
+                    except Exception as e:
+                        logger.error(f"Error processing Excel file: {str(e)}")
+                        break
+                else:
+                    logger.info(f"File not found yet at {file_path}, waiting...")
+                    sleep(wait_interval)
+            
+            logger.warning(f"File not found at {file_path} after waiting, falling back to placeholder data")
         
         strategy.store_fallback_data(ticker, market, data_type)
+        logger.info(f"Stored fallback data for {ticker} {market} {data_type.value} due to download failure")
         return 'PARTIAL'
         
     except Exception as e:
