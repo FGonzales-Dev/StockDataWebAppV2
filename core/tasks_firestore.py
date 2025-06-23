@@ -309,7 +309,7 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
                  except Exception as e:
                      logger.error(f"Failed to close Chrome driver: {str(e)}")
 
-def scraper_key_metrics(self, ticker: str, market_value: str, data_type: DataType) -> str:
+def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> str:
     """Key metrics scraper with Firestore check-first approach"""
     
     strategy = OptimizedScrapingStrategy()
