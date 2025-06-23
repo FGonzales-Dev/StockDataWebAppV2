@@ -145,7 +145,7 @@ def financial_statement_firestore_check(self, ticker_value: str, market_value: s
         data_type = DataType(download_type)
         
         if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
-            result = scrape_financial_statement_firestore(ticker_value, market_value, data_type)
+            result = scraper_financial_statement(ticker_value, market_value, data_type)
             
             # Update progress
             if result == 'EXISTING':
@@ -176,7 +176,7 @@ def key_metrics_firestore_check(self, ticker_value: str, market_value: str, down
         data_type = DataType(download_type)
         
         if data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
-            result = scraper_key_metrics_firestore(ticker_value, market_value, data_type)
+            result = scraper_key_metrics(ticker_value, market_value, data_type)
             
             # Update progress
             if result == 'EXISTING':
@@ -201,7 +201,7 @@ def key_metrics_firestore_check(self, ticker_value: str, market_value: str, down
 
 
 
-def scrape_financial_statement_firestore(ticker: str, market: str, data_type: DataType) -> str:
+def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -> str:
     """
     Financial statement scraper with Firestore check-first approach
     Returns: 'EXISTING' if data found, 'DONE' if scraped successfully, 'ERROR' if failed
@@ -364,7 +364,7 @@ def scraper_dividends_firestore(self, ticker_value: str, market_value: str):
         if driver:
             driver.quit()
 
-def scraper_key_metrics_firestore(self, ticker: str, market_value: str, data_type: DataType) -> str:
+def scraper_key_metrics(self, ticker: str, market_value: str, data_type: DataType) -> str:
     """Key metrics scraper with Firestore check-first approach"""
     
     strategy = OptimizedScrapingStrategy()

@@ -9,7 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import pandas as pd
 from .tasks_firestore import (
-    scrape_financial_statement_firestore,
+    scraper_financial_statement,
+    scraper_key_metrics,
 )
 from .firestore_storage import (
     FirestoreStorage,
@@ -78,7 +79,7 @@ def scrape_all_direct(ticker: str, market: str) -> str:
         
         # Scrape all financial statements
         for data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
-            result = scrape_financial_statement_firestore(ticker, market, data_type)
+            result = scraper_financial_statement(ticker, market, data_type)
             results.append(result)
         
         # Scrape other data types
@@ -87,7 +88,7 @@ def scrape_all_direct(ticker: str, market: str) -> str:
         # Scrape key metrics data
         for data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, 
                          DataType.KEY_METRICS_FINANCIAL_HEALTH]:
-            result = scrape_key_metrics_direct(ticker, market, data_type)
+            result = scraper_key_metrics(ticker, market, data_type)
             results.append(result)
         
         # Determine overall result
@@ -430,12 +431,12 @@ def direct_scrape_firestore(request):
             })
         
         # Import and use the appropriate scraping function
-        from .tasks_firestore import scrape_financial_statement_firestore, scraper_key_metrics_firestore
+        from .tasks_firestore import scraper_financial_statement, scraper_key_metrics
         
         if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
-            result = scrape_financial_statement_firestore(ticker, market, data_type)
+            result = scraper_financial_statement(ticker, market, data_type)
         elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
-            result = scraper_key_metrics_firestore(ticker, market, data_type)
+            result = scraper_key_metrics(ticker, market, data_type)
             
             if result == 'DONE':
                 # Get the newly stored data
@@ -533,15 +534,15 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
         
         # Trigger appropriate scraper based on data type
         if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
-            from .tasks_firestore import scrape_financial_statement_firestore
-            result = scrape_financial_statement_firestore(ticker, market, data_type)
+            from .tasks_firestore import scraper_financial_statement
+            result = scraper_financial_statement(ticker, market, data_type)
         elif data_type == DataType.DIVIDENDS:
             # For dividends, we need to implement a sync version
             result = scrape_dividends_direct(ticker, market)
         elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
             # For key metrics, we need to implement a sync version
-            from .tasks_firestore import scraper_key_metrics_firestore
-            result = scraper_key_metrics_firestore(ticker, market, data_type)
+            from .tasks_firestore import scraper_key_metrics
+            result = scraper_key_metrics(ticker, market, data_type)
         else:
             return JsonResponse({
                 'error': f'Scraping not implemented for {data_type.value}'
