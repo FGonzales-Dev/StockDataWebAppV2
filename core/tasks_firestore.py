@@ -309,61 +309,6 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
                  except Exception as e:
                      logger.error(f"Failed to close Chrome driver: {str(e)}")
 
-
-
-@shared_task(bind=True)
-def scraper_dividends_firestore(self, ticker_value: str, market_value: str):
-    """Dividends scraper with Firestore check-first approach"""
-    strategy = OptimizedScrapingStrategy()
-    data_type = DataType.DIVIDENDS
-    
-    # Check existing data first
-    existing_data = strategy.check_existing_data_first(ticker_value, market_value, data_type)
-    if existing_data:
-        logger.info(f"Found existing dividends data for {ticker_value} {market_value}")
-        self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
-        return 'EXISTING'
-    
-    # Proceed with scraping
-    driver = None
-    try:
-        driver = strategy.create_driver()
-        strategy.driver = driver
-        
-        url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends"
-        driver.get(url)
-        logger.info(f"Navigating to {url}")
-        
-        table_selectors = [
-            "//div[@class='mds-table__scroller__sal']",
-            "//div[contains(@class, 'table__scroller')]",
-            "//div[contains(@class, 'table') and contains(@class, 'scroller')]",
-            "//table"
-        ]
-        
-        table_element = strategy.find_element_safely(table_selectors, 30)
-        if table_element:
-            data = table_element.get_attribute("outerHTML")
-            df = pd.read_html(data)
-            if df and len(df) > 0:
-                data_json = df[0].to_json()
-                strategy.store_data(ticker_value, market_value, data_type, data_json, 'DONE')
-                self.update_state(state='SUCCESS', meta={'status': 'Data scraped and stored successfully'})
-                return 'DONE'
-        
-        strategy.store_fallback_data(ticker_value, market_value, data_type)
-        self.update_state(state='FAILURE', meta={'status': 'Scraping partially failed'})
-        return 'PARTIAL'
-        
-    except Exception as e:
-        logger.error(f"Error scraping dividends: {e}")
-        strategy.store_fallback_data(ticker_value, market_value, data_type)
-        self.update_state(state='FAILURE', meta={'status': f'Scraping failed: {str(e)}'})
-        return 'ERROR'
-    finally:
-        if driver:
-            driver.quit()
-
 def scraper_key_metrics(self, ticker: str, market_value: str, data_type: DataType) -> str:
     """Key metrics scraper with Firestore check-first approach"""
     
@@ -473,6 +418,61 @@ def scraper_key_metrics(self, ticker: str, market_value: str, data_type: DataTyp
                     logger.info("Chrome driver closed successfully")
                 except Exception as e:
                     logger.error(f"Failed to close Chrome driver: {str(e)}")
+
+
+
+@shared_task(bind=True)
+def scraper_dividends_firestore(self, ticker_value: str, market_value: str):
+    """Dividends scraper with Firestore check-first approach"""
+    strategy = OptimizedScrapingStrategy()
+    data_type = DataType.DIVIDENDS
+    
+    # Check existing data first
+    existing_data = strategy.check_existing_data_first(ticker_value, market_value, data_type)
+    if existing_data:
+        logger.info(f"Found existing dividends data for {ticker_value} {market_value}")
+        self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
+        return 'EXISTING'
+    
+    # Proceed with scraping
+    driver = None
+    try:
+        driver = strategy.create_driver()
+        strategy.driver = driver
+        
+        url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends"
+        driver.get(url)
+        logger.info(f"Navigating to {url}")
+        
+        table_selectors = [
+            "//div[@class='mds-table__scroller__sal']",
+            "//div[contains(@class, 'table__scroller')]",
+            "//div[contains(@class, 'table') and contains(@class, 'scroller')]",
+            "//table"
+        ]
+        
+        table_element = strategy.find_element_safely(table_selectors, 30)
+        if table_element:
+            data = table_element.get_attribute("outerHTML")
+            df = pd.read_html(data)
+            if df and len(df) > 0:
+                data_json = df[0].to_json()
+                strategy.store_data(ticker_value, market_value, data_type, data_json, 'DONE')
+                self.update_state(state='SUCCESS', meta={'status': 'Data scraped and stored successfully'})
+                return 'DONE'
+        
+        strategy.store_fallback_data(ticker_value, market_value, data_type)
+        self.update_state(state='FAILURE', meta={'status': 'Scraping partially failed'})
+        return 'PARTIAL'
+        
+    except Exception as e:
+        logger.error(f"Error scraping dividends: {e}")
+        strategy.store_fallback_data(ticker_value, market_value, data_type)
+        self.update_state(state='FAILURE', meta={'status': f'Scraping failed: {str(e)}'})
+        return 'ERROR'
+    finally:
+        if driver:
+            driver.quit()
 
 
 
