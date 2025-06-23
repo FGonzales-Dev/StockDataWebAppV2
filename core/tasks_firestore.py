@@ -135,6 +135,72 @@ class OptimizedScrapingStrategy:
         fallback = json.dumps({data_type.value.lower(): {"none": "no data"}})
         self.store_data(ticker, market, data_type, fallback, 'ERROR')
 
+
+@shared_task(bind=True)
+def financial_statement_firestore_check(self, ticker_value: str, market_value: str, download_type: str):
+    """
+    Main scraper task with Firestore check-first approach
+    """
+    try:
+        data_type = DataType(download_type)
+        
+        if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
+            result = scrape_financial_statement_firestore(ticker_value, market_value, data_type)
+            
+            # Update progress
+            if result == 'EXISTING':
+                self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
+            elif result == 'DONE':
+                self.update_state(state='SUCCESS', meta={'status': 'Data scraped and stored successfully'})
+            else:
+                self.update_state(state='FAILURE', meta={'status': f'Scraping failed: {result}'})
+            
+            return result
+        else:
+            logger.error(f"Data type {download_type} not yet implemented for Firestore")
+            return 'ERROR'
+            
+    except ValueError:
+        logger.error(f"Invalid data type: {download_type}")
+        return 'ERROR'
+    except Exception as e:
+        logger.error(f"Task failed: {e}")
+        return 'ERROR'
+    
+@shared_task(bind=True)
+def key_metrics_firestore_check(self, ticker_value: str, market_value: str, download_type: str):
+    """
+    Main scraper task with Firestore check-first approach
+    """
+    try:
+        data_type = DataType(download_type)
+        
+        if data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+            result = scraper_key_metrics_firestore(ticker_value, market_value, data_type)
+            
+            # Update progress
+            if result == 'EXISTING':
+                self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
+            elif result == 'DONE':
+                self.update_state(state='SUCCESS', meta={'status': 'Data scraped and stored successfully'})
+            else:
+                self.update_state(state='FAILURE', meta={'status': f'Scraping failed: {result}'})
+            
+            return result
+        else:
+            logger.error(f"Data type {download_type} not yet implemented for Firestore")
+            return 'ERROR'
+            
+    except ValueError:
+        logger.error(f"Invalid data type: {download_type}")
+        return 'ERROR'
+    except Exception as e:
+        logger.error(f"Task failed: {e}")
+        return 'ERROR'
+
+
+
+
 def scrape_financial_statement_firestore(ticker: str, market: str, data_type: DataType) -> str:
     """
     Financial statement scraper with Firestore check-first approach
@@ -243,36 +309,7 @@ def scrape_financial_statement_firestore(ticker: str, market: str, data_type: Da
                  except Exception as e:
                      logger.error(f"Failed to close Chrome driver: {str(e)}")
 
-# @shared_task(bind=True)
-# def scraper_firestore(self, ticker_value: str, market_value: str, download_type: str):
-#     """
-#     Main scraper task with Firestore check-first approach
-#     """
-#     try:
-#         data_type = DataType(download_type)
-        
-#         if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
-#             result = scrape_financial_statement_firestore(ticker_value, market_value, data_type)
-            
-#             # Update progress
-#             if result == 'EXISTING':
-#                 self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
-#             elif result == 'DONE':
-#                 self.update_state(state='SUCCESS', meta={'status': 'Data scraped and stored successfully'})
-#             else:
-#                 self.update_state(state='FAILURE', meta={'status': f'Scraping failed: {result}'})
-            
-#             return result
-#         else:
-#             logger.error(f"Data type {download_type} not yet implemented for Firestore")
-#             return 'ERROR'
-            
-#     except ValueError:
-#         logger.error(f"Invalid data type: {download_type}")
-#         return 'ERROR'
-#     except Exception as e:
-#         logger.error(f"Task failed: {e}")
-#         return 'ERROR'
+
 
 @shared_task(bind=True)
 def scraper_dividends_firestore(self, ticker_value: str, market_value: str):

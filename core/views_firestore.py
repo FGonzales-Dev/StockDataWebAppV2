@@ -150,12 +150,12 @@ def scrape_firestore(request):
             
             # Create a background task for scraping
             if download_type in ["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW"]:
-                from .tasks_firestore import scraper_firestore
-                task = scraper_firestore.delay(ticker_value, market_value, download_type)
+                from .tasks_firestore import financial_statement_firestore_check
+                task = financial_statement_firestore_check.delay(ticker_value, market_value, download_type)
             elif download_type in ["KEY_METRICS_CASH_FLOW", "KEY_METRICS_GROWTH", 
                                    "KEY_METRICS_FINANCIAL_HEALTH"]:
-                from .tasks_firestore import scraper_key_metrics_firestore  
-                task = scraper_key_metrics_firestore.delay(ticker_value, market_value, download_type)
+                from .tasks_firestore import key_metrics_firestore_check  
+                task = key_metrics_firestore_check.delay(ticker_value, market_value, download_type)
             elif download_type == "DIVIDENDS":
                 from .tasks_firestore import scraper_dividends_firestore
                 task = scraper_dividends_firestore.delay(ticker_value, market_value)
