@@ -11,6 +11,7 @@ import pandas as pd
 from .tasks_firestore import (
     scraper_financial_statement,
     scraper_key_metrics,
+    scraper_dividends
 )
 from .firestore_storage import (
     FirestoreStorage,
@@ -83,13 +84,15 @@ def scrape_all_direct(ticker: str, market: str) -> str:
             results.append(result)
         
         # Scrape other data types
-        results.append(scrape_dividends_direct(ticker, market))
+        results.append(scraper_dividends(ticker, market, DataType.DIVIDENDS))
         
         # Scrape key metrics data
         for data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, 
                          DataType.KEY_METRICS_FINANCIAL_HEALTH]:
             result = scraper_key_metrics(ticker, market, data_type)
             results.append(result)
+
+        
         
         # Determine overall result
         if all(r in ['DONE', 'EXISTING'] for r in results):
@@ -158,8 +161,8 @@ def scrape_firestore(request):
                 from .tasks_firestore import key_metrics_firestore_check  
                 task = key_metrics_firestore_check.delay(ticker_value, market_value, download_type)
             elif download_type == "DIVIDENDS":
-                from .tasks_firestore import scraper_dividends_firestore
-                task = scraper_dividends_firestore.delay(ticker_value, market_value)
+                from .tasks_firestore import dividends_firestore_check
+                task = dividends_firestore_check.delay(ticker_value, market_value)
             elif download_type == "ALL":
                 from .tasks_firestore import all_scraper_firestore
                 task = all_scraper_firestore.delay(ticker_value, market_value)
@@ -431,13 +434,14 @@ def direct_scrape_firestore(request):
             })
         
         # Import and use the appropriate scraping function
-        from .tasks_firestore import scraper_financial_statement, scraper_key_metrics
+        from .tasks_firestore import scraper_financial_statement, scraper_key_metrics, scraper_dividends
         
         if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
             result = scraper_financial_statement(ticker, market, data_type)
         elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
             result = scraper_key_metrics(ticker, market, data_type)
-            
+        elif data_type == DataType.DIVIDENDS:
+            result = scraper_dividends(ticker, market, data_type)
             if result == 'DONE':
                 # Get the newly stored data
                 new_data = storage.check_data_exists(ticker, market, data_type)
@@ -538,7 +542,8 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
             result = scraper_financial_statement(ticker, market, data_type)
         elif data_type == DataType.DIVIDENDS:
             # For dividends, we need to implement a sync version
-            result = scrape_dividends_direct(ticker, market)
+            from .tasks_firestore import scraper_dividends
+            result = scraper_dividends(ticker, market, data_type)
         elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
             # For key metrics, we need to implement a sync version
             from .tasks_firestore import scraper_key_metrics

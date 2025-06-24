@@ -135,7 +135,7 @@ class OptimizedScrapingStrategy:
         fallback = json.dumps({data_type.value.lower(): {"none": "no data"}})
         self.store_data(ticker, market, data_type, fallback, 'ERROR')
 
-
+#-------------------------------------FIRESTORE CHECK FIRST------------------------------------------------
 @shared_task(bind=True)
 def financial_statement_firestore_check(self, ticker_value: str, market_value: str, download_type: str):
     """
@@ -198,8 +198,39 @@ def key_metrics_firestore_check(self, ticker_value: str, market_value: str, down
         logger.error(f"Task failed: {e}")
         return 'ERROR'
 
+@shared_task(bind=True)
+def dividends_firestore_check(self, ticker_value: str, market_value: str):
+    """
+    Dividends scraper with Firestore check-first approach
+    """
+    try:
+        data_type = DataType.DIVIDENDS
+        
+        if data_type in [DataType.DIVIDENDS]:
+            result = scraper_dividends(ticker_value, market_value, data_type)
+            
+            # Update progress
+            if result == 'EXISTING':
+                self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
+            elif result == 'DONE':
+                self.update_state(state='SUCCESS', meta={'status': 'Data scraped and stored successfully'})
+            else:
+                self.update_state(state='FAILURE', meta={'status': f'Scraping failed: {result}'})
+            
+            return result
+        else:
+            logger.error(f"Data type dividends not yet implemented for Firestore")
+            return 'ERROR'
+            
+    except ValueError:
+        logger.error(f"Invalid data type: dividends")
+        return 'ERROR'
+    except Exception as e:
+        logger.error(f"Task failed: {e}")
+        return 'ERROR'
 
 
+#------------------------------------------------------------------------------------------------
 
 def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -> str:
     """
@@ -419,25 +450,23 @@ def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> 
                 except Exception as e:
                     logger.error(f"Failed to close Chrome driver: {str(e)}")
 
-
-
-@shared_task(bind=True)
-def scraper_dividends_firestore(self, ticker_value: str, market_value: str):
+def scraper_dividends(ticker_value: str, market_value: str, data_type: DataType) -> str:
     """Dividends scraper with Firestore check-first approach"""
     strategy = OptimizedScrapingStrategy()
-    data_type = DataType.DIVIDENDS
     
     # Check existing data first
     existing_data = strategy.check_existing_data_first(ticker_value, market_value, data_type)
     if existing_data:
-        logger.info(f"Found existing dividends data for {ticker_value} {market_value}")
-        self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
+        logger.info(f"Found existing {data_type.value} data for {ticker_value} {market_value} - skipping scrape")
         return 'EXISTING'
     
     # Proceed with scraping
     driver = None
     try:
         driver = strategy.create_driver()
+        if driver is None:
+            logger.error("Driver initialization returned None, cannot proceed with scraping")
+            raise Exception("Chrome driver is None after initialization")
         strategy.driver = driver
         
         url = f"https://www.morningstar.com/stocks/{market_value}/{ticker_value}/dividends"
@@ -458,17 +487,17 @@ def scraper_dividends_firestore(self, ticker_value: str, market_value: str):
             if df and len(df) > 0:
                 data_json = df[0].to_json()
                 strategy.store_data(ticker_value, market_value, data_type, data_json, 'DONE')
-                self.update_state(state='SUCCESS', meta={'status': 'Data scraped and stored successfully'})
+                logger.info(f"Data stored for {ticker_value} {market_value} {data_type.value}")
                 return 'DONE'
         
         strategy.store_fallback_data(ticker_value, market_value, data_type)
-        self.update_state(state='FAILURE', meta={'status': 'Scraping partially failed'})
+        logger.info(f"Stored fallback data for {ticker_value} {market_value} {data_type.value} due to scraping failure")
         return 'PARTIAL'
         
     except Exception as e:
         logger.error(f"Error scraping dividends: {e}")
         strategy.store_fallback_data(ticker_value, market_value, data_type)
-        self.update_state(state='FAILURE', meta={'status': f'Scraping failed: {str(e)}'})
+        logger.error(f"Scraping failed: {str(e)}")
         return 'ERROR'
     finally:
         if driver:
