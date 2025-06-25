@@ -13,6 +13,7 @@ from celery_progress.backend import ProgressRecorder
 import pandas as pd
 from time import sleep
 import os
+from io import BytesIO
 import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as EC
@@ -504,44 +505,48 @@ def scraper_dividends(ticker_value: str, market_value: str, data_type: DataType)
             driver.quit()
 
 
+@shared_task
+def all_scraper_firestore(ticker, market):
+    storage = get_storage()
+    data_collected = {}
 
-@shared_task(bind=True)
-def all_scraper_firestore(self, ticker_value: str, market_value: str):
-    """
-    Scrape all data types with Firestore check-first approach
-    """
-    
-    try:
-        all_data_types = [
-            DataType.INCOME_STATEMENT,
-            DataType.BALANCE_SHEET,
-            DataType.CASH_FLOW,
-            DataType.DIVIDENDS,
-            DataType.KEY_METRICS_CASH_FLOW,
-            DataType.KEY_METRICS_GROWTH,
-            DataType.KEY_METRICS_FINANCIAL_HEALTH
-        ]
-        
-        results = {}
-        
-        # Check existing data first
-        strategy = OptimizedScrapingStrategy()
-        for data_type in all_data_types:
-            existing = strategy.check_existing_data_first(ticker_value, market_value, data_type)
-            if existing:
-                results[data_type.value] = 'EXISTING'
-                logger.info(f"Found existing {data_type.value} for {ticker_value} {market_value}")
-            else:
-                # This would trigger individual scrapers
-                results[data_type.value] = 'PENDING'
-        
-        self.update_state(state='SUCCESS', meta=results)
-        return results
-        
-    except Exception as e:
-        logger.error(f"Error in all_scraper_firestore: {e}")
-        self.update_state(state='FAILURE', meta={'error': str(e)})
-        return {'error': str(e)}
+    for dt in [
+        DataType.INCOME_STATEMENT,
+        DataType.BALANCE_SHEET,
+        DataType.CASH_FLOW,
+        DataType.DIVIDENDS,
+        DataType.KEY_METRICS_CASH_FLOW,
+        DataType.KEY_METRICS_GROWTH,
+        DataType.KEY_METRICS_FINANCIAL_HEALTH,
+    ]:
+        existing = storage.check_data_exists(ticker, market, dt)
+        if existing and existing['status'] == 'DONE':
+            data_collected[dt.value] = json.loads(existing['data'])
+        else:
+            # Scrape missing data
+            if dt in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
+                scraper_financial_statement(ticker, market, dt)
+            elif dt == DataType.DIVIDENDS:
+                scraper_dividends(ticker, market, dt)
+            elif dt in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+                scraper_key_metrics(ticker, market, dt)
+
+            # Recheck
+            result = storage.check_data_exists(ticker, market, dt)
+            if result and result['status'] == 'DONE':
+                data_collected[dt.value] = json.loads(result['data'])
+
+    # Compile into one Excel file (e.g., save to media and return filename)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        for dtype, data in data_collected.items():
+            df = pd.DataFrame(data)
+            df.to_excel(writer, sheet_name=dtype[:31], index=False)
+
+    # Optionally save output to a file system or return result
+    # For example, you could return base64-encoded file if needed
+
+    return 'DONE'
 
 # Helper functions for key metrics scraping
 def _click_key_metrics_tab(scraper, data_type: DataType) -> bool:
