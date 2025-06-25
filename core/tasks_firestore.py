@@ -504,50 +504,6 @@ def scraper_dividends(ticker_value: str, market_value: str, data_type: DataType)
         if driver:
             driver.quit()
 
-
-@shared_task
-def all_scraper_firestore(ticker, market):
-    storage = get_storage()
-    data_collected = {}
-
-    for dt in [
-        DataType.INCOME_STATEMENT,
-        DataType.BALANCE_SHEET,
-        DataType.CASH_FLOW,
-        DataType.DIVIDENDS,
-        DataType.KEY_METRICS_CASH_FLOW,
-        DataType.KEY_METRICS_GROWTH,
-        DataType.KEY_METRICS_FINANCIAL_HEALTH,
-    ]:
-        existing = storage.check_data_exists(ticker, market, dt)
-        if existing and existing['status'] == 'DONE':
-            data_collected[dt.value] = json.loads(existing['data'])
-        else:
-            # Scrape missing data
-            if dt in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
-                scraper_financial_statement(ticker, market, dt)
-            elif dt == DataType.DIVIDENDS:
-                scraper_dividends(ticker, market, dt)
-            elif dt in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
-                scraper_key_metrics(ticker, market, dt)
-
-            # Recheck
-            result = storage.check_data_exists(ticker, market, dt)
-            if result and result['status'] == 'DONE':
-                data_collected[dt.value] = json.loads(result['data'])
-
-    # Compile into one Excel file (e.g., save to media and return filename)
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        for dtype, data in data_collected.items():
-            df = pd.DataFrame(data)
-            df.to_excel(writer, sheet_name=dtype[:31], index=False)
-
-    # Optionally save output to a file system or return result
-    # For example, you could return base64-encoded file if needed
-
-    return 'DONE'
-
 # Helper functions for key metrics scraping
 def _click_key_metrics_tab(scraper, data_type: DataType) -> bool:
     """Click the appropriate key metrics tab"""
@@ -563,3 +519,64 @@ def _click_key_metrics_tab(scraper, data_type: DataType) -> bool:
     
     tab_selectors = [f"//button[contains(., '{tab_text}')]"]
     return scraper.safe_click(tab_selectors) 
+
+
+@shared_task(bind=True)
+def all_scraper_firestore(self, ticker, market):
+    """Scrape all data types for a stock"""
+    storage = get_storage()
+    data_collected = {}
+    progress_recorder = ProgressRecorder(self)
+    total_steps = 7  # Total number of data types
+    current_step = 0
+
+    for dt in [
+        DataType.INCOME_STATEMENT,
+        DataType.BALANCE_SHEET,
+        DataType.CASH_FLOW,
+        DataType.DIVIDENDS,
+        DataType.KEY_METRICS_CASH_FLOW,
+        DataType.KEY_METRICS_GROWTH,
+        DataType.KEY_METRICS_FINANCIAL_HEALTH,
+    ]:
+        current_step += 1
+        progress_recorder.set_progress(current_step, total_steps, 
+            f'Processing {dt.value.replace("_", " ").title()}')
+        
+        existing = storage.check_data_exists(ticker, market, dt)
+        if existing and existing['status'] == 'DONE':
+            data_collected[dt.value] = json.loads(existing['data'])
+            logger.info(f"Found existing data for {dt.value}")
+        else:
+            # Scrape missing data
+            try:
+                if dt in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
+                    result = scraper_financial_statement(ticker, market, dt)
+                elif dt == DataType.DIVIDENDS:
+                    result = scraper_dividends(ticker, market, dt)
+                elif dt in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+                    result = scraper_key_metrics(ticker, market, dt)
+                
+                if result == 'DONE':
+                    # Recheck after scraping
+                    result = storage.check_data_exists(ticker, market, dt)
+                    if result and result['status'] == 'DONE':
+                        data_collected[dt.value] = json.loads(result['data'])
+                        logger.info(f"Successfully scraped new data for {dt.value}")
+            except Exception as e:
+                logger.error(f"Error scraping {dt.value}: {str(e)}")
+                continue
+
+    # Update final state
+    if len(data_collected) == total_steps:
+        self.update_state(state='SUCCESS', 
+                         meta={'status': 'All data collected successfully'})
+        return 'DONE'
+    elif len(data_collected) > 0:
+        self.update_state(state='SUCCESS', 
+                         meta={'status': f'Partially completed ({len(data_collected)}/{total_steps} types)'})
+        return 'PARTIAL'
+    else:
+        self.update_state(state='FAILURE', 
+                         meta={'status': 'Failed to collect any data'})
+        return 'ERROR'

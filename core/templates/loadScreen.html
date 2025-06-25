@@ -430,7 +430,39 @@
       document.getElementById('error-section').style.display = 'block';
       document.getElementById('error-message').textContent = message;
     }
-  
+    const isAllType = '{{download_type}}' === 'ALL';
+    
+    const dataTypes = [
+      'INCOME_STATEMENT',
+      'BALANCE_SHEET',
+      'CASH_FLOW',
+      'DIVIDENDS',
+      'KEY_METRICS_CASH_FLOW',
+      'KEY_METRICS_GROWTH',
+      'KEY_METRICS_FINANCIAL_HEALTH'
+    ];
+    
+    function updateDetailedProgress(data) {
+      const detailedProgress = document.getElementById('detailed-progress');
+      const currentTask = document.getElementById('current-task');
+      
+      if (isAllType && data.state === 'PROGRESS') {
+        detailedProgress.style.display = 'block';
+        
+        // Update current task message
+        if (data.message && data.message.includes('Processing')) {
+          currentTask.innerHTML = `<i class="fas fa-sync fa-spin me-2"></i>${data.message}`;
+        }
+        
+        // Update task progress bar if available
+        if (data.current !== undefined && data.total !== undefined) {
+          const taskProgressBar = document.getElementById('task-progress-bar');
+          const taskProgress = (data.current / data.total) * 100;
+          taskProgressBar.style.width = `${taskProgress}%`;
+        }
+      }
+    }
+
     function checkTaskStatus() {
       if (!taskId) {
         console.error('No task ID provided');
@@ -460,9 +492,16 @@
           
           statusMessage.innerHTML = `<i class="${icon} me-2"></i>${message}`;
           
+          if (isAllType) {
+            updateDetailedProgress(data);
+          }
           // Update progress for active states
           if (data.state === 'STARTED' || data.state === 'PROGRESS') {
-            updateProgress();
+            if (data.progress !== undefined) {
+              document.getElementById('progress-bar').style.width = `${data.progress}%`;
+            } else {
+              updateProgress();
+            }
           }
           
           // Handle progress bar updates
