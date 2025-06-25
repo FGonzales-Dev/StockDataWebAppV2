@@ -1,8 +1,3 @@
-"""
-Firestore-based Views for Stock Data Scraping
-Check Firestore first, scrape only if data doesn't exist
-"""
-
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -100,7 +95,10 @@ def scrape_firestore(request):
             })
             
         elif 'download' in request.POST:
-            return handle_download_firestore(ticker_value, market_value, download_type)
+            if download_type == "ALL":
+                return handle_all_download_firestore(ticker_value, market_value)
+            else:
+                return handle_download_firestore(ticker_value, market_value, download_type)
     
     return render(request, "../templates/stockData.html")
 
@@ -203,7 +201,6 @@ def get_task_info_firestore(request):
         
         # Add additional info based on task state
         if task.state == 'PROGRESS':
-            # Handle progress updates
             if isinstance(task.result, dict):
                 data['progress'] = task.result.get('progress', 0)
                 data['current'] = task.result.get('current', 0)
@@ -212,45 +209,32 @@ def get_task_info_firestore(request):
             else:
                 data['progress'] = 50  # Default progress
                 data['message'] = 'Scraping in progress...'
-                
         elif task.state == 'SUCCESS':
-            if isinstance(task.result, str):
-                if task.result == 'EXISTING':
-                    data['message'] = 'Data already existed in Firestore storage'
-                    data['result'] = 'EXISTING'
-                elif task.result == 'DONE':
-                    data['message'] = 'Data scraped and stored successfully in Firestore'
-                    data['result'] = 'DONE'
-                elif task.result == 'PARTIAL':
-                    data['message'] = 'Data partially scraped and stored in Firestore'
-                    data['result'] = 'PARTIAL'
-                else:
-                    data['message'] = f'Task completed with result: {task.result}'
-            elif isinstance(task.result, dict):
-                data['results'] = task.result
-                data['message'] = 'Task completed successfully'
+            if isinstance(task.result, dict) and 'results' in task.result:
+                # Handle ALL scraping results
+                results = task.result['results']
+                total = len(results)
+                successful = sum(1 for status in results.values() if status in ['DONE', 'EXISTING'])
+                data['message'] = f'Completed {successful}/{total} data types'
+                data['all_results'] = results  # Include detailed results
+                data['download_ready'] = True if successful > 0 else False
+            elif task.result == 'EXISTING':
+                data['message'] = 'Data already exists and is ready for download!'
+                data['download_ready'] = True
+            elif task.result == 'DONE':
+                data['message'] = 'Scraping completed successfully!'
+                data['download_ready'] = True
             else:
-                data['message'] = 'Task completed successfully'
-                
-        elif task.state == 'FAILURE':
-            data['error'] = str(task.result)
-            data['message'] = f'Task failed: {str(task.result)}'
-            
-        elif task.state == 'PENDING':
-            data['message'] = 'Task is waiting to be processed'
-            data['progress'] = 0
-            
-        elif task.state == 'STARTED':
-            data['message'] = 'Task is being processed'
-            data['progress'] = 25
+                data['message'] = 'Task completed with status: ' + str(task.result)
+                data['download_ready'] = task.result in ['DONE', 'EXISTING']
         
         return JsonResponse(data)
         
     except Exception as e:
+        logger.error(f"Error getting task info: {e}")
         return JsonResponse({
             'state': 'ERROR',
-            'result': f'Error retrieving task info: {str(e)}',
-            'message': f'Error retrieving task info: {str(e)}'
+            'result': str(e)
         })
 
 def check_data_status_firestore(request):

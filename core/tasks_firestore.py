@@ -1,8 +1,3 @@
-"""
-Firestore-based Celery Tasks for Stock Data Scraping
-Check Firestore first, scrape only if data doesn't exist
-"""
-
 import json
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -510,6 +505,7 @@ def all_scraper_firestore(self, ticker_value: str, market_value: str):
     """
     Scrape all data types with Firestore check-first approach
     """
+    progress_recorder = ProgressRecorder(self)
     
     try:
         all_data_types = [
@@ -523,19 +519,44 @@ def all_scraper_firestore(self, ticker_value: str, market_value: str):
         ]
         
         results = {}
+        total_steps = len(all_data_types)
+        current_step = 0
         
-        # Check existing data first
-        strategy = OptimizedScrapingStrategy()
+        # Process each data type
         for data_type in all_data_types:
+            current_step += 1
+            progress_recorder.set_progress(current_step, total_steps, 
+                                        f"Processing {data_type.value} ({current_step}/{total_steps})")
+            
+            # First check if data exists
+            strategy = OptimizedScrapingStrategy()
             existing = strategy.check_existing_data_first(ticker_value, market_value, data_type)
+            
             if existing:
                 results[data_type.value] = 'EXISTING'
                 logger.info(f"Found existing {data_type.value} for {ticker_value} {market_value}")
-            else:
-                # This would trigger individual scrapers
-                results[data_type.value] = 'PENDING'
+                continue
+            
+            # Data doesn't exist, trigger appropriate scraper
+            try:
+                if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
+                    result = scraper_financial_statement(ticker_value, market_value, data_type)
+                elif data_type == DataType.DIVIDENDS:
+                    result = scraper_dividends(ticker_value, market_value, data_type)
+                elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, 
+                                 DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+                    result = scraper_key_metrics(ticker_value, market_value, data_type)
+                
+                results[data_type.value] = result
+                logger.info(f"Scraped {data_type.value} for {ticker_value} {market_value} with result: {result}")
+                
+            except Exception as e:
+                logger.error(f"Error scraping {data_type.value}: {e}")
+                results[data_type.value] = 'ERROR'
+                strategy.store_fallback_data(ticker_value, market_value, data_type)
         
-        self.update_state(state='SUCCESS', meta=results)
+        # Update final state with all results
+        self.update_state(state='SUCCESS', meta={'results': results})
         return results
         
     except Exception as e:
