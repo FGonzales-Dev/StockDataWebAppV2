@@ -524,59 +524,108 @@ def _click_key_metrics_tab(scraper, data_type: DataType) -> bool:
 @shared_task(bind=True)
 def all_scraper_firestore(self, ticker, market):
     """Scrape all data types for a stock"""
-    storage = get_storage()
-    data_collected = {}
-    progress_recorder = ProgressRecorder(self)
-    total_steps = 7  # Total number of data types
-    current_step = 0
+    try:
+        storage = get_storage()
+        data_collected = {}
+        progress_recorder = ProgressRecorder(self)
+        total_steps = 7  # Total number of data types
+        current_step = 0
 
-    for dt in [
-        DataType.INCOME_STATEMENT,
-        DataType.BALANCE_SHEET,
-        DataType.CASH_FLOW,
-        DataType.DIVIDENDS,
-        DataType.KEY_METRICS_CASH_FLOW,
-        DataType.KEY_METRICS_GROWTH,
-        DataType.KEY_METRICS_FINANCIAL_HEALTH,
-    ]:
-        current_step += 1
-        progress_recorder.set_progress(current_step, total_steps, 
-            f'Processing {dt.value.replace("_", " ").title()}')
-        
-        existing = storage.check_data_exists(ticker, market, dt)
-        if existing and existing['status'] == 'DONE':
-            data_collected[dt.value] = json.loads(existing['data'])
-            logger.info(f"Found existing data for {dt.value}")
+        # Initial state
+        self.update_state(
+            state='STARTED',
+            meta={
+                'current': 0,
+                'total': total_steps,
+                'status': 'Starting data collection',
+                'progress': 0
+            }
+        )
+
+        for dt in [
+            DataType.INCOME_STATEMENT,
+            DataType.BALANCE_SHEET,
+            DataType.CASH_FLOW,
+            DataType.DIVIDENDS,
+            DataType.KEY_METRICS_CASH_FLOW,
+            DataType.KEY_METRICS_GROWTH,
+            DataType.KEY_METRICS_FINANCIAL_HEALTH,
+        ]:
+            current_step += 1
+            # Update progress for each step
+            progress_recorder.set_progress(
+                current_step, 
+                total_steps,
+                f'Processing {dt.value.replace("_", " ").title()}'
+            )
+            
+            logger.info(f"Processing {dt.value} ({current_step}/{total_steps})")
+            
+            existing = storage.check_data_exists(ticker, market, dt)
+            if existing and existing['status'] == 'DONE':
+                data_collected[dt.value] = json.loads(existing['data'])
+                logger.info(f"Found existing data for {dt.value}")
+            else:
+                try:
+                    if dt in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
+                        result = scraper_financial_statement(ticker, market, dt)
+                    elif dt == DataType.DIVIDENDS:
+                        result = scraper_dividends(ticker, market, dt)
+                    elif dt in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+                        result = scraper_key_metrics(ticker, market, dt)
+                    
+                    if result == 'DONE':
+                        result = storage.check_data_exists(ticker, market, dt)
+                        if result and result['status'] == 'DONE':
+                            data_collected[dt.value] = json.loads(result['data'])
+                            logger.info(f"Successfully scraped new data for {dt.value}")
+                except Exception as e:
+                    logger.error(f"Error scraping {dt.value}: {str(e)}")
+                    continue
+
+        # Final state update
+        collected_count = len(data_collected)
+        if collected_count == total_steps:
+            self.update_state(
+                state='SUCCESS',
+                meta={
+                    'current': total_steps,
+                    'total': total_steps,
+                    'status': 'All data collected successfully',
+                    'progress': 100
+                }
+            )
+            return 'DONE'
+        elif collected_count > 0:
+            self.update_state(
+                state='SUCCESS',
+                meta={
+                    'current': collected_count,
+                    'total': total_steps,
+                    'status': f'Partially completed ({collected_count}/{total_steps} types)',
+                    'progress': int((collected_count / total_steps) * 100)
+                }
+            )
+            return 'PARTIAL'
         else:
-            # Scrape missing data
-            try:
-                if dt in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
-                    result = scraper_financial_statement(ticker, market, dt)
-                elif dt == DataType.DIVIDENDS:
-                    result = scraper_dividends(ticker, market, dt)
-                elif dt in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
-                    result = scraper_key_metrics(ticker, market, dt)
-                
-                if result == 'DONE':
-                    # Recheck after scraping
-                    result = storage.check_data_exists(ticker, market, dt)
-                    if result and result['status'] == 'DONE':
-                        data_collected[dt.value] = json.loads(result['data'])
-                        logger.info(f"Successfully scraped new data for {dt.value}")
-            except Exception as e:
-                logger.error(f"Error scraping {dt.value}: {str(e)}")
-                continue
-
-    # Update final state
-    if len(data_collected) == total_steps:
-        self.update_state(state='SUCCESS', 
-                         meta={'status': 'All data collected successfully'})
-        return 'DONE'
-    elif len(data_collected) > 0:
-        self.update_state(state='SUCCESS', 
-                         meta={'status': f'Partially completed ({len(data_collected)}/{total_steps} types)'})
-        return 'PARTIAL'
-    else:
-        self.update_state(state='FAILURE', 
-                         meta={'status': 'Failed to collect any data'})
+            self.update_state(
+                state='FAILURE',
+                meta={
+                    'current': 0,
+                    'total': total_steps,
+                    'status': 'Failed to collect any data',
+                    'progress': 0
+                }
+            )
+            return 'ERROR'
+            
+    except Exception as e:
+        logger.error(f"Error in all_scraper_firestore: {str(e)}")
+        self.update_state(
+            state='FAILURE',
+            meta={
+                'status': f'Task failed: {str(e)}',
+                'progress': 0
+            }
+        )
         return 'ERROR'

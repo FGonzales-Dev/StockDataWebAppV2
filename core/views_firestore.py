@@ -43,6 +43,19 @@ def scrape_firestore(request):
         
         if 'get_data' in request.POST:
             # Check if data already exists first
+
+            if download_type == "ALL":
+                from .tasks_firestore import all_scraper_firestore
+                task = all_scraper_firestore.delay(ticker_value, market_value)
+                return render(request, "../templates/loadScreen.html", {
+                    "download_type": download_type,
+                    "task_id": task.id,
+                    "task_stat": task.status,
+                    "ticker": ticker_value,
+                    "market": market_value,
+                    "firestore_mode": True
+                })
+            
             try:
                 data_type = DataType(download_type)
                 storage = get_storage()
@@ -81,9 +94,6 @@ def scrape_firestore(request):
             elif download_type == "DIVIDENDS":
                 from .tasks_firestore import dividends_firestore_check
                 task = dividends_firestore_check.delay(ticker_value, market_value)
-            elif download_type == "ALL":
-                from .tasks_firestore import all_scraper_firestore
-                task = all_scraper_firestore.delay(ticker_value, market_value)
             else:
                 return render(request, "../templates/stockData.html", {
                     "error": f"Unsupported download type: {download_type}"
