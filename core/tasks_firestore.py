@@ -1,8 +1,15 @@
+"""
+Firestore-based Celery Tasks for Stock Data Scraping
+Check Firestore first, scrape only if data doesn't exist
+"""
+
 import json
 import logging
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
+from enum import Enum
 from celery import shared_task
+from celery_progress.backend import ProgressRecorder
 import pandas as pd
 from time import sleep
 import os
@@ -14,6 +21,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from stock_scraper.settings import BASE_DIR
 from .firestore_storage import (
+    FirestoreStorage, 
     DataType, 
     check_existing_data, 
     store_scraped_data,
@@ -222,7 +230,7 @@ def dividends_firestore_check(self, ticker_value: str, market_value: str):
         return 'ERROR'
 
 
-#-----------------------------------SCRAPERS-------------------------------------------------------------
+#------------------------------------------------------------------------------------------------
 
 def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -> str:
     """
