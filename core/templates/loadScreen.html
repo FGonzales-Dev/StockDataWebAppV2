@@ -472,17 +472,6 @@
           
           // Check for success state or result explicitly
           if (data.state === 'SUCCESS' || (data.result === 'DONE' || data.result === 'EXISTING') && !manualCheckPerformed) {
-            const downloadType = '{{ download_type }}';
-              if (downloadType === 'ALL') {
-                document.querySelector('button[name="download"]').innerHTML = '<i class="fas fa-download me-2"></i> Download All Data';
-              }
-              showSuccessSection(); 
-              clearInterval(pollInterval);
-              manualCheckPerformed = true;
-            } else {
-              showErrorMessage('Task status check timed out after multiple attempts. Please refresh and try again.');
-              clearInterval(pollInterval);
-            }
             console.log('Success condition met - State:', data.state, 'Result:', data.result, 'Showing success section');
             document.getElementById('progress-bar').style.width = '100%';
             setTimeout(() => {
