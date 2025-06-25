@@ -230,7 +230,7 @@ def dividends_firestore_check(self, ticker_value: str, market_value: str):
         return 'ERROR'
 
 
-#------------------------------------------------------------------------------------------------
+#---------------------------------SCRAPERS---------------------------------------------------------------
 
 def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -> str:
     """
