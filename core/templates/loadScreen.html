@@ -413,56 +413,149 @@
     };
   
     function updateProgress() {
-      $.ajax({
-        url: "{% url 'get_task_info_firestore' %}",
-        data: {
-          task_id: "{{ task_id }}"
-        },
-        success: function(data) {
-          if (data.state === 'SUCCESS') {
-            // Handle ALL data type results
-            if (data.all_results) {
-              let resultHtml = '<h4>Scraping Results:</h4><ul>';
-              for (const [dataType, status] of Object.entries(data.all_results)) {
-                const statusClass = status === 'DONE' || status === 'EXISTING' ? 'text-success' : 'text-danger';
-                resultHtml += `<li>${dataType}: <span class="${statusClass}">${status}</span></li>`;
-              }
-              resultHtml += '</ul>';
-              $('#progress-message').html(data.message + resultHtml);
-            } else {
-              $('#progress-message').text(data.message);
-            }
-            
-            if (data.download_ready) {
-              $('#success-section').show();
-              $('#progress-section').hide();
-            }
-          } else if (data.state === 'PROGRESS') {
-            const progress = data.progress || 0;
-            const total = data.total || 100;
-            const percentage = Math.round((progress / total) * 100);
-            $('#progress-bar').css('width', percentage + '%');
-            $('#progress-message').text(data.message);
-          } else if (data.state === 'FAILURE') {
-            $('#progress-message').html('<span class="text-danger">Error: ' + data.result + '</span>');
+      const progressBar = document.getElementById('progress-bar');
+      progressValue = Math.min(progressValue + Math.random() * 10, 85);
+      progressBar.style.width = progressValue + '%';
+    }
+  
+    function showSuccessSection() {
+      console.log('Showing success section');
+      document.getElementById('loading-section').style.display = 'none';
+      document.getElementById('success-section').style.display = 'block';
+    }
+  
+    function showErrorMessage(message) {
+      console.log('Showing error message:', message);
+      document.getElementById('loading-section').style.display = 'none';
+      document.getElementById('error-section').style.display = 'block';
+      document.getElementById('error-message').textContent = message;
+    }
+  
+    function checkTaskStatus() {
+      if (!taskId) {
+        console.error('No task ID provided');
+        showErrorMessage('No task ID provided');
+        return;
+      }
+  
+      pollCount++; // Increment polling attempt counter
+      console.log(`Polling attempt ${pollCount}/${maxPollAttempts} for task ID: ${taskId}`);
+  
+      fetch(`${taskInfoEndpoint}?task_id=${taskId}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Task status response:', data); // Detailed logging for debugging
+          retryCount = 0; // Reset retry count on successful response
+          
+          const statusMessage = document.getElementById('status-message');
+          const icon = statusIcons[data.state] || 'fas fa-info-circle';
+          
+          // Use custom message if available, otherwise use default
+          let message = data.message || statusMessages[data.state] || `Task status: ${data.state}`;
+          
+          statusMessage.innerHTML = `<i class="${icon} me-2"></i>${message}`;
+          
+          // Update progress for active states
+          if (data.state === 'STARTED' || data.state === 'PROGRESS') {
+            updateProgress();
           }
           
-          if (!['SUCCESS', 'FAILURE'].includes(data.state)) {
-            setTimeout(updateProgress, 1000);
+          // Handle progress bar updates
+          if (data.progress !== undefined) {
+            document.getElementById('progress-bar').style.width = data.progress + '%';
           }
-        },
-        error: function() {
-          $('#progress-message').html('<span class="text-danger">Error checking progress</span>');
-          setTimeout(updateProgress, 1000);
-        }
-      });
+          
+          // Check for success state or result explicitly
+          if (data.state === 'SUCCESS' || (data.result === 'DONE' || data.result === 'EXISTING') && !manualCheckPerformed) {
+            console.log('Success condition met - State:', data.state, 'Result:', data.result, 'Showing success section');
+            document.getElementById('progress-bar').style.width = '100%';
+            setTimeout(() => {
+              showSuccessSection();
+              clearInterval(pollInterval);
+            }, 500);
+            manualCheckPerformed = true; // Prevent multiple triggers
+          } else if (pollCount >= maxPollAttempts && !manualCheckPerformed) {
+            console.log(`Max polling attempts reached (${maxPollAttempts}), forcing success check for result:`, data.result);
+            if (data.result === 'DONE' || data.result === 'EXISTING' || data.state === 'SUCCESS') {
+              setTimeout(() => {
+                showSuccessSection();
+                clearInterval(pollInterval);
+              }, 500);
+              manualCheckPerformed = true;
+            } else {
+              showErrorMessage('Task status check timed out after multiple attempts. Please refresh and try again.');
+              clearInterval(pollInterval);
+            }
+          } else {
+            switch(data.state) {
+              case 'FAILURE':
+                console.log('Task failed, showing error message'); // Debug log
+                showErrorMessage(data.error || data.result || 'Unknown error occurred');
+                clearInterval(pollInterval);
+                break;
+              case 'REVOKED':
+                console.log('Task was revoked, showing error message'); // Debug log
+                showErrorMessage('Task was cancelled');
+                clearInterval(pollInterval);
+                break;
+              case 'ERROR':
+                console.log('Error state received, showing error message'); // Debug log
+                showErrorMessage(data.error || data.result || 'Error checking task status');
+                clearInterval(pollInterval);
+                break;
+              default:
+                console.log('Task state is', data.state, '- continuing to poll');
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error checking task status:', error);
+          retryCount++;
+          
+          if (retryCount >= maxRetries) {
+            console.log('Max retries reached, showing error message'); // Debug log
+            showErrorMessage(`Failed to check task status after ${maxRetries} attempts. Please try again.`);
+            clearInterval(pollInterval);
+          } else {
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.innerHTML = `<i class="fas fa-wifi me-2"></i>Connection error, retrying... (${retryCount}/${maxRetries})`;
+          }
+        });
     }
-    
-    $(document).ready(function() {
-      {% if not data_already_exists %}
-        updateProgress();
-      {% endif %}
-    });
+  
+    // Start polling when page loads
+    if (dataAlreadyExists) {
+      // Data already exists, show success section immediately
+      console.log('Data already exists, showing success section immediately');
+      setTimeout(() => {
+        showSuccessSection();
+      }, 100);
+    } else if (taskId) {
+      // Check immediately
+      checkTaskStatus();
+      
+      // Update progress periodically
+      const progressInterval = setInterval(updateProgress, 1000);
+      
+      // Check task status every 1.5 seconds (increased frequency)
+      pollInterval = setInterval(checkTaskStatus, 1500);
+      
+      // Fallback timeout after 15 minutes (900 seconds) for long-running tasks
+      setTimeout(() => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          clearInterval(progressInterval);
+          showErrorMessage('Task timed out after 15 minutes. Please try again.');
+        }
+      }, 900000);
+    } else {
+      showErrorMessage('No task ID provided');
+    }
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"

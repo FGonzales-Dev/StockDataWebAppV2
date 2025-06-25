@@ -1,3 +1,8 @@
+"""
+Firestore Storage System for Stock Data
+Replaces Firebase Realtime Database with Firestore for better querying and structure
+"""
+
 import json
 import logging
 import os
