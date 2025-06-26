@@ -386,7 +386,7 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
                 'ticker': ticker,
                 'market': market,
                 'data_type': data_type.value,
-                'scraped_at': existing_data['scraped_at'].isoformat(),
+                'scraped_at': existing_data['scraped_at'].isoformat() if existing_data['scraped_at'] else None,
                 'data': data_json
             })
         
@@ -395,70 +395,29 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
         
         # Trigger appropriate scraper based on data type
         if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
-            from .tasks_firestore import scraper_financial_statement
-            result = scraper_financial_statement(ticker, market, data_type)
+            from .tasks_firestore import financial_statement_firestore_check
+            task = financial_statement_firestore_check.delay(ticker, market, data_type.value)
         elif data_type == DataType.DIVIDENDS:
-            # For dividends, we need to implement a sync version
-            from .tasks_firestore import scraper_dividends
-            result = scraper_dividends(ticker, market, data_type)
+            from .tasks_firestore import dividends_firestore_check
+            task = dividends_firestore_check.delay(ticker, market)
         elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
-            # For key metrics, we need to implement a sync version
-            from .tasks_firestore import scraper_key_metrics
-            result = scraper_key_metrics(ticker, market, data_type)
+            from .tasks_firestore import key_metrics_firestore_check
+            task = key_metrics_firestore_check.delay(ticker, market, data_type.value)
         else:
             return JsonResponse({
                 'error': f'Scraping not implemented for {data_type.value}'
             }, status=501)
         
-        if result == 'EXISTING':
-            # Data was found during scraping (race condition)
-            new_data = storage.check_data_exists(ticker, market, data_type)
-            data_json = new_data['data']
-            if isinstance(data_json, str):
-                try:
-                    data_json = json.loads(data_json)
-                except json.JSONDecodeError:
-                    pass
-            
-            return JsonResponse({
-                'status': 'success',
-                'source': 'existing_data',
-                'ticker': ticker,
-                'market': market,
-                'data_type': data_type.value,
-                'scraped_at': new_data['scraped_at'].isoformat(),
-                'data': data_json
-            })
-        
-        elif result == 'DONE':
-            # Successfully scraped new data
-            new_data = storage.check_data_exists(ticker, market, data_type)
-            data_json = new_data['data']
-            if isinstance(data_json, str):
-                try:
-                    data_json = json.loads(data_json)
-                except json.JSONDecodeError:
-                    pass
-            
-            return JsonResponse({
-                'status': 'success',
-                'source': 'newly_scraped',
-                'ticker': ticker,
-                'market': market,
-                'data_type': data_type.value,
-                'scraped_at': new_data['scraped_at'].isoformat(),
-                'data': data_json
-            })
-        
-        else:
-            # Scraping failed or returned partial data
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Scraping failed with result: {result}',
-                'ticker': ticker,
-                'market': market,
-                'data_type': data_type.value
-            }, status=500)
+        # Return task information
+        return JsonResponse({
+            'status': 'pending',
+            'message': 'Data scraping initiated',
+            'ticker': ticker,
+            'market': market,
+            'data_type': data_type.value,
+            'task_id': task.id,
+            'task_status': task.status
+        })
             
     except Exception as e:
         logger.error(f"Error in API endpoint: {str(e)}")
