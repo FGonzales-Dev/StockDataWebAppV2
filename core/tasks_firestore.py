@@ -592,10 +592,11 @@ def all_scraper_firestore(self, ticker, market):
                     'current': total_steps,
                     'total': total_steps,
                     'status': 'All data collected successfully',
-                    'progress': 100
+                    'progress': 100,
+                    'result': 'DONE'
                 }
             )
-            return 'DONE'
+            return {'status': 'SUCCESS', 'result': 'DONE'}
         elif collected_count > 0:
             self.update_state(
                 state='SUCCESS',
@@ -603,10 +604,11 @@ def all_scraper_firestore(self, ticker, market):
                     'current': collected_count,
                     'total': total_steps,
                     'status': f'Partially completed ({collected_count}/{total_steps} types)',
-                    'progress': int((collected_count / total_steps) * 100)
+                    'progress': int((collected_count / total_steps) * 100),
+                    'result': 'PARTIAL'
                 }
             )
-            return 'PARTIAL'
+            return {'status': 'SUCCESS', 'result': 'PARTIAL'}
         else:
             self.update_state(
                 state='FAILURE',
@@ -614,10 +616,11 @@ def all_scraper_firestore(self, ticker, market):
                     'current': 0,
                     'total': total_steps,
                     'status': 'Failed to collect any data',
-                    'progress': 0
+                    'progress': 0,
+                    'result': 'ERROR'
                 }
             )
-            return 'ERROR'
+            return {'status': 'FAILURE', 'result': 'ERROR'}
             
     except Exception as e:
         logger.error(f"Error in all_scraper_firestore: {str(e)}")
