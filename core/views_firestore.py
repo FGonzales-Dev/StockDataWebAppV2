@@ -88,7 +88,7 @@ def scrape_firestore(request):
                 from .tasks_firestore import financial_statement_firestore_check
                 task = financial_statement_firestore_check.delay(ticker_value, market_value, download_type)
             elif download_type in ["KEY_METRICS_CASH_FLOW", "KEY_METRICS_GROWTH", 
-                                   "KEY_METRICS_FINANCIAL_HEALTH"]:
+                                   "KEY_METRICS_FINANCIAL_HEALTH", "KEY_METRICS_PROFITABILITYANDEFFICIENCY", "KEY_METRICS_FINANCIAL_SUMMARY"]:
                 from .tasks_firestore import key_metrics_firestore_check  
                 task = key_metrics_firestore_check.delay(ticker_value, market_value, download_type)
             elif download_type == "DIVIDENDS":
@@ -339,6 +339,8 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
     - keymetricscashflow -> KEY_METRICS_CASH_FLOW
     - keymetricsgrowth -> KEY_METRICS_GROWTH
     - keymetricsfinancialhealth -> KEY_METRICS_FINANCIAL_HEALTH
+    - keymetricsprofitabilityandefficiency -> KEY_METRICS_PROFITABILITYANDEFFICIENCY
+    - keymetricsfinancialsummary -> KEY_METRICS_FINANCIAL_SUMMARY
     """
     
     # Normalize inputs
@@ -353,7 +355,9 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
         'dividends': DataType.DIVIDENDS,
         'keymetricscashflow': DataType.KEY_METRICS_CASH_FLOW,
         'keymetricsgrowth': DataType.KEY_METRICS_GROWTH,
-        'keymetricsfinancialhealth': DataType.KEY_METRICS_FINANCIAL_HEALTH
+        'keymetricsfinancialhealth': DataType.KEY_METRICS_FINANCIAL_HEALTH,
+        'keymetricsprofitabilityandefficiency': DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY,
+        'keymetricsfinancialsummary': DataType.KEY_METRICS_FINANCIAL_SUMMARY
     }
     
     data_type_param_lower = data_type_param.lower()
@@ -400,7 +404,7 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
         elif data_type == DataType.DIVIDENDS:
             from .tasks_firestore import dividends_firestore_check
             task = dividends_firestore_check.delay(ticker, market)
-        elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+        elif data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH, DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY, DataType.KEY_METRICS_FINANCIAL_SUMMARY]:
             from .tasks_firestore import key_metrics_firestore_check
             task = key_metrics_firestore_check.delay(ticker, market, data_type.value)
         else:

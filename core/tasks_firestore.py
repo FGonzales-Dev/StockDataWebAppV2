@@ -176,7 +176,7 @@ def key_metrics_firestore_check(self, ticker_value: str, market_value: str, down
     try:
         data_type = DataType(download_type)
         
-        if data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+        if data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH, DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY, DataType.KEY_METRICS_FINANCIAL_SUMMARY, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
             result = scraper_key_metrics(ticker_value, market_value, data_type)
             
             # Update progress
@@ -400,7 +400,9 @@ def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> 
                 filename_base_map = {
                     DataType.KEY_METRICS_CASH_FLOW: "cashFlow",
                     DataType.KEY_METRICS_GROWTH: "growthTable",
-                    DataType.KEY_METRICS_FINANCIAL_HEALTH: "financialHealth"
+                    DataType.KEY_METRICS_FINANCIAL_HEALTH: "financialHealth",
+                    DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY: "profitabilityAndEfficiency",
+                    DataType.KEY_METRICS_FINANCIAL_SUMMARY: "summary-31-03-2025"
                 }
                 filename_base = filename_base_map.get(data_type, "keyMetrics")
                 download_dir = "/root/Downloads"
@@ -510,7 +512,9 @@ def _click_key_metrics_tab(scraper, data_type: DataType) -> bool:
     tab_map = {
         DataType.KEY_METRICS_CASH_FLOW: "Cash Flow",
         DataType.KEY_METRICS_GROWTH: "Growth",
-        DataType.KEY_METRICS_FINANCIAL_HEALTH: "Financial Health"
+        DataType.KEY_METRICS_FINANCIAL_HEALTH: "Financial Health",
+        DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY: "Profitability and Efficiency",
+        DataType.KEY_METRICS_FINANCIAL_SUMMARY: "Financial Summary"
     }
     
     tab_text = tab_map.get(data_type)
@@ -550,6 +554,8 @@ def all_scraper_firestore(self, ticker, market):
             DataType.KEY_METRICS_CASH_FLOW,
             DataType.KEY_METRICS_GROWTH,
             DataType.KEY_METRICS_FINANCIAL_HEALTH,
+            DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY,
+            DataType.KEY_METRICS_FINANCIAL_SUMMARY
         ]:
             current_step += 1
             # Update progress for each step
@@ -571,7 +577,7 @@ def all_scraper_firestore(self, ticker, market):
                         result = scraper_financial_statement(ticker, market, dt)
                     elif dt == DataType.DIVIDENDS:
                         result = scraper_dividends(ticker, market, dt)
-                    elif dt in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
+                    elif dt in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH, DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY, DataType.KEY_METRICS_FINANCIAL_SUMMARY]:
                         result = scraper_key_metrics(ticker, market, dt)
                     
                     if result == 'DONE':
