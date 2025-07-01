@@ -148,7 +148,9 @@ def handle_download_firestore(ticker: str, market: str, download_type: str):
         
         # Write Excel data to response
         with pd.ExcelWriter(response, engine='xlsxwriter') as writer:
-            df.to_excel(writer, sheet_name=download_type, index=False)
+            # Clean sheet name (Excel has 31 char limit)
+            sheet_name = download_type.replace('_', ' ').title()[:31]
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
         
         return response
             
