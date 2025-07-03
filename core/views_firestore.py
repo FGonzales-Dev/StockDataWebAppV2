@@ -334,15 +334,15 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
     URL format: /api/stock/{ticker}/{market}/{data_type}/
     
     Data type parameters:
-    - financialincomestatement -> INCOME_STATEMENT
-    - financialbalancesheet -> BALANCE_SHEET
-    - financialcashflow -> CASH_FLOW
+    - incomestatement -> INCOME_STATEMENT
+    - balance_sheet -> BALANCE_SHEET
+    - cash_flow -> CASH_FLOW
     - dividends -> DIVIDENDS
-    - keymetricscashflow -> KEY_METRICS_CASH_FLOW
-    - keymetricsgrowth -> KEY_METRICS_GROWTH
-    - keymetricsfinancialhealth -> KEY_METRICS_FINANCIAL_HEALTH
-    - keymetricsprofitabilityandefficiency -> KEY_METRICS_PROFITABILITYANDEFFICIENCY
-    - keymetricsfinancialsummary -> KEY_METRICS_FINANCIAL_SUMMARY
+    - key_metrics_cash_flow -> KEY_METRICS_CASH_FLOW
+    - key_metrics_growth -> KEY_METRICS_GROWTH
+    - key_metrics_financial_health -> KEY_METRICS_FINANCIAL_HEALTH
+    - key_metrics_profitability_and_efficiency -> KEY_METRICS_PROFITABILITYANDEFFICIENCY
+    - key_metrics_financial_summary -> KEY_METRICS_FINANCIAL_SUMMARY
     """
     
     # Normalize inputs
@@ -351,15 +351,15 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
     
     # Map URL parameter to DataType enum
     data_type_mapping = {
-        'financialincomestatement': DataType.INCOME_STATEMENT,
-        'financialbalancesheet': DataType.BALANCE_SHEET,
-        'financialcashflow': DataType.CASH_FLOW,
+        'incomestatement': DataType.INCOME_STATEMENT,
+        'balance_sheet': DataType.BALANCE_SHEET,
+        'cash_flow': DataType.CASH_FLOW,
         'dividends': DataType.DIVIDENDS,
-        'keymetricscashflow': DataType.KEY_METRICS_CASH_FLOW,
-        'keymetricsgrowth': DataType.KEY_METRICS_GROWTH,
-        'keymetricsfinancialhealth': DataType.KEY_METRICS_FINANCIAL_HEALTH,
-        'keymetricsprofitabilityandefficiency': DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY,
-        'keymetricsfinancialsummary': DataType.KEY_METRICS_FINANCIAL_SUMMARY
+        'key_metrics_cash_flow': DataType.KEY_METRICS_CASH_FLOW,
+        'key_metrics_growth': DataType.KEY_METRICS_GROWTH,
+        'key_metrics_financial_health': DataType.KEY_METRICS_FINANCIAL_HEALTH,
+        'key_metrics_profitability_and_efficiency': DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY,
+        'key_metrics_financial_summary': DataType.KEY_METRICS_FINANCIAL_SUMMARY
     }
     
     data_type_param_lower = data_type_param.lower()
