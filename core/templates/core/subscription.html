@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscribe - lorem ipsum</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Hand+Pre:wght@400..700&family=Lora:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Lora', 'Segoe UI', Tahoma, Geneva, Verdana, serif;
+            background-color: #f4f2ee;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 60px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .logo {
+            background-color: #b8956b;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 30px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+        
+        .benefits {
+            text-align: left;
+            margin-bottom: 40px;
+        }
+        
+        .benefit {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            color: #555;
+        }
+        
+        .benefit-icon {
+            margin-right: 12px;
+            margin-top: 2px;
+            color: #b8956b;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #b8956b;
+        }
+        
+        .btn-subscribe {
+            background-color: #b8956b;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn-subscribe:hover {
+            background-color: #a0845a;
+        }
+        
+        .launch-info {
+            margin-top: 30px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .error {
+            color: #e74c3c;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #ffeaea;
+            border-radius: 5px;
+        }
+        
+        .success {
+            color: #27ae60;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #eafaf1;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            Lorem<br>Ipsum
+        </div>
+        
+        <h1 class="title">Lorem ipsum dolor sit amet</h1>
+        <p class="subtitle">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+        
+        <div class="benefits">
+            <div class="benefit">
+                <span class="benefit-icon">📈</span>
+                <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+            </div>
+            <div class="benefit">
+                <span class="benefit-icon">⭐</span>
+                <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+            </div>
+            <div class="benefit">
+                <span class="benefit-icon">🔧</span>
+                <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+            </div>
+            <div class="benefit">
+                <span class="benefit-icon">💡</span>
+                <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+            </div>
+            <div class="benefit">
+                <span class="benefit-icon">📄</span>
+                <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+            </div>
+        </div>
+        
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        
+        {% if success %}
+            <div class="success">{{ success }}</div>
+        {% endif %}
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ form.email }}
+            </div>
+            <button type="submit" class="btn-subscribe">Use Stock Data</button>
+        </form>
+        
+    </div>
+</body>
+</html> 

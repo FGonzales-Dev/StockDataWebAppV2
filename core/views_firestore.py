@@ -3,7 +3,7 @@ Firestore-based Views for Stock Data Scraping
 Check Firestore first, scrape only if data doesn't exist
 """
 
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -19,17 +19,62 @@ from .firestore_storage import (
     get_storage,
     check_existing_data
 )
+from .forms import EmailSubscriptionForm
 from celery.result import AsyncResult
 import logging
 
 logger = logging.getLogger(__name__)
 
+def subscription_required(request):
+    """
+    View to handle email subscription before accessing stock data
+    """
+    if request.method == 'POST':
+        form = EmailSubscriptionForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            
+            # Save email to Firestore
+            storage = get_storage()
+            
+            # Check if email is already subscribed
+            if storage.check_email_subscription(email):
+                # Email already exists, redirect to stock data
+                request.session['subscribed_email'] = email
+                return redirect('stockData')
+            
+            # Save new subscription
+            if storage.save_email_subscription(email):
+                request.session['subscribed_email'] = email
+                return redirect('stockData')
+            else:
+                return render(request, 'core/subscription.html', {
+                    'form': form,
+                    'error': 'There was an error saving your subscription. Please try again.'
+                })
+    else:
+        form = EmailSubscriptionForm()
+    
+    return render(request, 'core/subscription.html', {'form': form})
+
+def logout_subscription(request):
+    """
+    Clear subscription session to allow re-subscription
+    """
+    if 'subscribed_email' in request.session:
+        del request.session['subscribed_email']
+    return redirect('subscription')
+
 @csrf_exempt
 def scrape_firestore(request):
     """
     Firestore-based scraping endpoint
-    Checks Firestore first, scrapes directly if data doesn't exist
+    Checks for email subscription first, then Firestore, scrapes directly if data doesn't exist
     """
+    
+    # Check if user is subscribed
+    if 'subscribed_email' not in request.session:
+        return redirect('subscription')
     
     if request.method == 'POST':
         ticker_value = request.POST.get("ticker", "").upper()

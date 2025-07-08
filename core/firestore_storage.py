@@ -230,6 +230,51 @@ class FirestoreStorage:
             logger.error(f"Error getting storage stats: {e}")
             return {}
 
+    def save_email_subscription(self, email: str) -> bool:
+        """
+        Save email subscription to Firestore
+        Returns True if successful
+        """
+        try:
+            # Use email as document ID to prevent duplicates
+            doc_id = email.replace('@', '_at_').replace('.', '_dot_')
+            
+            subscription_record = {
+                'email': email,
+                'subscribed_at': datetime.utcnow(),
+                'status': 'active'
+            }
+            
+            # Store in a separate collection for email subscriptions
+            self.db.collection('email_subscriptions').document(doc_id).set(subscription_record)
+            
+            logger.info(f"Saved email subscription for {email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving email subscription: {e}")
+            return False
+
+    def check_email_subscription(self, email: str) -> bool:
+        """
+        Check if email is already subscribed
+        Returns True if subscribed, False if not
+        """
+        try:
+            doc_id = email.replace('@', '_at_').replace('.', '_dot_')
+            doc = self.db.collection('email_subscriptions').document(doc_id).get()
+            
+            if doc.exists:
+                logger.info(f"Email {email} is already subscribed")
+                return True
+            else:
+                logger.info(f"Email {email} is not subscribed")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error checking email subscription: {e}")
+            return False
+
 # Global storage instance
 storage_instance = None
 

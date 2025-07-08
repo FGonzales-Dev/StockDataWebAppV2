@@ -3,7 +3,9 @@ from django.urls import path
 from core import views_firestore
 
 urlpatterns = [
-    path('', views_firestore.scrape_firestore, name='stockData'),
+    path('', views_firestore.subscription_required, name='subscription'),
+    path('stockdata/', views_firestore.scrape_firestore, name='stockData'),
+    path('logout/', views_firestore.logout_subscription, name='logout_subscription'),
     path('firestore/get_task_info/', views_firestore.get_task_info_firestore, name='get_task_info_firestore'),
     path('firestore/check_status/', views_firestore.check_data_status_firestore, name='check_data_status_firestore'),
     path('firestore/storage_stats/', views_firestore.storage_stats_firestore, name='storage_stats_firestore'),
