@@ -10,7 +10,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Hand+Pre:wght@400..700&family=Lora:ital,wght@0,400..700;1,400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
   
   <style>
     * {
@@ -20,7 +20,7 @@
     }
 
     body {
-      font-family: 'Lora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif;
+      font-family: 'Source Sans 3', sans-serif;
       background: #f4f2ee;
       min-height: 100vh;
       display: flex;
@@ -31,9 +31,7 @@
 
     .main-container {
       background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
       border-radius: 20px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
       padding: 3rem;
       max-width: 500px;
       width: 90%;
@@ -42,17 +40,6 @@
       overflow: hidden;
     }
 
-    .main-container::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: #b8956b;
-      background-size: 200% 100%;
-      animation: shimmer 2s infinite;
-    }
 
     @keyframes shimmer {
       0% { background-position: -200% 0; }
@@ -65,7 +52,7 @@
 
     .logo-icon {
       font-size: 3rem;
-      color: #b8956b;
+      color: #907E4D ;
       margin-bottom: 1rem;
       animation: pulse 2s infinite;
     }
@@ -118,7 +105,7 @@
 
     .progress-bar {
       height: 100%;
-      background:#b8956b;
+      background:#907E4D ;
       border-radius: 10px;
       width: 0%;
       transition: width 0.3s ease;
@@ -143,7 +130,7 @@
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background: #b8956b;
+      background: #907E4D ;
       animation: bounce 1.4s infinite ease-in-out both;
     }
 
@@ -174,7 +161,7 @@
     }
 
     .download-btn {
-      background: #b8956b;
+      background: #907E4D ;
       border: none;
       color: white;
       padding: 1rem 2rem;
@@ -204,7 +191,7 @@
     }
 
     .error-container {
-      background: #b8956b;
+      background: #907E4D ;
       border: 1px solid #fc8181;
       border-radius: 12px;
       padding: 2rem;
@@ -230,7 +217,7 @@
     }
 
     .retry-btn {
-      background:#b8956b;
+      background:#907E4D ;
       border: none;
       color: white;
       padding: 0.8rem 1.5rem;
@@ -346,11 +333,6 @@
           <div class="progress-bar" id="progress-bar"></div>
         </div>
         
-        <div class="spinner-container">
-          <div class="spinner-dot"></div>
-          <div class="spinner-dot"></div>
-          <div class="spinner-dot"></div>
-        </div>
         
         <small style="color: #718096;">
           <i class="fas fa-coffee me-1"></i>
