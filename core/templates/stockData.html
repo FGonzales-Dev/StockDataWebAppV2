@@ -36,6 +36,15 @@
       width: 100%;
       text-align: center;
   }
+
+  #container {
+      padding: 60px 40px;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      margin: 0 auto;
+  }
   
 
 
@@ -208,34 +217,28 @@
     
     <form name="myForm" method="POST" action="{% url 'stockData' %}" onsubmit="return validateForm()">
       {% csrf_token %}
-      <div class="container-fluid">
-        <div class="row">
-  
-            <div class="form-group">
-              <label for="ticker"></label>
-              <input type="text" class="form-control" id="ticker" placeholder="Stock Ticker" name="ticker" required="required" />
-            </div>
+      <div class="form-group">
+        <label for="ticker"></label>
+        <input type="text" class="form-control" id="ticker" placeholder="Stock Ticker" name="ticker" required="required" />
+      </div>
 
-            <div class="form-group">
-              <input type="text" class="form-control" id="market" placeholder="Stock Market" name="market" required="required" />
-            </div>
+      <div class="form-group">
+        <input type="text" class="form-control" id="market" placeholder="Stock Market" name="market" required="required" />
+      </div>
 
-            <div class="form-group">
-              <select name="download_type" id="select-type" class="form-control">
-                <option value="ALL">ALL</option>
-                <option value="BALANCE_SHEET">BALANCE SHEET</option>
-                <option value="INCOME_STATEMENT">INCOME STATEMENT</option>
-                <option value="CASH_FLOW">CASH FLOW</option>
-                <option value="KEY_METRICS_CASH_FLOW">KEY METRICS - CASH FLOW</option>
-                <option value="KEY_METRICS_GROWTH">KEY METRICS - GROWTH</option>
-                <option value="KEY_METRICS_FINANCIAL_HEALTH">KEY METRICS - FINANCIAL HEALTH</option>
-                <option value="KEY_METRICS_PROFITABILITYANDEFFICIENCY">KEY METRICS - PROFITABILITY AND EFFICIENCY</option>
-                <option value="KEY_METRICS_FINANCIAL_SUMMARY">KEY METRICS - FINANCIAL SUMMARY</option>
-                <option value="DIVIDENDS">DIVIDENDS</option>
-              </select>
-            </div>
-          
-        </div>
+      <div class="form-group">
+        <select name="download_type" id="select-type" class="form-control">
+          <option value="ALL">ALL</option>
+          <option value="BALANCE_SHEET">BALANCE SHEET</option>
+          <option value="INCOME_STATEMENT">INCOME STATEMENT</option>
+          <option value="CASH_FLOW">CASH FLOW</option>
+          <option value="KEY_METRICS_CASH_FLOW">KEY METRICS - CASH FLOW</option>
+          <option value="KEY_METRICS_GROWTH">KEY METRICS - GROWTH</option>
+          <option value="KEY_METRICS_FINANCIAL_HEALTH">KEY METRICS - FINANCIAL HEALTH</option>
+          <option value="KEY_METRICS_PROFITABILITYANDEFFICIENCY">KEY METRICS - PROFITABILITY AND EFFICIENCY</option>
+          <option value="KEY_METRICS_FINANCIAL_SUMMARY">KEY METRICS - FINANCIAL SUMMARY</option>
+          <option value="DIVIDENDS">DIVIDENDS</option>
+        </select>
       </div>
       <input type="submit" name="get_data" id="submit-data" value="Submit" />
     </form>
