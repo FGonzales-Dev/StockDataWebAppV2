@@ -303,13 +303,13 @@
             Data Ready!
           {% endif %}
         </h3>
-        <p class="subtitle">
+        {% comment %} <p class="subtitle">
           {% if data_already_exists %}
             Your {{ticker}} ({{market}}) {{download_type}} data was previously scraped{% if scraped_at %} on {{scraped_at}}{% endif %} and is ready for download
           {% else %}
             Your {{ticker}} ({{market}}) {{download_type}} data has been successfully processed
           {% endif %}
-        </p>
+        </p> {% endcomment %}
         <button type="submit" name="download" class="download-btn">
           <i class="fas fa-download me-2"></i>
           Download Excel File
