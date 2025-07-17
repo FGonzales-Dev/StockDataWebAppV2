@@ -21,19 +21,19 @@
 
     body {
       font-family: 'Source Sans 3', sans-serif;
-      background: #f4f2ee;
+      background-color: #f4f2ee;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #333;
+      padding: 20px;
     }
 
     .main-container {
-      border-radius: 20px;
-      padding: 3rem;
+      padding: 60px 40px;
+      border-radius: 12px;
       max-width: 500px;
-      width: 90%;
+      width: 100%;
       text-align: center;
       position: relative;
       overflow: hidden;
@@ -46,13 +46,13 @@
     }
 
     .logo-section {
-      margin-bottom: 2rem;
+      margin-bottom: 30px;
     }
 
     .logo-icon {
       font-size: 3rem;
-      color: #907E4D ;
-      margin-bottom: 1rem;
+      color: #907E4D;
+      margin-bottom: 30px;
       animation: pulse 2s infinite;
     }
 
@@ -62,16 +62,17 @@
     }
 
     .title {
-      font-size: 1.8rem;
-      font-weight: 600;
-      color: #2d3748;
-      margin-bottom: 0.5rem;
+      font-family: 'Lora', serif;
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 10px;
+      font-weight: 500;
     }
 
     .subtitle {
-      font-size: 1rem;
-      color: #718096;
-      margin-bottom: 2rem;
+      color: #666;
+      margin-bottom: 40px;
+      font-size: 16px;
     }
 
     /* Loading Section */
@@ -85,9 +86,9 @@
     }
 
     .status-message {
-      font-size: 1.1rem;
+      font-size: 16px;
       font-weight: 500;
-      color: #4a5568;
+      color: #555;
       margin-bottom: 1rem;
     }
 
@@ -145,9 +146,9 @@
     }
 
     .success-icon {
-      font-size: 4rem;
-      color: #48bb78;
-      margin-bottom: 1rem;
+      font-size: 3rem;
+      color: #907E4D;
+      margin-bottom: 30px;
       animation: checkmark 0.6s ease-in-out;
     }
 
@@ -157,24 +158,22 @@
     }
 
     .download-btn {
-      background: #907E4D ;
+      width: 100%;
+      padding: 15px;
+      border-radius: 8px;
       border: none;
+      font-size: 16px;
+      font-family: 'Source Sans 3', sans-serif;
+      background-color: #907E4D;
       color: white;
-      padding: 1rem 2rem;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
-      text-transform: none;
-      width: 100%;
       margin-top: 1rem;
     }
 
     .download-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+      background-color: #a0845a;
     }
 
     .download-btn:active {
@@ -187,11 +186,11 @@
     }
 
     .error-container {
-      background: #907E4D ;
-      border: 1px solid #fc8181;
-      border-radius: 12px;
       padding: 2rem;
-      color: #742a2a;
+      border-radius: 8px;
+      background-color: #ffeaea;
+      border: 1px solid #e74c3c;
+      color: #e74c3c;
     }
 
     .error-icon {
@@ -201,33 +200,36 @@
     }
 
     .error-title {
-      font-size: 1.3rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
+      font-family: 'Lora', serif;
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 10px;
+      font-weight: 500;
     }
 
     .error-message {
-      font-size: 1rem;
+      color: #666;
+      font-size: 16px;
       margin-bottom: 1.5rem;
       line-height: 1.5;
     }
 
     .retry-btn {
-      background:#907E4D ;
-      border: none;
-      color: white;
-      padding: 0.8rem 1.5rem;
+      width: 100%;
+      padding: 15px;
       border-radius: 8px;
-      font-size: 1rem;
+      border: none;
+      font-size: 16px;
+      font-family: 'Source Sans 3', sans-serif;
+      background-color: #907E4D;
+      color: white;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
     }
 
     .retry-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(229, 62, 62, 0.4);
+      background-color: #a0845a;
     }
 
     /* Hidden form inputs */
@@ -238,12 +240,11 @@
     /* Responsive Design */
     @media (max-width: 768px) {
       .main-container {
-        padding: 2rem;
-        margin: 1rem;
+        padding: 40px 20px;
       }
       
       .title {
-        font-size: 1.5rem;
+        font-size: 20px;
       }
       
       .logo-icon {
