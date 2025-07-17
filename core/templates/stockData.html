@@ -17,17 +17,9 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-    }
-
-    .container {
-      padding: 60px 40px;
-      border-radius: 12px;
-      max-width: 500px;
-      width: 100%;
-      text-align: center;
   }
   
-    body {
+  body {
       font-family: 'Source Sans 3', sans-serif;
       background-color: #f4f2ee;
       min-height: 100vh;
@@ -35,15 +27,17 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-    }
-
-    #main {
+  }
+  
+  .container {
+      padding: 60px 40px;
+      border-radius: 12px;
       max-width: 500px;
       width: 100%;
       text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
+  }
+  
+
 
     .logo-section {
       margin-bottom: 2rem;
@@ -169,9 +163,8 @@
 
     /* Responsive Design */
     @media (max-width: 768px) {
-      #main {
-        padding: 2rem;
-        margin: 1rem;
+      .container {
+        padding: 40px 20px;
       }
       
       .title, h1 {
@@ -217,7 +210,7 @@
       {% csrf_token %}
       <div class="container-fluid">
         <div class="row">
-          <div class="col-md-12">
+  
             <div class="form-group">
               <label for="ticker"></label>
               <input type="text" class="form-control" id="ticker" placeholder="Stock Ticker" name="ticker" required="required" />
@@ -241,7 +234,7 @@
                 <option value="DIVIDENDS">DIVIDENDS</option>
               </select>
             </div>
-          </div>
+          
         </div>
       </div>
       <input type="submit" name="get_data" id="submit-data" value="Submit" />
