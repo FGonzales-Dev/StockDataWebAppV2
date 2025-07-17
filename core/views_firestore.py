@@ -27,11 +27,20 @@ logger = logging.getLogger(__name__)
 
 def subscription_required(request):
     """
-    View to handle email subscription before accessing stock data
+    View to handle email subscription and passkey verification before accessing stock data
     """
     if request.method == 'POST':
         form = EmailSubscriptionForm(request.POST)
+        passkey = request.POST.get('passkey')
+        
         if form.is_valid():
+            # Verify passkey
+            if passkey != 'K7N4P8':
+                return render(request, 'core/subscription.html', {
+                    'form': form,
+                    'error': 'Invalid access key. Please try again.'
+                })
+                
             email = form.cleaned_data['email']
             
             # Save email to Firestore
@@ -42,15 +51,10 @@ def subscription_required(request):
                 # Email already exists, redirect to stock data
                 request.session['subscribed_email'] = email
                 return redirect('stockData')
-            
-            # Save new subscription
-            if storage.save_email_subscription(email):
-                request.session['subscribed_email'] = email
-                return redirect('stockData')
             else:
                 return render(request, 'core/subscription.html', {
                     'form': form,
-                    'error': 'There was an error saving your subscription. Please try again.'
+                    'error': 'Email not found. Please contact administrator for access.'
                 })
     else:
         form = EmailSubscriptionForm()
