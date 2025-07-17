@@ -19,6 +19,14 @@
       box-sizing: border-box;
     }
 
+    .container {
+      padding: 60px 40px;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+  }
+  
     body {
       font-family: 'Source Sans 3', sans-serif;
       background-color: #f4f2ee;
@@ -43,7 +51,7 @@
 
     .logo-icon {
       font-size: 3rem;
-      color: #907E4D ;
+      color: #907E4D;
       margin-bottom: 1rem;
     }
 
@@ -53,7 +61,7 @@
       color: #333;
       margin-bottom: 10px;
       font-weight: 500;
-  }
+    }
 
     .subtitle {
       font-size: 1rem;
@@ -72,51 +80,61 @@
       margin-bottom: 20px;
     }
 
-    .container-fluid {
-      padding: 2rem;
-      margin-bottom: 1.5rem;
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #907E4D;
+      font-size: 16px;
+      font-family: 'Source Sans 3', sans-serif;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: #907E4D;
     }
 
     input[type='text'] {
       width: 100%;
-      margin-bottom: 15px;
-      padding: 1rem;
-      border: 0.5px solid #907E4D ;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #907E4D;
+      font-size: 16px;
       font-family: 'Source Sans 3', sans-serif;
-      border-radius: 12px;
-      font-size: 1rem;
-      background: white;
     }
 
     input[type='text']:focus {
       outline: none;
-      border-color: #907E4D ;
+      border-color: #907E4D;
     }
 
     input[type='text']::placeholder {
-      color: #a0aec0;
+      color: #666;
     }
 
     #select-type {
-      font-family: 'Source Sans 3', sans-serif;
       width: 100%;
-      margin-bottom: 15px;
-      padding: 1rem;
-      border: 0.5px solid #907E4D ;
-      border-radius: 12px;
-      font-size: 1rem;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #907E4D;
+      font-size: 16px;
+      font-family: 'Source Sans 3', sans-serif;
       background: white;
       cursor: pointer;
     }
 
     #select-type:focus {
       outline: none;
-      border-color: #907E4D ;
+      border-color: #907E4D;
     }
 
     input[type='submit'] {
       font-family: 'Source Sans 3', sans-serif;
-      background-color: #907E4D ;
+      background-color: #907E4D;
       color: white;
       padding: 15px 30px;
       border: none;
@@ -146,7 +164,7 @@
     }
 
     .logout-link:hover {
-      color: #907E4D ;
+      color: #907E4D;
     }
 
     /* Responsive Design */
@@ -180,7 +198,7 @@
     integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8"
     crossorigin="anonymous"></script>
 
-  <div id="main">
+  <div id="container">
     <!-- Logout Link -->
     <a href="{% url 'logout_subscription' %}" class="logout-link">
       <i class="fas fa-sign-out-alt"></i> Change Email
@@ -200,23 +218,29 @@
       <div class="container-fluid">
         <div class="row">
           <div class="col-md-12">
-            <label for="ticker"></label>
-            <input type="text" id="ticker" placeholder="Stock Ticker" name="ticker"  required="required" />
+            <div class="form-group">
+              <label for="ticker"></label>
+              <input type="text" class="form-control" id="ticker" placeholder="Stock Ticker" name="ticker" required="required" />
+            </div>
 
-            <input type="text" id="market" placeholder="Stock Market" name="market"  required="required" />
+            <div class="form-group">
+              <input type="text" class="form-control" id="market" placeholder="Stock Market" name="market" required="required" />
+            </div>
 
-            <select name="download_type" id="select-type">
-              <option value="ALL">ALL</option>
-              <option value="BALANCE_SHEET">BALANCE SHEET</option>
-              <option value="INCOME_STATEMENT">INCOME STATEMENT</option>
-              <option value="CASH_FLOW">CASH FLOW</option>
-              <option value="KEY_METRICS_CASH_FLOW">KEY METRICS - CASH FLOW</option>
-              <option value="KEY_METRICS_GROWTH">KEY METRICS - GROWTH</option>
-              <option value="KEY_METRICS_FINANCIAL_HEALTH">KEY METRICS - FINANCIAL HEALTH</option>
-              <option value="KEY_METRICS_PROFITABILITYANDEFFICIENCY">KEY METRICS - PROFITABILITY AND EFFICIENCY</option>
-              <option value="KEY_METRICS_FINANCIAL_SUMMARY">KEY METRICS - FINANCIAL SUMMARY</option>
-              <option value="DIVIDENDS">DIVIDENDS</option>
-            </select>
+            <div class="form-group">
+              <select name="download_type" id="select-type" class="form-control">
+                <option value="ALL">ALL</option>
+                <option value="BALANCE_SHEET">BALANCE SHEET</option>
+                <option value="INCOME_STATEMENT">INCOME STATEMENT</option>
+                <option value="CASH_FLOW">CASH FLOW</option>
+                <option value="KEY_METRICS_CASH_FLOW">KEY METRICS - CASH FLOW</option>
+                <option value="KEY_METRICS_GROWTH">KEY METRICS - GROWTH</option>
+                <option value="KEY_METRICS_FINANCIAL_HEALTH">KEY METRICS - FINANCIAL HEALTH</option>
+                <option value="KEY_METRICS_PROFITABILITYANDEFFICIENCY">KEY METRICS - PROFITABILITY AND EFFICIENCY</option>
+                <option value="KEY_METRICS_FINANCIAL_SUMMARY">KEY METRICS - FINANCIAL SUMMARY</option>
+                <option value="DIVIDENDS">DIVIDENDS</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
