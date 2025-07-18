@@ -6,6 +6,8 @@ Check Firestore first, scrape only if data doesn't exist
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import PermissionDenied
+from functools import wraps
 import json
 import pandas as pd
 from .tasks_firestore import (
@@ -24,6 +26,14 @@ from celery.result import AsyncResult
 import logging
 
 logger = logging.getLogger(__name__)
+
+def subscription_required_decorator(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if 'subscribed_email' not in request.session:
+            return redirect('subscription')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 def subscription_required(request):
     """
@@ -70,15 +80,12 @@ def logout_subscription(request):
     return redirect('subscription')
 
 @csrf_exempt
+@subscription_required_decorator
 def scrape_firestore(request):
     """
     Firestore-based scraping endpoint
     Checks for email subscription first, then Firestore, scrapes directly if data doesn't exist
     """
-    
-    # Check if user is subscribed
-    if 'subscribed_email' not in request.session:
-        return redirect('subscription')
     
     if request.method == 'POST':
         ticker_value = request.POST.get("ticker", "").upper()
