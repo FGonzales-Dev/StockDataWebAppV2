@@ -26,7 +26,7 @@ SECRET_KEY = 'bkr(1mx&+l80n275l=j6rz!4@qzfb$^-n86xqc*+sj9b*kz9gm'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '167.172.77.167', '167.172.77.167:8080']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '167.172.77.167', '167.172.77.167:8080', 'app.giles.capital']
 
 CRISPY_TEMPLATE_PACK="bootstrap4"
 # Application definition
