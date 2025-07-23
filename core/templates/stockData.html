@@ -228,13 +228,14 @@
     
     <form name="myForm" method="POST" action="{% url 'stockData' %}" onsubmit="return validateForm()">
       {% csrf_token %}
-            <div class="form-group">
-              <label for="ticker"></label>
-              <input type="text" class="form-control" id="ticker" placeholder="Stock Ticker" name="ticker" required="required" />
-            </div>
 
             <div class="form-group">
               <input type="text" class="form-control" id="market" placeholder="Stock Market" name="market" required="required" />
+            </div>
+
+            <div class="form-group">
+              <label for="ticker"></label>
+              <input type="text" class="form-control" id="ticker" placeholder="Stock Ticker" name="ticker" required="required" />
             </div>
 
             <div class="form-group">
