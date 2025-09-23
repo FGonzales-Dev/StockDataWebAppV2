@@ -87,6 +87,13 @@
       margin-bottom: 20px;
     }
 
+    .form-text {
+      font-size: 0.875rem;
+      color: #6c757d;
+      margin-top: 0.25rem;
+      display: block;
+    }
+
     .form-control {
       width: 100%;
       height: 40px;
@@ -230,11 +237,13 @@
       {% csrf_token %}
 
             <div class="form-group">
-              <input type="text" class="form-control" id="market" placeholder="Stock Market" name="market" required="required" />
+              <input type="text" class="form-control" id="market" placeholder="Stock Market (e.g., NASDAQ, NYSE, XNAS)" name="market" required="required" />
+              <small class="form-text text-muted">Enter the stock exchange (e.g., NASDAQ, NYSE) or leave blank for auto-detection</small>
             </div>
 
             <div class="form-group">
-              <input type="text" class="form-control" id="ticker" placeholder="Stock Ticker" name="ticker" required="required" />
+              <input type="text" class="form-control" id="ticker" placeholder="Company Name or Stock Ticker (e.g., Apple, AAPL)" name="ticker" required="required" />
+              <small class="form-text text-muted">Enter company name (e.g., Apple, Microsoft) or ticker symbol (e.g., AAPL, MSFT)</small>
             </div>
 
             <div class="form-group">

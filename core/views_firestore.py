@@ -22,6 +22,7 @@ from .firestore_storage import (
     check_existing_data
 )
 from .forms import EmailSubscriptionForm
+from .openrouter_service import resolve_stock_ticker, is_likely_ticker_symbol
 from celery.result import AsyncResult
 import logging
 
@@ -85,17 +86,42 @@ def scrape_firestore(request):
     """
     Firestore-based scraping endpoint
     Checks for email subscription first, then Firestore, scrapes directly if data doesn't exist
+    Now includes AI-powered ticker symbol resolution via OpenRouter
     """
     
     if request.method == 'POST':
-        ticker_value = request.POST.get("ticker", "").upper()
-        market_value = request.POST.get("market", "").upper()
+        ticker_input = request.POST.get("ticker", "").strip()
+        market_input = request.POST.get("market", "").strip()
         download_type = request.POST.get("download_type", "")
         
-        if not ticker_value or not market_value or not download_type:
+        if not ticker_input or not market_input or not download_type:
             return render(request, "../templates/stockData.html", {
                 "error": "Please provide ticker, market, and download type"
             })
+        
+        # Use AI to resolve ticker symbol if needed
+        ticker_resolution = resolve_stock_ticker(ticker_input, market_input)
+        
+        if ticker_resolution['success']:
+            ticker_value = ticker_resolution['ticker']
+            market_value = ticker_resolution['market']
+            logger.info(f"AI resolved '{ticker_input}' to ticker '{ticker_value}' on market '{market_value}' with {ticker_resolution['confidence']} confidence")
+        else:
+            # Fallback to original input if AI resolution fails
+            ticker_value = ticker_input.upper()
+            market_value = market_input.upper()
+            logger.warning(f"AI ticker resolution failed for '{ticker_input}', using original input: {ticker_value}")
+        
+        # Store the resolution info for potential display
+        resolution_info = {
+            'original_ticker': ticker_input,
+            'original_market': market_input,
+            'resolved_ticker': ticker_value,
+            'resolved_market': market_value,
+            'confidence': ticker_resolution.get('confidence', 'unknown'),
+            'reasoning': ticker_resolution.get('reasoning', ''),
+            'was_resolved': ticker_resolution['success']
+        }
         
         if 'get_data' in request.POST:
             # Check if data already exists first
@@ -109,7 +135,8 @@ def scrape_firestore(request):
                     "task_stat": task.status,
                     "ticker": ticker_value,
                     "market": market_value,
-                    "firestore_mode": True
+                    "firestore_mode": True,
+                    "resolution_info": resolution_info
                 })
             
             try:
@@ -128,7 +155,8 @@ def scrape_firestore(request):
                         "data_already_exists": True,  # Flag to show success section immediately
                         "scraped_at": existing_data['scraped_at'].strftime("%Y-%m-%d %H:%M:%S") if existing_data['scraped_at'] else "Unknown",
                         "task_id": "existing_data",  # Dummy task ID for form
-                        "message": f"Data for {ticker_value} ({market_value}) - {download_type} already exists and is ready for download!"
+                        "message": f"Data for {ticker_value} ({market_value}) - {download_type} already exists and is ready for download!",
+                        "resolution_info": resolution_info
                     })
                 
             except ValueError:
@@ -162,7 +190,8 @@ def scrape_firestore(request):
                 "task_stat": task.status,
                 "ticker": ticker_value,
                 "market": market_value,
-                "firestore_mode": True  # Flag to indicate this is firestore scraping
+                "firestore_mode": True,  # Flag to indicate this is firestore scraping
+                "resolution_info": resolution_info
             })
             
         elif 'download' in request.POST:
