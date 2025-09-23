@@ -293,7 +293,7 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
                 DataType.CASH_FLOW: "Cash Flow_Annual_As Originally Reported"
             }
             filename_base = filename_base_map[data_type]
-            download_dir = "/root/Downloads"
+            download_dir = "/root/downloads"
             logger.info(f"Checking for downloaded file in: {download_dir} with base name: {filename_base}")
             
             max_wait = 30  # Wait up to 30 seconds for file to appear
@@ -405,7 +405,7 @@ def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> 
                     DataType.KEY_METRICS_FINANCIAL_SUMMARY: "summary-31-03-2025"
                 }
                 filename_base = filename_base_map.get(data_type, "keyMetrics")
-                download_dir = "/root/Downloads"
+                download_dir = "/root/downloads"
                 logger.info(f"Checking for downloaded file in: {download_dir} with base name: {filename_base}")
                 
                 max_wait = 30  # Wait up to 30 seconds for file to appear
