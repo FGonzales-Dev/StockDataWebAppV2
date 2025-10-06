@@ -95,8 +95,10 @@ def scrape_firestore(request):
         download_type = request.POST.get("download_type", "")
         
         if not ticker_input or not market_input or not download_type:
+            from .stock_market_utils import get_market_choices
             return render(request, "../templates/stockData.html", {
-                "error": "Please provide ticker, market, and download type"
+                "error": "Please provide ticker, market, and download type",
+                "market_choices": get_market_choices()
             })
         
         # Use AI to resolve ticker symbol if needed
@@ -197,7 +199,10 @@ def scrape_firestore(request):
         elif 'download' in request.POST:
             return handle_download_firestore(ticker_value, market_value, download_type)
     
-    return render(request, "../templates/stockData.html")
+    from .stock_market_utils import get_market_choices
+    return render(request, "../templates/stockData.html", {
+        "market_choices": get_market_choices()
+    })
 
 def handle_download_firestore(ticker: str, market: str, download_type: str):
     """Handle data download from Firestore"""
