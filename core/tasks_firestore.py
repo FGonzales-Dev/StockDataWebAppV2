@@ -71,8 +71,24 @@ class OptimizedScrapingStrategy:
         options.add_argument("--log-level=0")
         options.add_argument("--headless")  # Explicitly set headless mode
         options.add_argument("--disable-gpu")  # Disable GPU for headless mode in Docker
-         
-         # Initialize driver with retry mechanism
+        
+        # Configure download directory - use the existing downloads directory
+        download_dir = "/root/StockDataWebAppV2/downloads"
+        os.makedirs(download_dir, exist_ok=True)
+        
+        # Set download preferences
+        prefs = {
+            "download.default_directory": download_dir,
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True,
+            "safebrowsing.disable_download_protection": True,
+            "profile.default_content_settings.popups": 0,
+            "profile.default_content_setting_values.automatic_downloads": 1
+        }
+        options.add_experimental_option("prefs", prefs)
+        
+        # Initialize driver with retry mechanism
         max_retries = 5  # Increased retries
         for attempt in range(max_retries):
             try:
@@ -293,7 +309,7 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
                 DataType.CASH_FLOW: "Cash Flow_Annual_As Originally Reported"
             }
             filename_base = filename_base_map[data_type]
-            download_dir = "/root/downloads"
+            download_dir = "/root/StockDataWebAppV2/downloads"
             logger.info(f"Checking for downloaded file in: {download_dir} with base name: {filename_base}")
             
             max_wait = 30  # Wait up to 30 seconds for file to appear
@@ -405,7 +421,7 @@ def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> 
                     DataType.KEY_METRICS_FINANCIAL_SUMMARY: "summary-31-03-2025"
                 }
                 filename_base = filename_base_map.get(data_type, "keyMetrics")
-                download_dir = "/root/downloads"
+                download_dir = "/root/StockDataWebAppV2/downloads"
                 logger.info(f"Checking for downloaded file in: {download_dir} with base name: {filename_base}")
                 
                 max_wait = 30  # Wait up to 30 seconds for file to appear
