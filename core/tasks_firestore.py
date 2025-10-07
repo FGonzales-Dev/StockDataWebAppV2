@@ -1,7 +1,3 @@
-"""
-Firestore-based Celery Tasks for Stock Data Scraping
-Check Firestore first, scrape only if data doesn't exist
-"""
 
 import json
 import logging
@@ -31,13 +27,11 @@ from .firestore_storage import (
 import uuid
 import time
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @dataclass
 class ScrapingConfig:
-    """Configuration for scraping operations"""
     show_browser: bool = True
     element_wait_timeout: int = 30
     download_directory: str = "/selenium"
@@ -46,7 +40,6 @@ class ScrapingConfig:
     max_retries: int = 3
 
 class OptimizedScrapingStrategy:
-    """Optimized base scraping strategy with Firestore storage"""
     
     def __init__(self, config: ScrapingConfig = None):
         self.config = config or ScrapingConfig()
@@ -54,8 +47,6 @@ class OptimizedScrapingStrategy:
         self.storage = get_storage()
     
     def create_driver(self):
-        """Create optimized Chrome driver"""
-        # Set Chrome options
         options = uc.ChromeOptions()
         options.binary_location = "/usr/bin/google-chrome"
         options.add_argument(f"--window-size={self.config.browser_width},{self.config.browser_height}")
@@ -69,14 +60,12 @@ class OptimizedScrapingStrategy:
         options.add_argument("--test-type")
         options.add_argument("--start-maximized")
         options.add_argument("--log-level=0")
-        options.add_argument("--headless")  # Explicitly set headless mode
-        options.add_argument("--disable-gpu")  # Disable GPU for headless mode in Docker
+        options.add_argument("--headless")
+        options.add_argument("--disable-gpu")
         
-        # Configure download directory - use the existing downloads directory
         download_dir = "/root/StockDataWebAppV2/downloads"
         os.makedirs(download_dir, exist_ok=True)
         
-        # Set download preferences
         prefs = {
             "download.default_directory": download_dir,
             "download.prompt_for_download": False,
@@ -88,26 +77,24 @@ class OptimizedScrapingStrategy:
         }
         options.add_experimental_option("prefs", prefs)
         
-        # Initialize driver with retry mechanism
-        max_retries = 5  # Increased retries
+        max_retries = 5
         for attempt in range(max_retries):
             try:
                 self.driver = uc.Chrome(
                     options=options,
-                    headless=True,  # Enforce headless mode
-                    version_main=137  # Match the installed Chrome major version
+                    headless=True,
+                    version_main=137
                 )
                 logger.info("Chrome driver initialized successfully")
-                return self.driver  # Return the driver for explicit assignment if needed
+                return self.driver
             except Exception as e:
                 logger.error(f"Attempt {attempt + 1} failed to initialize Chrome: {str(e)}")
                 if attempt == max_retries - 1:
                     logger.error("All retries failed to initialize Chrome driver")
                     raise
-                time.sleep(5)  # Increased wait time before retrying
+                time.sleep(5)
     
     def safe_click(self, selectors: List[str], timeout: int = 10) -> bool:
-        """Safely click an element using multiple selectors"""
         for selector in selectors:
             try:
                 element = WebDriverWait(self.driver, timeout).until(
@@ -122,7 +109,6 @@ class OptimizedScrapingStrategy:
         return False
     
     def find_element_safely(self, selectors: List[str], timeout: int = 10):
-        """Find an element using multiple selectors"""
         for selector in selectors:
             try:
                 element = WebDriverWait(self.driver, timeout).until(
@@ -136,11 +122,9 @@ class OptimizedScrapingStrategy:
         return None
     
     def check_existing_data_first(self, ticker: str, market: str, data_type: DataType) -> Optional[str]:
-        """Check if data already exists in Firestore"""
         return check_existing_data(ticker, market, data_type)
     
     def store_data(self, ticker: str, market: str, data_type: DataType, data: str, status: str = 'DONE'):
-        """Store data in Firestore"""
         success = store_scraped_data(ticker, market, data_type, data, status)
         if success:
             logger.info(f"Stored {data_type.value} data for {ticker} {market}")
@@ -148,23 +132,17 @@ class OptimizedScrapingStrategy:
             logger.error(f"Failed to store {data_type.value} data for {ticker} {market}")
     
     def store_fallback_data(self, ticker: str, market: str, data_type: DataType):
-        """Store fallback data when scraping fails"""
         fallback = json.dumps({data_type.value.lower(): {"none": "no data"}})
         self.store_data(ticker, market, data_type, fallback, 'ERROR')
 
-#-------------------------------------FIRESTORE CHECK FIRST------------------------------------------------
 @shared_task(bind=True)
 def financial_statement_firestore_check(self, ticker_value: str, market_value: str, download_type: str):
-    """
-    Main scraper task with Firestore check-first approach
-    """
     try:
         data_type = DataType(download_type)
         
         if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
             result = scraper_financial_statement(ticker_value, market_value, data_type)
             
-            # Update progress
             if result == 'EXISTING':
                 self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
             elif result == 'DONE':
@@ -186,16 +164,12 @@ def financial_statement_firestore_check(self, ticker_value: str, market_value: s
     
 @shared_task(bind=True)
 def key_metrics_firestore_check(self, ticker_value: str, market_value: str, download_type: str):
-    """
-    Main scraper task with Firestore check-first approach
-    """
     try:
         data_type = DataType(download_type)
         
         if data_type in [DataType.KEY_METRICS_CASH_FLOW, DataType.KEY_METRICS_GROWTH, DataType.KEY_METRICS_FINANCIAL_HEALTH, DataType.KEY_METRICS_PROFITABILITYANDEFFICIENCY, DataType.KEY_METRICS_FINANCIAL_SUMMARY, DataType.KEY_METRICS_FINANCIAL_HEALTH]:
             result = scraper_key_metrics(ticker_value, market_value, data_type)
             
-            # Update progress
             if result == 'EXISTING':
                 self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
             elif result == 'DONE':
@@ -217,16 +191,12 @@ def key_metrics_firestore_check(self, ticker_value: str, market_value: str, down
 
 @shared_task(bind=True)
 def dividends_firestore_check(self, ticker_value: str, market_value: str):
-    """
-    Dividends scraper with Firestore check-first approach
-    """
     try:
         data_type = DataType.DIVIDENDS
         
         if data_type in [DataType.DIVIDENDS]:
             result = scraper_dividends(ticker_value, market_value, data_type)
             
-            # Update progress
             if result == 'EXISTING':
                 self.update_state(state='SUCCESS', meta={'status': 'Data already exists - retrieved from storage'})
             elif result == 'DONE':
@@ -247,22 +217,15 @@ def dividends_firestore_check(self, ticker_value: str, market_value: str):
         return 'ERROR'
 
 
-#---------------------------------SCRAPERS---------------------------------------------------------------
 
 def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -> str:
-    """
-    Financial statement scraper with Firestore check-first approach
-    Returns: 'EXISTING' if data found, 'DONE' if scraped successfully, 'ERROR' if failed
-    """
     strategy = OptimizedScrapingStrategy()
     
-    # STEP 1: Check if data already exists
     existing_data = strategy.check_existing_data_first(ticker, market, data_type)
     if existing_data:
         logger.info(f"Found existing {data_type.value} data for {ticker} {market} - skipping scrape")
         return 'EXISTING'
     
-    # STEP 2: Data doesn't exist, proceed with scraping
     logger.info(f"No existing data found for {ticker} {market} {data_type.value} - starting scrape")
     
     driver = None
@@ -273,7 +236,6 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
             raise Exception("Chrome driver is None after initialization")
         strategy.driver = driver
         
-        # Ensure download directory exists
         download_dir = BASE_DIR + strategy.config.download_directory
         if not os.path.exists(download_dir):
             logger.info(f"Creating download directory at {download_dir}")
@@ -285,7 +247,6 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
         logger.info(f"Navigating to {url}")
         driver.get(url)
         
-        # Click tab
         tab_text = data_type.value.replace('_', ' ').title()
         tab_selectors = [f"//button[contains(., '{tab_text}')]"]
         
@@ -300,9 +261,8 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
         ]
         
         if strategy.safe_click(export_selectors):
-            sleep(20)  # Increased wait time for download to complete
+            sleep(20)
             
-            # Process file
             filename_base_map = {
                 DataType.INCOME_STATEMENT: "Income Statement_Annual_As Originally Reported",
                 DataType.BALANCE_SHEET: "Balance Sheet_Annual_As Originally Reported",
@@ -312,17 +272,15 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
             download_dir = "/root/StockDataWebAppV2/downloads"
             logger.info(f"Checking for downloaded file in: {download_dir} with base name: {filename_base}")
             
-            max_wait = 30  # Wait up to 30 seconds for file to appear
+            max_wait = 30
             wait_interval = 5
             file_path = None
             for _ in range(max_wait // wait_interval):
-                # Look for files matching the base name, including possible duplicates like (1), (2), etc.
                 import glob
                 possible_files = glob.glob(f"{download_dir}/{filename_base}*.xls")
                 if possible_files:
-                    # Sort by modification time, newest first
                     possible_files.sort(key=os.path.getmtime, reverse=True)
-                    file_path = possible_files[0]  # Take the most recent file
+                    file_path = possible_files[0]
                     logger.info(f"File found at {file_path}, processing Excel data")
                     try:
                         df = pd.read_excel(file_path)
@@ -358,18 +316,15 @@ def scraper_financial_statement(ticker: str, market: str, data_type: DataType) -
                      logger.error(f"Failed to close Chrome driver: {str(e)}")
 
 def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> str:
-    """Key metrics scraper with Firestore check-first approach"""
     
     strategy = OptimizedScrapingStrategy()
     
    
-    # STEP 1: Check if data already exists
     existing_data = strategy.check_existing_data_first(ticker, market_value, data_type)
     if existing_data:
         logger.info(f"Found existing {data_type.value} data for {ticker} {market_value} - skipping scrape")
         return 'EXISTING'
     
-    # STEP 2: Data doesn't exist, proceed with scraping
     logger.info(f"No existing data found for {ticker} {market_value} {data_type.value} - starting scrape")
     
     driver = None
@@ -380,7 +335,6 @@ def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> 
                 raise Exception("Chrome driver is None after initialization")
             strategy.driver = driver
             
-            # Ensure download directory exists
             download_dir = BASE_DIR + strategy.config.download_directory
             if not os.path.exists(download_dir):
                 logger.info(f"Creating download directory at {download_dir}")
@@ -392,14 +346,12 @@ def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> 
             logger.info(f"Navigating to {url}")
             driver.get(url)
             
-            # Click appropriate tab
             if not _click_key_metrics_tab(strategy, data_type):
                 logger.warning(f"Failed to click tab for {data_type.value}")
                 raise Exception(f"Failed to click tab for {data_type.value}")
             
             sleep(3)
             
-            # Click Export Data button
             export_selectors = [
                 "//button[@id='salEqsvFinancialsPopoverExport']",
                 "//button[@aria-label='Export']",
@@ -410,9 +362,8 @@ def scraper_key_metrics(ticker: str, market_value: str, data_type: DataType) -> 
             ]
             
             if strategy.safe_click(export_selectors):
-                sleep(20)  # Increased wait time for download to complete
+                sleep(20)
                 
-                # Process file
                 filename_base_map = {
                     DataType.KEY_METRICS_CASH_FLOW: "cashFlow",
                     DataType.KEY_METRICS_GROWTH: "growthTable",

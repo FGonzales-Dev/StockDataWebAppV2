@@ -1,7 +1,3 @@
-"""
-Firestore-based Views for Stock Data Scraping
-Check Firestore first, scrape only if data doesn't exist
-"""
 
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
@@ -37,15 +33,11 @@ def subscription_required_decorator(view_func):
     return _wrapped_view
 
 def subscription_required(request):
-    """
-    View to handle email subscription and passkey verification before accessing stock data
-    """
     if request.method == 'POST':
         form = EmailSubscriptionForm(request.POST)
         passkey = request.POST.get('passkey')
         
         if form.is_valid():
-            # Verify passkey
             if passkey != 'K7N4P8':
                 return render(request, 'core/subscription.html', {
                     'form': form,
@@ -54,12 +46,9 @@ def subscription_required(request):
                 
             email = form.cleaned_data['email']
             
-            # Save email to Firestore
             storage = get_storage()
             
-            # Check if email is already subscribed
             if storage.check_email_subscription(email):
-                # Email already exists, redirect to stock data
                 request.session['subscribed_email'] = email
                 return redirect('stockData')
             else:
@@ -73,9 +62,6 @@ def subscription_required(request):
     return render(request, 'core/subscription.html', {'form': form})
 
 def logout_subscription(request):
-    """
-    Clear subscription session to allow re-subscription
-    """
     if 'subscribed_email' in request.session:
         del request.session['subscribed_email']
     return redirect('subscription')
@@ -83,11 +69,6 @@ def logout_subscription(request):
 @csrf_exempt
 @subscription_required_decorator
 def scrape_firestore(request):
-    """
-    Firestore-based scraping endpoint
-    Checks for email subscription first, then Firestore, scrapes directly if data doesn't exist
-    Now includes AI-powered ticker symbol resolution via OpenRouter
-    """
     
     if request.method == 'POST':
         ticker_input = request.POST.get("ticker", "").strip()
@@ -101,7 +82,6 @@ def scrape_firestore(request):
                 "market_choices": get_market_choices()
             })
         
-        # Use AI to resolve ticker symbol if needed
         ticker_resolution = resolve_stock_ticker(ticker_input, market_input)
         
         if ticker_resolution['success']:
@@ -109,12 +89,10 @@ def scrape_firestore(request):
             market_value = ticker_resolution['market']
             logger.info(f"AI resolved '{ticker_input}' to ticker '{ticker_value}' on market '{market_value}' with {ticker_resolution['confidence']} confidence")
         else:
-            # Fallback to original input if AI resolution fails
             ticker_value = ticker_input.upper()
             market_value = market_input.upper()
             logger.warning(f"AI ticker resolution failed for '{ticker_input}', using original input: {ticker_value}")
         
-        # Store the resolution info for potential display
         resolution_info = {
             'original_ticker': ticker_input,
             'original_market': market_input,
@@ -126,7 +104,6 @@ def scrape_firestore(request):
         }
         
         if 'get_data' in request.POST:
-            # Check if data already exists first
 
             if download_type == "ALL":
                 from .tasks_firestore import all_scraper_firestore
@@ -147,16 +124,15 @@ def scrape_firestore(request):
                 existing_data = storage.check_data_exists(ticker_value, market_value, data_type)
                 
                 if existing_data and existing_data['status'] == 'DONE':
-                    # Data already exists, show success screen with download option immediately
                     logger.info(f"Found existing data for {ticker_value} {market_value} {download_type}")
                     return render(request, "../templates/loadScreen.html", {
                         "download_type": download_type,
                         "ticker": ticker_value,
                         "market": market_value,
                         "firestore_mode": True,
-                        "data_already_exists": True,  # Flag to show success section immediately
+                        "data_already_exists": True,
                         "scraped_at": existing_data['scraped_at'].strftime("%Y-%m-%d %H:%M:%S") if existing_data['scraped_at'] else "Unknown",
-                        "task_id": "existing_data",  # Dummy task ID for form
+                        "task_id": "existing_data",
                         "message": f"Data for {ticker_value} ({market_value}) - {download_type} already exists and is ready for download!",
                         "resolution_info": resolution_info
                     })
@@ -166,10 +142,8 @@ def scrape_firestore(request):
                     "error": f"Invalid download type: {download_type}"
                 })
             
-            # Data doesn't exist, start background scraping and show loading screen
             logger.info(f"No existing data found for {ticker_value} {market_value} {download_type} - starting background scrape")
             
-            # Create a background task for scraping
             if download_type in ["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW"]:
                 from .tasks_firestore import financial_statement_firestore_check
                 task = financial_statement_firestore_check.delay(ticker_value, market_value, download_type)
@@ -185,14 +159,13 @@ def scrape_firestore(request):
                     "error": f"Unsupported download type: {download_type}"
                 })
             
-            # Return loading screen immediately with task ID
             return render(request, "../templates/loadScreen.html", {
                 "download_type": download_type,
                 "task_id": task.id,
                 "task_stat": task.status,
                 "ticker": ticker_value,
                 "market": market_value,
-                "firestore_mode": True,  # Flag to indicate this is firestore scraping
+                "firestore_mode": True,
                 "resolution_info": resolution_info
             })
             
@@ -205,7 +178,6 @@ def scrape_firestore(request):
     })
 
 def handle_download_firestore(ticker: str, market: str, download_type: str):
-    """Handle data download from Firestore"""
     
     try:
         storage = get_storage()
@@ -213,7 +185,6 @@ def handle_download_firestore(ticker: str, market: str, download_type: str):
         if download_type == "ALL":
             return handle_all_download_firestore(ticker, market)
         
-        # Get data for specific type
         try:
             data_type = DataType(download_type)
         except ValueError:
@@ -224,7 +195,6 @@ def handle_download_firestore(ticker: str, market: str, download_type: str):
         if not existing_data or existing_data['status'] != 'DONE':
             return HttpResponse("No data available for download", status=404)
         
-        # Parse and create Excel file
         data = existing_data['data']
         if isinstance(data, str):
             data = json.loads(data)
@@ -232,13 +202,10 @@ def handle_download_firestore(ticker: str, market: str, download_type: str):
         df = pd.DataFrame(data)
         filename = f"{ticker}_{market}_{download_type.lower()}.xlsx"
         
-        # Create response
         response = HttpResponse(content_type='application/vnd.ms-excel')
         response['Content-Disposition'] = f'attachment; filename={filename}'
         
-        # Write Excel data to response
         with pd.ExcelWriter(response, engine='xlsxwriter') as writer:
-            # Clean sheet name (Excel has 31 char limit)
             sheet_name = download_type.replace('_', ' ').title()[:31]
             df.to_excel(writer, sheet_name=sheet_name, index=False)
         
@@ -249,7 +216,6 @@ def handle_download_firestore(ticker: str, market: str, download_type: str):
         return HttpResponse(f"Error generating download: {str(e)}", status=500)
 
 def handle_all_download_firestore(ticker: str, market: str):
-    """Handle download of all data types for a stock from Firestore"""
     
     try:
         storage = get_storage()
@@ -271,11 +237,9 @@ def handle_all_download_firestore(ticker: str, market: str):
                             data = json.loads(data)
                         df = pd.DataFrame(data)
                         
-                        # Clean sheet name (Excel has 31 char limit)
                         sheet_name = data_type.replace('_', ' ').title()[:31]
                         df.to_excel(writer, sheet_name=sheet_name, index=False)
                     except Exception as e:
-                        # Create error sheet if data can't be processed
                         error_df = pd.DataFrame({"Error": [f"Could not process data: {str(e)}"]})
                         error_df.to_excel(writer, sheet_name=f"Error_{data_type[:20]}", index=False)
         
@@ -286,7 +250,6 @@ def handle_all_download_firestore(ticker: str, market: str):
         return HttpResponse(f"Error generating comprehensive download: {str(e)}", status=500)
 
 def get_task_info_firestore(request):
-    """Enhanced task status endpoint for Firestore tasks"""
     
     task_id = request.GET.get('task_id', None)
     if not task_id:
@@ -300,19 +263,17 @@ def get_task_info_firestore(request):
         data = {
             'state': task.state,
             'result': task.result,
-            'firestore': True  # Flag to indicate this is from Firestore scraper
+            'firestore': True
         }
         
-        # Add additional info based on task state
         if task.state == 'PROGRESS':
-            # Handle progress updates
             if isinstance(task.result, dict):
                 data['progress'] = task.result.get('progress', 0)
                 data['current'] = task.result.get('current', 0)
                 data['total'] = task.result.get('total', 1)
                 data['message'] = task.result.get('message', 'Processing...')
             else:
-                data['progress'] = 50  # Default progress
+                data['progress'] = 50
                 data['message'] = 'Scraping in progress...'
                 
         elif task.state == 'SUCCESS':
@@ -356,7 +317,6 @@ def get_task_info_firestore(request):
         })
 
 def check_data_status_firestore(request):
-    """Check what data exists for a ticker/market combination"""
     
     ticker = request.GET.get('ticker', '').upper()
     market = request.GET.get('market', '').upper()
@@ -400,7 +360,6 @@ def check_data_status_firestore(request):
         }, status=500)
 
 def storage_stats_firestore(request):
-    """Get Firestore storage statistics"""
     
     try:
         storage = get_storage()
@@ -419,27 +378,10 @@ def storage_stats_firestore(request):
 
 @csrf_exempt
 def api_stock_data_firestore(request, ticker, market, data_type_param):
-    """
-    API endpoint to get specific stock data from Firestore or trigger scraping
-    URL format: /api/stock/{ticker}/{market}/{data_type}/
     
-    Data type parameters:
-    - incomestatement -> INCOME_STATEMENT
-    - balance_sheet -> BALANCE_SHEET
-    - cash_flow -> CASH_FLOW
-    - dividends -> DIVIDENDS
-    - key_metrics_cash_flow -> KEY_METRICS_CASH_FLOW
-    - key_metrics_growth -> KEY_METRICS_GROWTH
-    - key_metrics_financial_health -> KEY_METRICS_FINANCIAL_HEALTH
-    - key_metrics_profitability_and_efficiency -> KEY_METRICS_PROFITABILITYANDEFFICIENCY
-    - key_metrics_financial_summary -> KEY_METRICS_FINANCIAL_SUMMARY
-    """
-    
-    # Normalize inputs
     ticker = ticker.upper()
     market = market.upper()
     
-    # Map URL parameter to DataType enum
     data_type_mapping = {
         'incomestatement': DataType.INCOME_STATEMENT,
         'balance_sheet': DataType.BALANCE_SHEET,
@@ -464,11 +406,9 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
     try:
         storage = get_storage()
         
-        # Check if data already exists
         existing_data = storage.check_data_exists(ticker, market, data_type)
         
         if existing_data and existing_data['status'] == 'DONE':
-            # Return existing data
             data_json = existing_data['data']
             if isinstance(data_json, str):
                 try:
@@ -486,10 +426,8 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
                 'data': data_json
             })
         
-        # Data doesn't exist, trigger scraping
         logger.info(f"No existing data for {ticker} {market} {data_type.value} - starting scrape")
         
-        # Trigger appropriate scraper based on data type
         if data_type in [DataType.INCOME_STATEMENT, DataType.BALANCE_SHEET, DataType.CASH_FLOW]:
             from .tasks_firestore import financial_statement_firestore_check
             task = financial_statement_firestore_check.delay(ticker, market, data_type.value)
@@ -504,7 +442,6 @@ def api_stock_data_firestore(request, ticker, market, data_type_param):
                 'error': f'Scraping not implemented for {data_type.value}'
             }, status=501)
         
-        # Return task information
         return JsonResponse({
             'status': 'pending',
             'message': 'Data scraping initiated',

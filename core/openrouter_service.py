@@ -1,7 +1,3 @@
-"""
-OpenRouter AI Service for Stock Ticker Symbol Resolution
-Converts company names to stock ticker symbols using AI
-"""
 
 import requests
 import json
@@ -12,9 +8,6 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 class OpenRouterService:
-    """
-    Service to interact with OpenRouter AI for stock ticker symbol resolution
-    """
     
     def __init__(self):
         self.api_key = "add this in droplet instead"
@@ -25,21 +18,8 @@ class OpenRouterService:
         }
     
     def _check_special_mappings(self, company_name: str, market: str = None) -> Optional[Dict]:
-        """
-        Check for special company name mappings that should be handled directly
-        without AI processing
-        
-        Args:
-            company_name (str): Company name to check
-            market (str, optional): Market exchange
-            
-        Returns:
-            Optional[Dict]: Mapping result if found, None otherwise
-        """
-        # Normalize the input for comparison
         normalized_name = company_name.lower().strip()
         
-        # Rolls-Royce variations mapping
         rolls_royce_variations = [
             'rolls royce', 'rolls-royce', 'rolce royce', 'rolceroyce', 
             'rolls royce holdings', 'rolls-royce holdings', 'rolls royce plc',
@@ -58,39 +38,17 @@ class OpenRouterService:
                 'original_market': market
             }
         
-        # Add more special mappings here as needed
-        # Example for other companies with common misspellings or variations
         
         return None
     
     def resolve_ticker_symbol(self, company_name: str, market: str = None) -> Dict:
-        """
-        Resolve company name to stock ticker symbol using OpenRouter AI
-        
-        Args:
-            company_name (str): Company name (e.g., "Apple", "Microsoft", "Tesla")
-            market (str, optional): Market exchange (e.g., "NASDAQ", "NYSE", "XNAS")
-            
-        Returns:
-            Dict: {
-                'success': bool,
-                'ticker': str,
-                'market': str,
-                'company_name': str,
-                'confidence': str,
-                'error': str (if any)
-            }
-        """
         try:
-            # Check for specific company name mappings first
             mapped_result = self._check_special_mappings(company_name, market)
             if mapped_result:
                 return mapped_result
             
-            # Prepare the prompt for AI
             prompt = self._create_ticker_resolution_prompt(company_name, market)
             
-            # Make API request to OpenRouter
             response = self._make_openrouter_request(prompt)
             
             if response.get('success'):
@@ -117,9 +75,6 @@ class OpenRouterService:
             }
     
     def _create_ticker_resolution_prompt(self, company_name: str, market: str = None) -> str:
-        """
-        Create a prompt for AI to resolve ticker symbol
-        """
         market_context = f" on {market}" if market else ""
         
         prompt = f"""
@@ -162,12 +117,9 @@ Now resolve: "{company_name}"{market_context}
         return prompt.strip()
     
     def _make_openrouter_request(self, prompt: str) -> Dict:
-        """
-        Make API request to OpenRouter
-        """
         try:
             payload = {
-                "model": "anthropic/claude-3.5-sonnet",  # Using Claude for better reasoning
+                "model": "anthropic/claude-3.5-sonnet",
                 "messages": [
                     {
                         "role": "user",
@@ -175,7 +127,7 @@ Now resolve: "{company_name}"{market_context}
                     }
                 ],
                 "max_tokens": 500,
-                "temperature": 0.1,  # Low temperature for consistent results
+                "temperature": 0.1,
                 "top_p": 0.9
             }
             
@@ -222,12 +174,7 @@ Now resolve: "{company_name}"{market_context}
             }
     
     def _parse_ai_response(self, ai_response: str, original_company: str, original_market: str = None) -> Dict:
-        """
-        Parse AI response and extract ticker information
-        """
         try:
-            # Try to extract JSON from the response
-            # AI might include extra text, so we need to find the JSON part
             start_idx = ai_response.find('{')
             end_idx = ai_response.rfind('}') + 1
             
@@ -237,7 +184,6 @@ Now resolve: "{company_name}"{market_context}
             json_str = ai_response[start_idx:end_idx]
             parsed_data = json.loads(json_str)
             
-            # Validate required fields
             required_fields = ['ticker', 'market', 'company_name', 'confidence']
             for field in required_fields:
                 if field not in parsed_data:
@@ -256,7 +202,6 @@ Now resolve: "{company_name}"{market_context}
             
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse AI response as JSON: {str(e)}")
-            # Fallback: try to extract ticker from response text
             return self._fallback_parse(ai_response, original_company, original_market)
         except Exception as e:
             logger.error(f"Error parsing AI response: {str(e)}")
@@ -270,18 +215,12 @@ Now resolve: "{company_name}"{market_context}
             }
     
     def _fallback_parse(self, response_text: str, original_company: str, original_market: str = None) -> Dict:
-        """
-        Fallback parsing when JSON parsing fails
-        """
-        # Look for common ticker patterns in the response
         import re
         
-        # Common ticker patterns (3-5 uppercase letters)
         ticker_pattern = r'\b([A-Z]{3,5})\b'
         tickers = re.findall(ticker_pattern, response_text.upper())
         
         if tickers:
-            # Take the first ticker found
             ticker = tickers[0]
             return {
                 'success': True,
@@ -294,7 +233,6 @@ Now resolve: "{company_name}"{market_context}
                 'original_market': original_market
             }
         else:
-            # No ticker found, return original input
             return {
                 'success': False,
                 'ticker': original_company.upper(),
@@ -307,16 +245,6 @@ Now resolve: "{company_name}"{market_context}
             }
     
     def batch_resolve_tickers(self, company_names: list, market: str = None) -> list:
-        """
-        Resolve multiple company names to ticker symbols
-        
-        Args:
-            company_names (list): List of company names
-            market (str, optional): Market exchange
-            
-        Returns:
-            list: List of resolution results
-        """
         results = []
         for company_name in company_names:
             result = self.resolve_ticker_symbol(company_name, market)
@@ -324,48 +252,25 @@ Now resolve: "{company_name}"{market_context}
         return results
 
 
-# Global instance
 openrouter_service = OpenRouterService()
 
 
 def resolve_stock_ticker(company_name: str, market: str = None) -> Dict:
-    """
-    Convenience function to resolve a single ticker symbol
-    
-    Args:
-        company_name (str): Company name or ticker symbol
-        market (str, optional): Market exchange
-        
-    Returns:
-        Dict: Resolution result
-    """
     return openrouter_service.resolve_ticker_symbol(company_name, market)
 
 
 def is_likely_ticker_symbol(text: str) -> bool:
-    """
-    Check if the input text is likely already a ticker symbol
-    
-    Args:
-        text (str): Input text
-        
-    Returns:
-        bool: True if likely a ticker symbol
-    """
     if not text:
         return False
     
     text = text.strip().upper()
     
-    # Ticker symbols are typically 1-5 uppercase letters
     if len(text) > 5:
         return False
     
-    # Check if it's all uppercase letters
     if not text.isalpha():
         return False
     
-    # Common ticker patterns
     if len(text) >= 1 and len(text) <= 5:
         return True
     
