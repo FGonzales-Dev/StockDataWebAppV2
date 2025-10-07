@@ -24,6 +24,45 @@ class OpenRouterService:
             "Content-Type": "application/json",
         }
     
+    def _check_special_mappings(self, company_name: str, market: str = None) -> Optional[Dict]:
+        """
+        Check for special company name mappings that should be handled directly
+        without AI processing
+        
+        Args:
+            company_name (str): Company name to check
+            market (str, optional): Market exchange
+            
+        Returns:
+            Optional[Dict]: Mapping result if found, None otherwise
+        """
+        # Normalize the input for comparison
+        normalized_name = company_name.lower().strip()
+        
+        # Rolls-Royce variations mapping
+        rolls_royce_variations = [
+            'rolls royce', 'rolls-royce', 'rolce royce', 'rolceroyce', 
+            'rolls royce holdings', 'rolls-royce holdings', 'rolls royce plc',
+            'rolls-royce plc', 'rr', 'rolls royce group', 'rolls-royce group'
+        ]
+        
+        if normalized_name in rolls_royce_variations:
+            return {
+                'success': True,
+                'ticker': 'RR',
+                'market': market or 'XLON',  # London Stock Exchange
+                'company_name': 'Rolls-Royce Holdings plc',
+                'confidence': 'high',
+                'reasoning': 'Direct mapping for Rolls-Royce variations to RR ticker on London Stock Exchange',
+                'original_input': company_name,
+                'original_market': market
+            }
+        
+        # Add more special mappings here as needed
+        # Example for other companies with common misspellings or variations
+        
+        return None
+    
     def resolve_ticker_symbol(self, company_name: str, market: str = None) -> Dict:
         """
         Resolve company name to stock ticker symbol using OpenRouter AI
@@ -43,6 +82,11 @@ class OpenRouterService:
             }
         """
         try:
+            # Check for specific company name mappings first
+            mapped_result = self._check_special_mappings(company_name, market)
+            if mapped_result:
+                return mapped_result
+            
             # Prepare the prompt for AI
             prompt = self._create_ticker_resolution_prompt(company_name, market)
             
